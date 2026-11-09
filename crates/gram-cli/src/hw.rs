@@ -1,10 +1,8 @@
 //! `gram-cli hw` : matériel détecté, en texte (à comparer au Gestionnaire des tâches) ou en JSON.
 
-use crate::fmt::{gb, gb_round, num};
 use anyhow::Result;
-use gram_core::{
-    GpuInfo, HardwareProfile, Overrides, RamKind, RuntimeStatus, RuntimesStatus, Source,
-};
+use gram_core::fmt::{gb, gb_round, num};
+use gram_core::{GpuInfo, HardwareProfile, Overrides, RuntimeStatus, RuntimesStatus, Source};
 use serde::Serialize;
 use std::fmt::Write as _;
 use std::time::{Duration, Instant};
@@ -55,17 +53,6 @@ fn source(s: Source) -> &'static str {
     }
 }
 
-fn ram_kind(k: RamKind) -> &'static str {
-    match k {
-        RamKind::Ddr3 => "DDR3",
-        RamKind::Ddr4 => "DDR4",
-        RamKind::Ddr5 => "DDR5",
-        RamKind::Lpddr4 => "LPDDR4",
-        RamKind::Lpddr5 => "LPDDR5",
-        RamKind::Unknown => "type inconnu",
-    }
-}
-
 fn plural(n: u32, one: &str, many: &str) -> String {
     format!("{n} {}", if n > 1 { many } else { one })
 }
@@ -103,8 +90,8 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
     let r = &hw.ram;
     let size = r.installed.unwrap_or(r.total);
     let kind = match r.speed_mts {
-        Some(s) => format!("{}-{s}", ram_kind(r.kind)),
-        None => format!("{}, vitesse inconnue", ram_kind(r.kind)),
+        Some(s) => format!("{}-{s}", r.kind.label()),
+        None => format!("{}, vitesse inconnue", r.kind.label()),
     };
     let modules = match r.slots {
         Some(slots) => format!(

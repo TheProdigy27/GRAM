@@ -1,10 +1,21 @@
 //! Application Tauri de GRAM : commandes IPC, état partagé et événements.
 //!
 //! Toute la logique reste côté Rust ; le frontend Angular affiche les données et
-//! envoie des filtres.
+//! envoie des filtres. Au démarrage, le matériel, les runtimes et le catalogue (cache ou
+//! catalogue embarqué) sont chargés en parallèle ; `hardware-ready` signale la fin de la
+//! détection du matériel.
 
 mod commands;
+mod error;
+mod events;
+mod settings_store;
+mod state;
+mod token;
 
+#[cfg(test)]
+mod tests;
+
+use state::AppState;
 use tracing_subscriber::EnvFilter;
 
 pub fn run() {
@@ -13,7 +24,12 @@ pub fn run() {
         .init();
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![commands::system::ping])
+        .manage(AppState::production())
+        .setup(|app| {
+            tauri::async_runtime::spawn(state::startup(app.handle().clone()));
+            Ok(())
+        })
+        .invoke_handler(commands::handler())
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application Tauri");
 }

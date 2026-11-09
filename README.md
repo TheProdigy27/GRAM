@@ -28,6 +28,10 @@ cargo run -p gram-cli -- snapshot    # régénère data/seed_catalog.json (catal
 cargo run -p gram-cli -- estimate Qwen3-8B             # chaque quantification estimée pour cette machine
 cargo run -p gram-cli -- estimate Qwen3-8B --ctx 32768 --kv q8_0 --vision
 cargo run -p gram-cli -- estimate Llama-3.3-70B --profile tests/fixtures/profiles/p3-rtx4090-24go-64go-ddr5.json
+cargo run -p gram-cli -- rank                          # classement polyvalent (contexte 8k) pour cette machine
+cargo run -p gram-cli -- rank --usage code --ctx 16384 --json
+cargo run -p gram-cli -- rank --usage vision --runtime llama-cpp --max-size-gb 12 --show-too-big --limit 0
+cargo run -p gram-cli -- rank --profile tests/fixtures/profiles/p1-portable-igpu-16go.json --usage fast-chat
 
 powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complète
 ```
@@ -42,8 +46,8 @@ powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complè
 | `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `estimate`, `rank`, `snapshot` |
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements |
 | `app/ui` | Frontend Angular + Angular Material |
-| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques, pour les modèles pas encore détaillés), `seed_catalog.json` (catalogue de démarrage, généré) |
-| `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`) et modèles réels du catalogue (`models/`) |
+| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques pour les modèles pas encore détaillés, et facteur de qualité selon les bits par poids), `quality_overrides.json` (bonus de qualité manuels par famille, vide au départ), `seed_catalog.json` (catalogue de démarrage, généré) |
+| `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`), modèles réels du catalogue (`models/`) et échantillon figé de 35 modèles pour le classement (`catalog/`) |
 
 Les types Rust exposés au frontend sont convertis en TypeScript par `ts-rs` dans `app/ui/src/app/core/generated/` à chaque `cargo test`. Ne pas modifier ces fichiers à la main.
 
@@ -93,3 +97,56 @@ Profils types du §15 (`tests/fixtures/profiles/`), testés dans `crates/gram-co
 | P2 : RTX 3060 12 Go + 32 Go DDR4-3600 | GPU, ~37 tok/s, parfait | trop gros |
 | P3 : RTX 4090 24 Go + 64 Go DDR5-6000 | GPU, ~95 tok/s, parfait | hybride 37/80 couches, ~2,1 tok/s |
 | P4 : RX 7800 XT 16 Go + 32 Go DDR5-6000 | GPU, ~62 tok/s, parfait | trop gros |
+
+## Classement
+
+`gram-core::rank` classe les modèles du catalogue pour la machine (§9 du plan). C'est du calcul pur : environ 15 ms pour 1 165 modèles en build debug.
+
+1. **Quatre axes de 0 à 100** pour chaque quantification candidate :
+   - qualité : `f_taille × f_quant + récence + curation`, avec `f_taille = 40 + 12 × log2(milliards de paramètres)` (`√(total × actifs)` pour un MoE) et `f_quant` interpolé sur les bits par poids réels (`data/quant_quality.json`) ; +5 sous 6 mois, −10 au-delà de 18 mois ;
+   - vitesse : `100 × ln(tok/s ÷ 2) / ln(20)` (2 tok/s → 0, 40 tok/s → 100) ;
+   - marge : 100 jusqu'à 80 % de la mémoire du mode, puis 60 à 95 %, puis 40 ;
+   - contexte : part du contexte souhaité atteignable.
+2. **Score** : `(moyenne pondérée × 0,95 + popularité) × facteur d'usage × confiance`, toujours entre 0 et 100. Les poids dépendent du cas d'usage (polyvalent 0,45 / 0,30 / 0,15 / 0,10, etc., modifiables dans les paramètres). La popularité vaut de 0 à 5 points selon `log10(téléchargements)`. Le facteur d'usage vaut × 0,92 pour un modèle qui ne correspond pas au cas d'usage Code ou Raisonnement. La confiance vaut × 0,95 pour une estimation approximative (tailles ou architecture inconnues).
+3. **Meilleure quantification** : le score maximal parmi celles qui tiennent (et sous la taille maximale demandée), en préférant celles qui atteignent le seuil de lenteur du cas d'usage. À score égal, la plus petite l'emporte.
+4. **Sections** : exécutables, « Exécutable mais lent » (aucune quantification au-dessus du seuil : 5 tok/s, 8 pour le raisonnement, 10 pour le chat rapide), trop gros (du plus proche de tenir au plus éloigné). Le filtre Vision ne garde que les modèles vision. Un modèle dont toutes les quantifications sont sous 2,5 bits par poids n'est pas proposé.
+5. **Explication** générée pour chaque ligne, par exemple « Tient entièrement en VRAM (9,9 / 14,3 Go) en Q8_0 · ~51 tok/s estimés · contexte 158k possible ».
+
+Pourquoi ce calcul plutôt qu'une somme simple : avec des bonus ajoutés puis un écrêtage à 100, des dizaines de modèles finissaient ex æquo à 100 et les téléchargements décidaient seuls. Sans le facteur de confiance, des fine-tunes jamais détaillés (taille estimée, « Q2_K* ») occupaient la moitié du haut du classement.
+
+La fiche détail (`model_detail`) évalue de la même façon toutes les quantifications d'un modèle et génère les commandes du runtime choisi (§10.3) : `ollama run hf.co/{dépôt}:{QUANT}` puis `/set parameter num_ctx`, `llama-server -hf … -c … -ngl …` (999 si tout tient en VRAM), ou la page Hugging Face pour LM Studio. Les règles propres aux runtimes (contexte par défaut d'Ollama, GPU intégré, cache KV quantifié, dépôt protégé, fichier découpé) sont toutes dans `crates/gram-core/src/launch.rs`.
+
+Le snapshot du classement (`crates/gram-core/tests/snapshots/`) porte sur un échantillon figé de 35 modèles réels et les 4 profils types. Il a été relu à la main. Après un changement volontaire du scoring, relire les différences avec `cargo insta review`, ou `INSTA_UPDATE=always cargo test -p gram-core` puis `git diff`.
+
+## Application : commandes IPC
+
+Toute la logique est en Rust (`app/src-tauri`). Au démarrage, le matériel, les runtimes et le catalogue (cache, sinon catalogue embarqué) sont chargés en parallèle. Le classement est recalculé à chaque appel de `rank`.
+
+| Commande | Arguments | Résultat |
+|---|---|---|
+| `get_hardware` | – | `HardwareProfile` (détecté une fois, puis gardé en mémoire) |
+| `rescan_hardware` | – | `HardwareProfile` (corrections conservées) |
+| `set_hardware_overrides` | `{ overrides: Overrides }` | `HardwareProfile`. Corrections et simulation (`simulatedGpu`, `simulatedRamTotal`), utilisées par les classements suivants ; `{}` revient aux valeurs détectées |
+| `detect_runtimes` | – | `RuntimesStatus` |
+| `sync_catalog` | `{ force: boolean }` | `SyncSummary`, plus les événements `sync-progress`, `rate-limit` et `sync-done` |
+| `rank` | `{ request: RankRequest }` | `RankResponse` (`useCase`, `ctx`, `runtime`, `maxSize` en octets, `showTooBig`, `limit` ; tout est optionnel) |
+| `get_model_detail` | `{ request: DetailRequest }` | `ModelDetail`. À la première ouverture, les quantifications de tous les dépôts du modèle sont chargées (cache, sinon réseau) |
+| `get_settings` / `save_settings` | – / `{ settings: Settings }` | `Settings`, enregistrés dans `%LOCALAPPDATA%\GRAM\settings.json` et ramenés dans leurs bornes |
+| `set_hf_token` / `clear_hf_token` / `has_hf_token` | `{ token }` / – / – | `null` / `null` / `boolean`. Le token est rangé dans le Gestionnaire d'identifiants Windows et n'est jamais renvoyé |
+| `export_ranking` | `{ format: 'md' \| 'csv', path }` | `null`. Exporte le dernier classement en entier ; chemin absolu avec l'extension du format. CSV : `;`, virgule décimale, UTF-8 avec BOM (Excel en français) |
+
+Événements : `hardware-ready` (`HardwareProfile`), `sync-progress` (`SyncProgress`), `sync-done` (`SyncSummary`), `rate-limit` (`RateLimitInfo`). Les erreurs rejettent la promesse avec un message en français.
+
+Différences avec l'esquisse du §5.3 : la simulation passe par `set_hardware_overrides` (déjà gérée par `Overrides`) plutôt que par un drapeau de `RankRequest`, ainsi ce qui est affiché est toujours ce qui est classé. `get_model_detail` reçoit le cas d'usage et le contexte, dont dépendent les estimations.
+
+Pour essayer depuis la console du WebView (`npm run tauri dev`, clic droit → Inspecter) :
+
+```js
+const invoke = window.__TAURI_INTERNALS__.invoke;
+await invoke('get_hardware');
+await invoke('rank', { request: { useCase: 'code', ctx: 16384, limit: 5 } });
+await invoke('get_model_detail', { request: { repoId: 'Qwen/Qwen3-8B-GGUF', useCase: 'general' } });
+await invoke('set_hardware_overrides', { overrides: { simulatedGpu: 'NVIDIA GeForce RTX 4090 24 Go' } });
+```
+
+Les tests de `app/src-tauri/src/tests.rs` appellent ces commandes de bout en bout avec le runtime simulé de Tauri (sans réseau, sans détection réelle, sans toucher au trousseau). Sous Windows, le manifeste Common Controls v6 est embarqué par l'éditeur de liens dans tous les exécutables (`build.rs`) : sans lui, un binaire de test qui construit une `App` Tauri ne démarre pas (`STATUS_ENTRYPOINT_NOT_FOUND`).

@@ -1,8 +1,8 @@
 //! `gram-cli sync` et `gram-cli snapshot` : catalogue Hugging Face.
 
-use crate::fmt::{gb, num, thousands};
 use anyhow::{Context, Result};
 use chrono::Local;
+use gram_core::fmt::{gb, num, thousands};
 use gram_core::{DataSource, DataSourceKind, ModelEntry, SyncPhase, SyncSummary};
 use gram_hub::{
     Cache, Catalog, HfToken, Hub, HubEvent, ReqwestTransport, SyncOptions, api::SizeBucket,

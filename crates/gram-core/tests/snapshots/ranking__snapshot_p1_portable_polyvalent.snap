@@ -1,0 +1,45 @@
+---
+source: crates/gram-core/tests/ranking.rs
+expression: snapshot_text(&r)
+---
+Polyvalent · contexte 8192 · VRAM 0,0 Go · RAM 8,0 Go · lent sous 5 tok/s
+
+Exécutables (21)
+ 1 Mellum2.1-12B-A2.5B-Thinking         Q2_K               5,2 Go CPU              24.4 tok/s ctx   42k score  80.3 (Q  65.8 V  83.5 F 100.0 C 100.0) limite
+ 2 GigaChat3.1-10B-A1.8B                Q2_K          *    4,0 Go CPU              36.9 tok/s ctx   25k score  74.0 (Q  54.9 V  97.3 F 100.0 C 100.0) limite
+ 3 LFM3-1.7B-Uncensored                 Q4_K_M             1,1 Go CPU              24.0 tok/s ctx  256k score  73.9 (Q  53.1 V  82.9 F 100.0 C 100.0) limite
+ 4 MiMo-V2.6-Distill-Qwen-9B            IQ3_M              4,5 Go CPU               5.8 tok/s ctx   95k score  72.4 (Q  78.5 V  35.3 F 100.0 C 100.0) limite
+ 5 Ornith-1.5-9B                        Q3_K_M             4,6 Go CPU               5.7 tok/s ctx   93k score  72.4 (Q  78.8 V  34.8 F 100.0 C 100.0) limite
+ 6 Qwen3.5-9B-The-Defiant-Fable-Uncenso IQ2_M              4,6 Go CPU               5.6 tok/s ctx   92k score  72.3 (Q  78.7 V  34.7 F 100.0 C 100.0) limite
+ 7 Qwen3.5-4B                           Q3_K_M             2,1 Go CPU              12.1 tok/s ctx  171k score  72.0 (Q  61.2 V  60.0 F 100.0 C 100.0) limite
+ 8 gemma-4-E2B-it                       Q3_K_S             2,3 Go CPU              11.3 tok/s ctx   76k score  71.7 (Q  62.3 V  57.9 F 100.0 C 100.0) limite
+ 9 TwIL-8B                              Q3_K_L             4,4 Go CPU               5.9 tok/s ctx   19k score  70.7 (Q  78.1 V  36.3 F 100.0 C 100.0) limite
+10 TwIL-LM3                             Q2_K          *    1,1 Go CPU              22.1 tok/s ctx   45k score  70.6 (Q  54.8 V  80.2 F 100.0 C 100.0) limite
+11 Qwen3-VL-8B-Instruct                 UD-Q3_K_XL         4,0 Go CPU               6.5 tok/s ctx   24k score  70.5 (Q  71.5 V  39.2 F 100.0 C 100.0) limite
+12 Qwen3-VL-2B-Instruct                 Q2_K          *    0,6 Go CPU              38.6 tok/s ctx   48k score  70.3 (Q  41.4 V  98.8 F 100.0 C 100.0) limite
+13 Qwen2.5-1.5B-Instruct                Q2_K               0,7 Go CPU              35.4 tok/s ctx    8k score  69.8 (Q  32.7 V  95.9 F 100.0 C 100.0) limite
+14 Qwen3-4B                             UD-Q3_K_XL         2,0 Go CPU              13.0 tok/s ctx   39k score  68.0 (Q  50.2 V  62.4 F 100.0 C 100.0) limite
+15 Qwen3-8B                             UD-Q3_K_XL         4,0 Go CPU               6.5 tok/s ctx   24k score  66.2 (Q  61.4 V  39.2 F 100.0 C 100.0) limite
+16 Qwen3-0.6B                           Q8_0               0,6 Go CPU              41.3 tok/s ctx   40k score  66.0 (Q  21.0 V 100.0 F 100.0 C 100.0) limite
+17 gemma-4-12B-it                       Q3_K_S             4,8 Go CPU               5.4 tok/s ctx    3k score  63.9 (Q  76.3 V  33.4 F  87.3 C  45.3) limite
+18 Qwen2.5-VL-7B-Instruct               Q3_K_M        *    3,5 Go CPU               7.3 tok/s ctx   28k score  62.3 (Q  58.5 V  43.3 F 100.0 C 100.0) limite
+19 gemma-7b                             Q3_K_M        *    4,0 Go CPU               6.5 tok/s ctx    8k score  61.7 (Q  60.3 V  39.5 F 100.0 C 100.0) limite
+20 Qwen3-14B                            UD-IQ2_M           5,1 Go CPU               5.1 tok/s ctx   15k score  61.0 (Q  59.4 V  31.6 F  86.6 C 100.0) limite
+21 Qwen2.5-Coder-14B-Instruct           IQ2_XS             4,4 Go CPU               5.9 tok/s ctx   16k score  60.1 (Q  50.6 V  36.3 F 100.0 C 100.0) limite
+
+Exécutable mais lent (1)
+ 1 Qwen2.5-14B-Instruct                 Q2_K               5,4 Go CPU               4.8 tok/s ctx   11k score  58.2 (Q  62.0 V  29.5 F  67.5 C 100.0) limite
+
+Trop gros (12)
+ 1 Qwen3.8-27B                          IQ2_XXS            8,3 Go trop gros         0.0 tok/s ctx     0 score  36.3 (Q  73.1 V   0.0 F   0.0 C   0.0) trop juste
+ 2 Qwen3.8-27B-Ultimate-Heretic-Uncenso IQ2_M              9,5 Go trop gros         0.0 tok/s ctx     0 score  39.3 (Q  84.9 V   0.0 F   0.0 C   0.0) trop juste
+ 3 gemma-4-26B-A4B-it                   UD-IQ2_XXS         9,2 Go trop gros         0.0 tok/s ctx     0 score  33.3 (Q  66.3 V   0.0 F   0.0 C   0.0) trop juste
+ 4 Ornith-1.5-35B-A3B                   IQ2_XS            10,5 Go trop gros         0.0 tok/s ctx     0 score  31.6 (Q  62.3 V   0.0 F   0.0 C   0.0) trop juste
+ 5 Cyber-Tiel-Coder-35B-A3B-GGUF-MTP    Q2_K          *   13,2 Go trop gros         0.0 tok/s ctx     0 score  34.1 (Q  72.4 V   0.0 F   0.0 C   0.0) trop juste
+ 6 Sage-A1.5                            IQ3_S             14,9 Go trop gros         0.0 tok/s ctx     0 score  37.7 (Q  76.6 V   0.0 F   0.0 C   0.0) trop juste
+ 7 Llama-3.3-70B-Instruct               UD-IQ2_M          22,6 Go trop gros         0.0 tok/s ctx     0 score  31.7 (Q  64.6 V   0.0 F   0.0 C   0.0) trop juste
+ 8 Qwen3-Coder-Next                     UD-IQ2_M          23,2 Go trop gros         0.0 tok/s ctx     0 score  31.1 (Q  62.7 V   0.0 F   0.0 C   0.0) trop juste
+ 9 Qwen3-Next-80B-A3B-Instruct          UD-IQ2_XXS        24,4 Go trop gros         0.0 tok/s ctx     0 score  31.1 (Q  63.6 V   0.0 F   0.0 C   0.0) trop juste
+10 llama-3-firefunction-v2              Q2_K          *   26,3 Go trop gros         0.0 tok/s ctx     0 score  32.7 (Q  73.8 V   0.0 F   0.0 C   0.0) trop juste
+11 Ornith-1.5-122B                      UD-IQ1_M          37,6 Go trop gros         0.0 tok/s ctx     0 score  37.1 (Q  75.0 V   0.0 F   0.0 C   0.0) trop juste
+12 DeepSeek-V4.1-Flash-1017-GSQ-RCO     IQ4_NL        *  103,0 Go trop gros         0.0 tok/s ctx     0 score  45.3 (Q  99.9 V   0.0 F   0.0 C   0.0) trop juste

@@ -19,6 +19,11 @@ pub struct Cache {
     root: PathBuf,
 }
 
+/// Dossier de l'application : `%LOCALAPPDATA%\GRAM` (cache, `settings.json`).
+pub fn app_dir() -> Option<PathBuf> {
+    directories::BaseDirs::new().map(|d| d.data_local_dir().join("GRAM"))
+}
+
 /// Identifiant de dépôt Hugging Face sûr pour un nom de fichier : `org/nom`, caractères
 /// `[A-Za-z0-9._-]`, sans `..`.
 pub fn valid_repo_id(repo: &str) -> bool {
@@ -44,7 +49,7 @@ impl Cache {
 
     /// `%LOCALAPPDATA%\GRAM\cache` (équivalent sur les autres OS).
     pub fn default_root() -> Option<PathBuf> {
-        directories::BaseDirs::new().map(|d| d.data_local_dir().join("GRAM").join("cache"))
+        app_dir().map(|d| d.join("cache"))
     }
 
     pub fn root(&self) -> &Path {

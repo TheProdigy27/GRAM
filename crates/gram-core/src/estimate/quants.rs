@@ -1,4 +1,5 @@
-//! Quantifications à évaluer pour un modèle (§8.5) et table `data/quant_quality.json`.
+//! Quantifications à évaluer pour un modèle (§8.5) et table `data/quant_quality.json`
+//! (échelle de repli, et facteur de qualité du §9).
 
 use super::EstimateParams;
 use crate::model::{ModelEntry, QuantVariant};
@@ -14,15 +15,25 @@ pub struct TypicalQuant {
     pub bpw: f32,
 }
 
+/// Un point de la courbe de qualité : facteur `f_quant` pour un nombre de bits par poids.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+pub struct QualityPoint {
+    pub bpw: f32,
+    pub factor: f32,
+}
+
 #[derive(Deserialize)]
 struct QuantFile {
     fallback: Vec<TypicalQuant>,
+    quality: Vec<QualityPoint>,
 }
 
 /// Contenu de `data/quant_quality.json`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct QuantTable {
     fallback: Vec<TypicalQuant>,
+    /// Triée par bits par poids croissants.
+    quality: Vec<QualityPoint>,
 }
 
 impl QuantTable {
@@ -35,15 +46,39 @@ impl QuantTable {
     }
 
     pub fn from_json(json: &str) -> serde_json::Result<Self> {
-        let file: QuantFile = serde_json::from_str(json)?;
+        let mut file: QuantFile = serde_json::from_str(json)?;
         if file.fallback.is_empty() || file.fallback.iter().any(|q| q.bpw <= 0.0) {
             return Err(serde::de::Error::custom(
                 "échelle de repli vide, ou bits par poids non positifs",
             ));
         }
+        let valid =
+            |p: &QualityPoint| p.bpw.is_finite() && p.bpw > 0.0 && (0.0..=1.0).contains(&p.factor);
+        if file.quality.is_empty() || !file.quality.iter().all(valid) {
+            return Err(serde::de::Error::custom(
+                "courbe de qualité vide, ou points hors bornes (facteur entre 0 et 1)",
+            ));
+        }
+        file.quality.sort_by(|a, b| a.bpw.total_cmp(&b.bpw));
         Ok(Self {
             fallback: file.fallback,
+            quality: file.quality,
         })
+    }
+
+    /// Facteur de qualité `f_quant` (§9) : interpolation linéaire sur les bits par poids
+    /// réels, constant au-delà des extrémités de la courbe.
+    pub fn quality_factor(&self, bpw: f32) -> f32 {
+        let (first, last) = (self.quality[0], self.quality[self.quality.len() - 1]);
+        if bpw.is_nan() || bpw <= first.bpw {
+            return first.factor;
+        }
+        if bpw >= last.bpw {
+            return last.factor;
+        }
+        let i = self.quality.partition_point(|p| p.bpw <= bpw);
+        let (a, b) = (self.quality[i - 1], self.quality[i]);
+        a.factor + (b.factor - a.factor) * (bpw - a.bpw) / (b.bpw - a.bpw)
     }
 
     /// Échelle de repli, de la quantification la plus fidèle à la plus compacte.

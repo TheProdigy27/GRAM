@@ -1,17 +1,17 @@
 //! `gram-cli estimate` : toutes les quantifications d'un modèle du catalogue, estimées pour
 //! cette machine ou pour un profil matériel enregistré (§8 du plan). Aucun appel réseau.
 
-use crate::fmt::{gb, num, thousands};
 use crate::sync::{cache, params, source_label};
 use anyhow::{Context, Result, bail};
+use gram_core::fmt::{gb, num, thousands, tok_s};
 use gram_core::{
-    DataSource, EstimateParams, FitLevel, HardwareProfile, KvCacheType, MemoryBudget, ModelEntry,
-    QuantTable, RunMode, VariantEstimate, Workload, estimate_variants,
+    DataSource, EstimateParams, HardwareProfile, KvCacheType, MemoryBudget, ModelEntry, QuantTable,
+    VariantEstimate, Workload, estimate_variants,
 };
 use serde::Serialize;
 use std::cmp::Reverse;
 use std::fmt::Write as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub struct EstimateArgs {
     pub query: String,
@@ -36,8 +36,9 @@ struct Report<'a> {
     variants: &'a [VariantEstimate],
 }
 
-pub fn run(args: EstimateArgs) -> Result<()> {
-    let hw: HardwareProfile = match &args.profile {
+/// Profil matériel enregistré (`--profile`), sinon matériel de cette machine.
+pub(crate) fn hardware(profile: Option<&Path>) -> Result<HardwareProfile> {
+    Ok(match profile {
         Some(path) => {
             let text = std::fs::read_to_string(path)
                 .with_context(|| format!("lecture de {}", path.display()))?;
@@ -45,7 +46,11 @@ pub fn run(args: EstimateArgs) -> Result<()> {
                 .with_context(|| format!("{} n'est pas un HardwareProfile", path.display()))?
         }
         None => gram_hw::detect(),
-    };
+    })
+}
+
+pub fn run(args: EstimateArgs) -> Result<()> {
+    let hw = hardware(args.profile.as_deref())?;
     let cache = cache(args.cache_dir)?;
     let (catalog, source) = gram_hub::load_offline(&cache)
         .context("aucun catalogue disponible : lancer `gram-cli sync`")?;
@@ -130,34 +135,8 @@ fn line(out: &mut String, label: &str, text: &str) {
     let _ = writeln!(out, "{label:<LABEL_WIDTH$}{text}");
 }
 
-fn mode(m: RunMode) -> String {
-    match m {
-        RunMode::Gpu => "GPU".into(),
-        RunMode::Hybrid { gpu_layers, layers } => format!("hybride {gpu_layers}/{layers}"),
-        RunMode::Cpu => "CPU".into(),
-        RunMode::TooBig => "trop gros".into(),
-    }
-}
-
-fn fit(f: FitLevel) -> &'static str {
-    match f {
-        FitLevel::Perfect => "parfait",
-        FitLevel::Good => "bon",
-        FitLevel::Marginal => "limite",
-        FitLevel::TooTight => "trop juste",
-    }
-}
-
-fn mem(bytes: u64) -> String {
+pub(crate) fn mem(bytes: u64) -> String {
     if bytes == 0 { "—".into() } else { gb(bytes) }
-}
-
-fn speed(tok_s: f32) -> String {
-    match tok_s {
-        t if t <= 0.0 => "—".into(),
-        t if t < 10.0 => format!("~{}", num(f64::from(t), 1)),
-        t => format!("~{}", t.round()),
-    }
 }
 
 fn render(
@@ -271,12 +250,12 @@ fn render(
             label,
             gb(v.size_bytes),
             bpw,
-            mode(e.mode),
+            e.mode.label(),
             mem(e.mem_gpu),
             mem(e.mem_cpu),
-            speed(e.tok_s),
+            tok_s(e.tok_s),
             ctx_max,
-            fit(e.fit)
+            e.fit.label()
         );
     }
 

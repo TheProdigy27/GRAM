@@ -18,6 +18,17 @@ pub enum DataSourceKind {
     Snapshot,
 }
 
+impl DataSourceKind {
+    /// Nom affiché dans la barre d'état.
+    pub const fn label(self) -> &'static str {
+        match self {
+            DataSourceKind::Online => "en ligne",
+            DataSourceKind::Cache => "cache",
+            DataSourceKind::Snapshot => "catalogue embarqué",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

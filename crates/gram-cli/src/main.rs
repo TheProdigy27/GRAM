@@ -1,13 +1,13 @@
 //! `gram-cli` : binaire de debug pour valider chaque brique de GRAM sans l'interface.
 
 mod estimate;
-mod fmt;
 mod hw;
+mod rank;
 mod sync;
 
-use anyhow::{Result, bail};
+use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
-use gram_core::{KvCacheType, UseCase};
+use gram_core::{KvCacheType, Runtime, UseCase};
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
@@ -71,15 +71,34 @@ enum Command {
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
-    /// Classe les modèles pour cette machine.
+    /// Classe les modèles du catalogue pour cette machine (sans réseau).
     Rank {
         #[arg(long, value_enum, default_value_t = Usage::General)]
         usage: Usage,
         /// Contexte souhaité en tokens (défaut : celui du cas d'usage).
         #[arg(long)]
         ctx: Option<u32>,
+        /// Runtime des avertissements (défaut : Ollama).
+        #[arg(long, value_enum)]
+        runtime: Option<Rt>,
+        /// Taille maximale d'une quantification, en Go.
+        #[arg(long)]
+        max_size_gb: Option<f64>,
+        /// Liste aussi les modèles trop gros.
+        #[arg(long)]
+        show_too_big: bool,
+        /// Lignes par liste (0 : toutes).
+        #[arg(long, default_value_t = 25)]
+        limit: u32,
+        /// Profil matériel JSON (`HardwareProfile`) à la place de cette machine.
+        #[arg(long)]
+        profile: Option<PathBuf>,
+        /// Sortie JSON (`RankResponse`).
         #[arg(long)]
         json: bool,
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
     },
     /// Génère `data/seed_catalog.json` (catalogue embarqué pour le hors ligne).
     Snapshot {
@@ -98,6 +117,23 @@ enum Usage {
     Reasoning,
     FastChat,
     Vision,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Rt {
+    Ollama,
+    LmStudio,
+    LlamaCpp,
+}
+
+impl From<Rt> for Runtime {
+    fn from(r: Rt) -> Self {
+        match r {
+            Rt::Ollama => Runtime::Ollama,
+            Rt::LmStudio => Runtime::LmStudio,
+            Rt::LlamaCpp => Runtime::LlamaCpp,
+        }
+    }
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -172,10 +208,27 @@ fn main() -> Result<()> {
             json,
             cache_dir,
         }),
-        Command::Rank { usage, .. } => {
-            let _usage = UseCase::from(usage);
-            bail!("`rank` n'est pas encore implémenté (phase 4)")
-        }
+        Command::Rank {
+            usage,
+            ctx,
+            runtime,
+            max_size_gb,
+            show_too_big,
+            limit,
+            profile,
+            json,
+            cache_dir,
+        } => rank::run(rank::RankArgs {
+            use_case: usage.into(),
+            ctx,
+            runtime: runtime.map(Into::into),
+            max_size_gb,
+            show_too_big,
+            limit,
+            profile,
+            json,
+            cache_dir,
+        }),
         Command::Snapshot { output, cache_dir } => sync::snapshot(&output, cache_dir),
     }
 }
@@ -257,10 +310,46 @@ mod tests {
         ])
         .unwrap();
         match cli.command {
-            Command::Rank { usage, ctx, json } => {
+            Command::Rank {
+                usage,
+                ctx,
+                json,
+                limit,
+                runtime,
+                ..
+            } => {
                 assert_eq!(UseCase::from(usage), UseCase::Code);
                 assert_eq!(ctx, Some(16384));
                 assert!(json);
+                assert_eq!(limit, 25);
+                assert!(runtime.is_none());
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
+        let cli = Cli::try_parse_from([
+            "gram-cli",
+            "rank",
+            "--runtime",
+            "llama-cpp",
+            "--max-size-gb",
+            "12.5",
+            "--show-too-big",
+            "--limit",
+            "0",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Rank {
+                runtime,
+                max_size_gb,
+                show_too_big,
+                limit,
+                ..
+            } => {
+                assert_eq!(runtime.map(Runtime::from), Some(Runtime::LlamaCpp));
+                assert_eq!(max_size_gb, Some(12.5));
+                assert!(show_too_big);
+                assert_eq!(limit, 0);
             }
             _ => panic!("sous-commande inattendue"),
         }

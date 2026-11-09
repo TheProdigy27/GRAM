@@ -14,3 +14,6 @@ ts-rs.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+insta = "1.49.0"

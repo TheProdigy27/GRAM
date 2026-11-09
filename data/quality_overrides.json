@@ -1,0 +1,4 @@
+{
+  "about": "Bonus de qualité manuels par famille de modèles (bonus_curation du §9), en points sur 100, positifs ou négatifs. La clé est cherchée, sans tenir compte de la casse, dans le modèle de base, le nom affiché et le dépôt ; si plusieurs clés correspondent, la plus longue l'emporte. Exemple : { \"qwen3-coder\": 4, \"llama-2\": -10 }. Vide au départ.",
+  "families": {}
+}

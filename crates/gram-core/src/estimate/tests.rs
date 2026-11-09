@@ -708,11 +708,19 @@ fn estimation_de_toutes_les_variantes() {
 
 #[test]
 fn table_des_quantifications() {
-    assert!(QuantTable::from_json(r#"{ "fallback": [] }"#).is_err());
-    assert!(QuantTable::from_json(r#"{ "fallback": [{ "label": "Q4_K_M", "bpw": 0 }] }"#).is_err());
-    let t =
-        QuantTable::from_json(r#"{ "fallback": [{ "label": "Q4_K_M", "bpw": 4.9 }] }"#).unwrap();
+    let curve = r#""quality": [{ "bpw": 8, "factor": 1 }, { "bpw": 3, "factor": 0.8 }]"#;
+    let table = |fallback: &str, quality: &str| {
+        QuantTable::from_json(&format!(r#"{{ "fallback": {fallback}, {quality} }}"#))
+    };
+    let q4 = r#"[{ "label": "Q4_K_M", "bpw": 4.9 }]"#;
+    assert!(table("[]", curve).is_err());
+    assert!(table(r#"[{ "label": "Q4_K_M", "bpw": 0 }]"#, curve).is_err());
+    assert!(table(q4, r#""quality": []"#).is_err());
+    assert!(table(q4, r#""quality": [{ "bpw": 4, "factor": 1.5 }]"#).is_err());
+    let t = table(q4, curve).unwrap();
     assert_eq!(t.fallback()[0].label, "Q4_K_M");
+    // Points triés à la lecture, interpolation linéaire.
+    assert!((t.quality_factor(5.5) - 0.9).abs() < 1e-6);
     let embedded = QuantTable::embedded().fallback();
     assert_eq!(embedded.first().unwrap().label, "Q8_0");
     assert!(embedded.windows(2).all(|w| w[0].bpw > w[1].bpw));

@@ -1,5 +1,5 @@
 {
-  "about": "Bits par poids typiques des quantifications GGUF, pour estimer la taille d'un modèle dont les fichiers n'ont pas été détaillés (échelle de repli du §8.5, de la plus fidèle à la plus compacte). Valeurs mesurées sur des dépôts réels (unsloth/Llama-3.1-8B-Instruct-GGUF et Qwen/Qwen3-8B-GGUF : bpw = taille × 8 / paramètres). Les petits modèles ont des bpw un peu plus élevés (embeddings gardés en haute précision), les très gros un peu plus faibles.",
+  "about": "Quantifications GGUF. « fallback » : bits par poids typiques, pour estimer la taille d'un modèle dont les fichiers n'ont pas été détaillés (échelle de repli du §8.5, de la plus fidèle à la plus compacte). Valeurs mesurées sur des dépôts réels (unsloth/Llama-3.1-8B-Instruct-GGUF et Qwen/Qwen3-8B-GGUF : bpw = taille × 8 / paramètres). Les petits modèles ont des bpw un peu plus élevés (embeddings gardés en haute précision), les très gros un peu plus faibles. « quality » : facteur de qualité f_quant du §9 en fonction des bits par poids réels, interpolé linéairement entre ces points (constant au-delà des extrémités).",
   "fallback": [
     { "label": "Q8_0", "bpw": 8.5 },
     { "label": "Q6_K", "bpw": 6.57 },
@@ -7,5 +7,15 @@
     { "label": "Q4_K_M", "bpw": 4.9 },
     { "label": "Q3_K_M", "bpw": 4.0 },
     { "label": "Q2_K", "bpw": 3.2 }
+  ],
+  "quality": [
+    { "bpw": 2.6, "factor": 0.70 },
+    { "bpw": 3.0, "factor": 0.82 },
+    { "bpw": 3.9, "factor": 0.90 },
+    { "bpw": 4.25, "factor": 0.94 },
+    { "bpw": 4.8, "factor": 0.96 },
+    { "bpw": 5.5, "factor": 0.98 },
+    { "bpw": 6.5, "factor": 0.99 },
+    { "bpw": 8.0, "factor": 1.00 }
   ]
 }

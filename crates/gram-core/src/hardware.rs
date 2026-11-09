@@ -62,6 +62,20 @@ pub enum RamKind {
     Unknown,
 }
 
+impl RamKind {
+    /// Nom affiché.
+    pub const fn label(self) -> &'static str {
+        match self {
+            RamKind::Ddr3 => "DDR3",
+            RamKind::Ddr4 => "DDR4",
+            RamKind::Ddr5 => "DDR5",
+            RamKind::Lpddr4 => "LPDDR4",
+            RamKind::Lpddr5 => "LPDDR5",
+            RamKind::Unknown => "type inconnu",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

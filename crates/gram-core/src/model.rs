@@ -99,15 +99,37 @@ pub enum Pipeline {
 }
 
 /// Cas d'usage : polyvalent, code, raisonnement, chat rapide, vision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum UseCase {
+    #[default]
     General,
     Code,
     Reasoning,
     FastChat,
     Vision,
+}
+
+impl UseCase {
+    pub const ALL: [UseCase; 5] = [
+        UseCase::General,
+        UseCase::Code,
+        UseCase::Reasoning,
+        UseCase::FastChat,
+        UseCase::Vision,
+    ];
+
+    /// Nom affiché.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::General => "Polyvalent",
+            Self::Code => "Code",
+            Self::Reasoning => "Raisonnement",
+            Self::FastChat => "Chat rapide",
+            Self::Vision => "Vision",
+        }
+    }
 }
 
 /// Une quantification d'un dépôt GGUF.

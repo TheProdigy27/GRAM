@@ -58,6 +58,18 @@ pub enum RunMode {
     TooBig,
 }
 
+impl RunMode {
+    /// Nom affiché : « GPU », « hybride 37/80 », « CPU », « trop gros ».
+    pub fn label(&self) -> String {
+        match *self {
+            RunMode::Gpu => "GPU".into(),
+            RunMode::Hybrid { gpu_layers, layers } => format!("hybride {gpu_layers}/{layers}"),
+            RunMode::Cpu => "CPU".into(),
+            RunMode::TooBig => "trop gros".into(),
+        }
+    }
+}
+
 /// Niveau d'adéquation affiché : parfait, bon, limite, trop juste.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -86,6 +98,18 @@ pub struct MemoryBreakdown {
     pub overhead: u64,
     /// Projecteur vision (`mmproj`), si l'usage vision est demandé, en octets.
     pub vision: u64,
+}
+
+impl FitLevel {
+    /// Nom affiché.
+    pub const fn label(self) -> &'static str {
+        match self {
+            FitLevel::Perfect => "parfait",
+            FitLevel::Good => "bon",
+            FitLevel::Marginal => "limite",
+            FitLevel::TooTight => "trop juste",
+        }
+    }
 }
 
 impl MemoryBreakdown {
