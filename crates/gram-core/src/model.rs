@@ -9,7 +9,8 @@ use ts_rs::TS;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ModelEntry {
-    /// Dépôt canonique (ex. « bartowski/Qwen_Qwen3-8B-GGUF »).
+    /// Dépôt canonique (ex. « Qwen/Qwen3-8B-GGUF ») : organisation officielle, sinon uploader
+    /// prioritaire, sinon le plus téléchargé.
     pub repo_id: String,
     pub sha: String,
     /// `cardData.base_model` (ex. « Qwen/Qwen3-8B »).
@@ -32,13 +33,26 @@ pub struct ModelEntry {
     pub last_modified: Option<DateTime<Utc>>,
     /// Dépôt protégé : il faut accepter les conditions (et un token) pour télécharger.
     pub gated: bool,
-    /// Une entrée par quantification, de la plus petite à la plus grosse. Vide tant que le
-    /// détail du dépôt n'a pas été chargé (tailles réelles inconnues).
+    /// Une entrée par quantification, de la plus petite à la plus grosse, réunies depuis le
+    /// dépôt canonique et les alternatives détaillées (le dépôt prioritaire l'emporte pour un
+    /// même libellé). Vide tant qu'aucun détail n'a été chargé (tailles réelles inconnues).
     pub variants: Vec<QuantVariant>,
     /// Taille du projecteur vision (`mmproj-*.gguf`), en octets.
     pub mmproj_bytes: Option<u64>,
-    /// Autres dépôts GGUF du même modèle de base.
-    pub alternatives: Vec<String>,
+    /// Autres dépôts GGUF du même modèle de base, par ordre de priorité.
+    pub alternatives: Vec<RepoRef>,
+}
+
+/// Un dépôt GGUF alternatif d'un modèle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RepoRef {
+    pub repo_id: String,
+    /// Commit vu dans la liste (clé du cache des détails).
+    pub sha: String,
+    pub downloads: u64,
+    pub gated: bool,
 }
 
 /// Métadonnées d'architecture, nécessaires au calcul du cache KV.
@@ -103,7 +117,10 @@ pub enum UseCase {
 pub struct QuantVariant {
     /// Ex. « Q4_K_M », « UD-Q4_K_XL », « IQ4_XS ».
     pub label: String,
-    /// Plusieurs fichiers si le modèle est découpé.
+    /// Dépôt qui fournit ces fichiers : le canonique ou une alternative
+    /// (`ollama run hf.co/{repo_id}:{label}`).
+    pub repo_id: String,
+    /// Chemins dans le dépôt ; plusieurs fichiers si le modèle est découpé.
     pub files: Vec<String>,
     pub size_bytes: u64,
     /// Bits par poids réels = taille × 8 / paramètres.

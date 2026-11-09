@@ -164,6 +164,12 @@ fn model_row(i: usize, m: &ModelEntry) -> String {
         None => "inconnue".into(),
     };
     let mut flags = Vec::new();
+    let mut repos: Vec<&str> = m.variants.iter().map(|v| v.repo_id.as_str()).collect();
+    repos.sort_unstable();
+    repos.dedup();
+    if repos.len() > 1 {
+        flags.push(format!("{} dépôts", repos.len()));
+    }
     if let Some(active) = m.params_active {
         flags.push(format!("MoE {} actifs", params(active)));
     }
@@ -264,8 +270,9 @@ mod tests {
     };
 
     fn entry() -> ModelEntry {
-        let variant = |label: &str, size_bytes: u64| QuantVariant {
+        let variant = |label: &str, repo: &str, size_bytes: u64| QuantVariant {
             label: label.into(),
+            repo_id: repo.into(),
             files: vec![format!("m-{label}.gguf")],
             size_bytes,
             bpw: 4.9,
@@ -300,8 +307,8 @@ mod tests {
             last_modified: None,
             gated: false,
             variants: vec![
-                variant("Q4_K_M", 20_542_732_576),
-                variant("BF16", 69_376_637_536),
+                variant("Q4_K_M", "unsloth/Qwen3.6-35B-A3B-GGUF", 20_542_732_576),
+                variant("BF16", "ggml-org/Qwen3.6-35B-A3B-GGUF", 69_376_637_536),
             ],
             mmproj_bytes: Some(902_822_144),
             alternatives: vec![],
@@ -346,6 +353,6 @@ mod tests {
         assert!(out.contains("Qwen3.6-35B-A3B"));
         assert!(out.contains("35B   2 quantifs  19,1–64,6 Go"), "{out}");
         assert!(out.contains("256k  qwen35moe · 40 couches · 2 KV (10 couches KV)"));
-        assert!(out.contains("MoE 3,5B actifs, vision"));
+        assert!(out.contains("· 2 dépôts, MoE 3,5B actifs, vision"), "{out}");
     }
 }

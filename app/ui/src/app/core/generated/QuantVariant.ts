@@ -9,7 +9,12 @@ export type QuantVariant = {
  */
 label: string, 
 /**
- * Plusieurs fichiers si le modèle est découpé.
+ * Dépôt qui fournit ces fichiers : le canonique ou une alternative
+ * (`ollama run hf.co/{repo_id}:{label}`).
+ */
+repoId: string, 
+/**
+ * Chemins dans le dépôt ; plusieurs fichiers si le modèle est découpé.
  */
 files: Array<string>, sizeBytes: number, 
 /**

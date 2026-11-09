@@ -158,8 +158,10 @@ async fn synchronisation_complete_puis_cache_puis_hors_ligne() {
     let s = &out.summary;
     let c = &out.catalog;
     assert_eq!(s.source.kind, DataSourceKind::Online);
-    // 3 tranches (0–2B, 2–5B, 5–10B) × 2 pipelines × 2 tris, puis 5 détails.
-    assert_eq!(s.api_calls, 12 + 5);
+    // 3 tranches (0–2B, 2–5B, 5–10B) × 2 pipelines × 2 tris, 5 dépôts canoniques, puis
+    // 2 alternatives pour Qwen3-8B (dépôt officiel incomplet) : unsloth (absent, 404) et
+    // bartowski.
+    assert_eq!(s.api_calls, 12 + 5 + 2);
     // 3 en-têtes GGUF, 1 en-tête absent (404) puis son config.json.
     assert_eq!(s.resolver_calls, 5);
     assert_eq!((s.models, s.detailed, s.with_arch), (6, 4, 4));
@@ -186,13 +188,29 @@ async fn synchronisation_complete_puis_cache_puis_hors_ligne() {
     assert!(!c.models.iter().any(|m| m.repo_id.contains("askmdb")));
 
     let qwen3 = model(c, "Qwen/Qwen3-8B-GGUF");
+    let alternatives: Vec<&str> = qwen3
+        .alternatives
+        .iter()
+        .map(|a| a.repo_id.as_str())
+        .collect();
     assert_eq!(
-        qwen3.alternatives,
+        alternatives,
         vec!["unsloth/Qwen3-8B-GGUF", "bartowski/Qwen_Qwen3-8B-GGUF"]
     );
+    assert_eq!(
+        qwen3.alternatives[1].sha,
+        "0b69f75b7472688e6808490aa2b85efdb81b5ce7"
+    );
     assert_eq!(qwen3.base_model.as_deref(), Some("Qwen/Qwen3-8B"));
-    assert_eq!(qwen3.variants.len(), 5);
-    assert_eq!(qwen3.variants[0].label, "Q4_K_M");
+    // 5 quantifications officielles + 20 libellés que seul bartowski propose.
+    assert_eq!(qwen3.variants.len(), 25);
+    let smallest = &qwen3.variants[0];
+    assert_eq!(
+        (smallest.label.as_str(), smallest.repo_id.as_str()),
+        ("IQ2_M", "bartowski/Qwen_Qwen3-8B-GGUF")
+    );
+    let q4 = qwen3.variants.iter().find(|v| v.label == "Q4_K_M").unwrap();
+    assert_eq!(q4.repo_id, "Qwen/Qwen3-8B-GGUF");
     let arch = qwen3.arch.as_ref().unwrap();
     assert_eq!(arch.source, ArchSource::GgufHeader);
     assert_eq!(
@@ -229,14 +247,14 @@ async fn synchronisation_complete_puis_cache_puis_hors_ligne() {
         std::fs::read_dir(dir.path().join("details"))
             .unwrap()
             .count(),
-        4
+        5
     );
     assert_eq!(
         std::fs::read_dir(dir.path().join("arch")).unwrap().count(),
         4
     );
 
-    // Progression : 12 listes, 5 détails, 4 architectures.
+    // Progression : 12 listes, 5 détails, deux passes d'alternatives, 4 architectures.
     let totals: Vec<(SyncPhase, u32)> = events
         .lock()
         .unwrap()
@@ -251,6 +269,8 @@ async fn synchronisation_complete_puis_cache_puis_hors_ligne() {
         vec![
             (SyncPhase::Listing, 12),
             (SyncPhase::Details, 5),
+            (SyncPhase::Details, 1),
+            (SyncPhase::Details, 1),
             (SyncPhase::Architecture, 4)
         ]
     );
@@ -288,7 +308,8 @@ async fn synchronisation_complete_puis_cache_puis_hors_ligne() {
     };
     let resync = sync_with_seed(&hub, &cache, &forced, None).await.unwrap();
     assert_eq!(resync.summary.source.kind, DataSourceKind::Online);
-    // 12 listes + le détail toujours absent d'Igor282.
+    // 12 listes + le détail toujours absent d'Igor282. Qwen3-8B est complet grâce au cache
+    // de bartowski : unsloth n'est pas redemandé.
     assert_eq!(resync.summary.api_calls, 13);
     assert_eq!(resync.summary.resolver_calls, 0);
     assert_eq!(resync.summary.with_arch, 4);
@@ -345,7 +366,8 @@ async fn enrichissement_a_la_demande() {
         enrich(&hub, &cache, &dale).await,
         Err(HubError::Http { status: 404, .. })
     ));
-    // Un modèle déjà détaillé : tout vient du cache.
+    // Un modèle déjà détaillé : tout vient du cache, sauf l'alternative unsloth, jamais
+    // obtenue (404), que la fiche détail redemande.
     let before = hub.api_calls() + hub.resolver_calls();
     let qwen3 = model(&out.catalog, "Qwen/Qwen3-8B-GGUF");
     let stripped = ModelEntry {
@@ -355,7 +377,7 @@ async fn enrichissement_a_la_demande() {
     };
     let e = enrich(&hub, &cache, &stripped).await.unwrap();
     assert_eq!(&e, qwen3);
-    assert_eq!(hub.api_calls() + hub.resolver_calls(), before);
+    assert_eq!(hub.api_calls() + hub.resolver_calls(), before + 1);
 }
 
 #[test]

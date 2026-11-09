@@ -5,14 +5,14 @@ use crate::api::ApiModel;
 use crate::dedup::Group;
 use crate::files::{self, RepoFile};
 use chrono::{DateTime, Utc};
-use gram_core::{ArchInfo, ModelEntry, Pipeline, UseCase};
+use gram_core::{ArchInfo, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
 /// Version du format de `catalog.json` et de `seed_catalog.json`. Un cache d'un autre format
 /// est ignoré.
-pub const CATALOG_FORMAT: u32 = 1;
+pub const CATALOG_FORMAT: u32 = 2;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -167,37 +167,81 @@ pub fn entry_from_group(g: &Group) -> ModelEntry {
         gated: c.gated,
         variants: Vec::new(),
         mmproj_bytes: None,
-        alternatives: g.repos[1..].iter().map(|r| r.model.id.clone()).collect(),
+        alternatives: g.repos[1..]
+            .iter()
+            .map(|r| RepoRef {
+                repo_id: r.model.id.clone(),
+                sha: r.model.sha.clone().unwrap_or_default(),
+                downloads: r.downloads(),
+                gated: r.model.gated,
+            })
+            .collect(),
     }
 }
 
-/// Ajoute les tailles réelles des fichiers. Renvoie `false` si le dépôt ne contient aucune
-/// quantification exploitable, ou si son nombre de paramètres est manifestement faux.
-pub fn apply_detail(e: &mut ModelEntry, d: &RepoDetail) -> bool {
-    e.sha.clone_from(&d.sha);
-    e.gated = d.gated;
-    if let Some(p) = d.params_total {
-        e.params_total = p;
+/// Quantifications suffisantes pour se passer des dépôts alternatifs : au moins
+/// [`COMPLETE_MIN_VARIANTS`] variantes, dont une sous [`COMPLETE_MAX_LOW_BPW`] bits par poids
+/// (pour les machines à petite mémoire). Les dépôts officiels n'en proposent souvent que
+/// quelques-unes, à partir de Q4_K_M.
+pub const COMPLETE_MIN_VARIANTS: usize = 8;
+pub const COMPLETE_MAX_LOW_BPW: f32 = 3.5;
+
+pub fn variants_complete(variants: &[QuantVariant]) -> bool {
+    variants.len() >= COMPLETE_MIN_VARIANTS
+        && variants
+            .iter()
+            .any(|v| v.bpw > 0.0 && v.bpw <= COMPLETE_MAX_LOW_BPW)
+}
+
+/// Ajoute les tailles réelles des fichiers, réunies depuis plusieurs dépôts du groupe.
+/// `details` est trié par priorité (dépôt canonique d'abord) : pour un même libellé, la
+/// variante du dépôt prioritaire l'emporte ; le projecteur vision vient du premier dépôt qui
+/// en a un.
+///
+/// Renvoie `false` si aucune quantification n'est exploitable, ou si le nombre de paramètres
+/// du dépôt canonique est manifestement faux (modèle écarté). Une alternative incohérente est
+/// simplement ignorée.
+pub fn apply_details(e: &mut ModelEntry, details: &[&RepoDetail]) -> bool {
+    if let Some(d) = details.iter().find(|d| d.repo_id == e.repo_id) {
+        e.sha.clone_from(&d.sha);
+        e.gated = d.gated;
+        if let Some(p) = d.params_total {
+            e.params_total = p;
+        }
     }
-    if e.ctx_train == 0
-        && let Some(c) = d.ctx_train
-    {
-        e.ctx_train = c;
+    let mut variants: Vec<QuantVariant> = Vec::new();
+    let mut mmproj = None;
+    let mut vision_tag = false;
+    for d in details {
+        if e.ctx_train == 0
+            && let Some(c) = d.ctx_train
+        {
+            e.ctx_train = c;
+        }
+        let analysis = files::analyze(&d.repo_id, &d.files, e.params_total);
+        if analysis.params_suspect() {
+            tracing::debug!(
+                repo = d.repo_id,
+                "nombre de paramètres incohérent avec les fichiers"
+            );
+            if d.repo_id == e.repo_id {
+                e.variants.clear();
+                return false;
+            }
+            continue;
+        }
+        vision_tag |= d.pipeline_tag.as_deref() == Some("image-text-to-text");
+        mmproj = mmproj.or(analysis.mmproj.map(|m| m.size));
+        for v in analysis.variants {
+            if !variants.iter().any(|known| known.label == v.label) {
+                variants.push(v);
+            }
+        }
     }
-    let analysis = files::analyze(&d.files, e.params_total);
-    if analysis.params_suspect() {
-        tracing::debug!(
-            repo = e.repo_id,
-            "nombre de paramètres incohérent avec les fichiers : modèle écarté"
-        );
-        e.variants.clear();
-        return false;
-    }
-    e.variants = analysis.variants;
-    e.mmproj_bytes = analysis.mmproj.map(|m| m.size);
-    let vision =
-        e.mmproj_bytes.is_some() || d.pipeline_tag.as_deref() == Some("image-text-to-text");
-    if vision {
+    variants.sort_by(|a, b| a.size_bytes.cmp(&b.size_bytes).then(a.label.cmp(&b.label)));
+    e.variants = variants;
+    e.mmproj_bytes = mmproj;
+    if e.mmproj_bytes.is_some() || vision_tag {
         e.pipeline = Pipeline::ImageTextToText;
         if !e.use_cases.contains(&UseCase::Vision) {
             e.use_cases.push(UseCase::Vision);
@@ -221,6 +265,118 @@ pub fn apply_arch(e: &mut ModelEntry, a: &ArchRecord) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::files::RepoFile;
+    use crate::test_support::fixture;
+
+    fn detail(name: &str) -> RepoDetail {
+        let m: ApiModel =
+            serde_json::from_slice(&fixture(&format!("details/{name}.json"))).unwrap();
+        RepoDetail::from_api(&m).unwrap()
+    }
+
+    fn entry(repo: &str, params_total: u64) -> ModelEntry {
+        ModelEntry {
+            repo_id: repo.into(),
+            sha: String::new(),
+            base_model: None,
+            display_name: "test".into(),
+            params_total,
+            params_active: None,
+            arch: None,
+            ctx_train: 0,
+            pipeline: Pipeline::TextGeneration,
+            use_cases: vec![UseCase::General],
+            downloads: 0,
+            likes: 0,
+            created_at: None,
+            last_modified: None,
+            gated: false,
+            variants: vec![],
+            mmproj_bytes: None,
+            alternatives: vec![],
+        }
+    }
+
+    #[test]
+    fn quantifications_reunies() {
+        let official = detail("Qwen--Qwen3-8B-GGUF");
+        let bartowski = detail("bartowski--Qwen_Qwen3-8B-GGUF");
+        let mut e = entry("Qwen/Qwen3-8B-GGUF", 8_190_735_360);
+
+        assert!(apply_details(&mut e, &[&official]));
+        assert_eq!(e.variants.len(), 5);
+        assert_eq!(e.sha, official.sha);
+        assert_eq!(e.ctx_train, 40960);
+        // Rien sous Q4_K_M : il faut un dépôt alternatif.
+        assert!(!variants_complete(&e.variants));
+
+        assert!(apply_details(&mut e, &[&official, &bartowski]));
+        assert_eq!(e.variants.len(), 25);
+        assert!(variants_complete(&e.variants));
+        // Même libellé dans les deux dépôts : le dépôt prioritaire (officiel) l'emporte.
+        let q4 = e.variants.iter().find(|v| v.label == "Q4_K_M").unwrap();
+        assert_eq!(q4.repo_id, "Qwen/Qwen3-8B-GGUF");
+        assert_eq!(q4.files, vec!["Qwen3-8B-Q4_K_M.gguf"]);
+        // Libellés propres à chaque dépôt.
+        let q5_0 = e.variants.iter().find(|v| v.label == "Q5_0").unwrap();
+        assert_eq!(q5_0.repo_id, "Qwen/Qwen3-8B-GGUF");
+        assert_eq!(e.variants[0].label, "IQ2_M");
+        assert_eq!(e.variants[0].repo_id, "bartowski/Qwen_Qwen3-8B-GGUF");
+        assert!(
+            e.variants
+                .windows(2)
+                .all(|w| w[0].size_bytes <= w[1].size_bytes)
+        );
+        // Le sha reste celui du dépôt canonique.
+        assert_eq!(e.sha, official.sha);
+
+        // Ordre inverse : bartowski prioritaire pour les libellés communs.
+        let mut e = entry("bartowski/Qwen_Qwen3-8B-GGUF", 8_190_735_360);
+        apply_details(&mut e, &[&bartowski, &official]);
+        let q4 = e.variants.iter().find(|v| v.label == "Q4_K_M").unwrap();
+        assert_eq!(q4.repo_id, "bartowski/Qwen_Qwen3-8B-GGUF");
+    }
+
+    #[test]
+    fn projecteur_vision() {
+        let unsloth = detail("unsloth--Qwen3.5-9B-GGUF");
+        let mut e = entry("Qwen/Qwen3.5-9B-GGUF", 8_953_803_264);
+        assert!(apply_details(&mut e, &[&unsloth]));
+        assert_eq!(e.mmproj_bytes, Some(918_166_080));
+        assert_eq!(e.pipeline, Pipeline::ImageTextToText);
+        assert!(e.use_cases.contains(&UseCase::Vision));
+    }
+
+    #[test]
+    fn depot_incoherent() {
+        let official = detail("Qwen--Qwen3-8B-GGUF");
+        // Fichiers bien trop gros pour 8 G paramètres (plus de 40 bits par poids).
+        let weird = RepoDetail {
+            repo_id: "x/weird-GGUF".into(),
+            sha: "0123456789abcdef".into(),
+            gated: false,
+            pipeline_tag: None,
+            params_total: None,
+            ctx_train: None,
+            files: ["Q2_K", "Q3_K_M", "Q4_K_M"]
+                .iter()
+                .map(|q| RepoFile {
+                    path: format!("m-{q}.gguf"),
+                    size: 60_000_000_000,
+                })
+                .collect(),
+        };
+        // Alternative incohérente : ignorée.
+        let mut e = entry("Qwen/Qwen3-8B-GGUF", 8_190_735_360);
+        assert!(apply_details(&mut e, &[&official, &weird]));
+        assert_eq!(e.variants.len(), 5);
+        // Dépôt canonique incohérent : modèle écarté.
+        let mut e = entry("x/weird-GGUF", 8_190_735_360);
+        assert!(!apply_details(&mut e, &[&weird, &official]));
+        assert!(e.variants.is_empty());
+        // Aucun détail : rien d'exploitable.
+        assert!(!apply_details(&mut entry("a/b", 1), &[]));
+    }
 
     #[test]
     fn actifs_par_le_nom() {

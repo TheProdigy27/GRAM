@@ -58,10 +58,10 @@ Pour ajouter un cas de test matériel (portable, GPU AMD, machine sans GPU…) :
 
 1. elle les regroupe par modèle de base, d'après les tags `base_model:quantized:…` : un fine-tune reste à part ;
 2. elle choisit le dépôt canonique (organisation officielle, puis `data/uploaders.json`, puis le plus téléchargé) ;
-3. elle charge les tailles réelles des fichiers pour les 150 premiers groupes ;
+3. elle charge les tailles réelles des fichiers pour les 150 premiers groupes, et réunit les quantifications de tous les dépôts du groupe. Si le dépôt canonique en propose peu (un dépôt officiel limité à Q4_K_M et au-dessus, par exemple), elle charge jusqu'à 2 dépôts alternatifs. Pour un même libellé, le dépôt prioritaire l'emporte ;
 4. elle lit l'architecture dans les 64 premiers Kio de l'en-tête GGUF, et à défaut dans le `config.json` du modèle de base.
 
-Une synchronisation complète coûte environ 180 appels API et 150 appels resolver, ce qui reste sous le quota anonyme. Les suivantes réutilisent le cache.
+Une première synchronisation coûte environ 230 appels API et 150 appels resolver, ce qui reste sous le quota anonyme (500 par 5 minutes). Les suivantes réutilisent le cache. La fiche d'un modèle (`enrich`) réunit les quantifications de tous ses dépôts, dans la limite de 10 alternatives.
 
 - Cache : `%LOCALAPPDATA%\GRAM\cache\` (`catalog.json`, `details/` et `arch/` indexés par commit, donc gardés indéfiniment).
 - Hors ligne, ou si Hugging Face est injoignable : cache, puis catalogue embarqué (`data/seed_catalog.json`).

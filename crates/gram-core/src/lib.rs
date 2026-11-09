@@ -21,7 +21,7 @@ pub use hardware::{
     Backends, CpuInfo, DiskInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, RamKind, Source,
     Vendor,
 };
-pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, UseCase};
+pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};
 pub use runtime::{RuntimeStatus, RuntimesStatus};
 
 /// Version du crate, affichée dans l'interface.

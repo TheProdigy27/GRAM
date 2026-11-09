@@ -4,8 +4,10 @@
 //!    téléchargements et top 50 par tendance.
 //! 2. Filtrage : `gguf.total` connu, sous la borne haute, assez téléchargé (ou en tendance).
 //! 3. Dédoublonnage par modèle de base ([`crate::dedup`]).
-//! 4. Pré-classement, puis détail (`?blobs=true`, tailles réelles) des N premiers groupes ;
-//!    le cache par `repo@sha` sert pour tous les groupes, sans appel réseau.
+//! 4. Pré-classement, puis détail (`?blobs=true`, tailles réelles) du dépôt canonique des N
+//!    premiers groupes, et de 2 dépôts alternatifs au plus quand ses quantifications sont
+//!    incomplètes ; les quantifications de tous les dépôts détaillés sont réunies. Le cache par
+//!    `repo@sha` sert pour tous les dépôts de tous les groupes, sans appel réseau.
 //! 5. Architecture (en-tête GGUF, sinon `config.json`) des modèles détaillés.
 //!
 //! Hors ligne, ou si Hugging Face est injoignable : cache, puis catalogue embarqué.
@@ -13,7 +15,8 @@
 use crate::api::{self, ApiModel, ListQuery, SizeBucket, Sort};
 use crate::cache::{Cache, valid_repo_id};
 use crate::catalog::{
-    ArchRecord, CATALOG_FORMAT, Catalog, RepoDetail, apply_arch, apply_detail, entry_from_group,
+    ArchRecord, CATALOG_FORMAT, Catalog, RepoDetail, apply_arch, apply_details, entry_from_group,
+    variants_complete,
 };
 use crate::config::parse_config;
 use crate::dedup::{Group, ListedRepo, Uploaders, group_repos};
@@ -33,6 +36,13 @@ use std::sync::atomic::{AtomicU32, Ordering};
 /// Lectures successives de l'en-tête GGUF : 64 Kio suffisent presque toujours (les clés
 /// d'architecture précèdent le tokenizer), 32 Mio au maximum (§7.4).
 const HEADER_READS: [u64; 3] = [64 << 10, 8 << 20, 32 << 20];
+
+/// Dépôts alternatifs détaillés au plus par groupe pendant une synchronisation, quand les
+/// quantifications du dépôt canonique sont incomplètes (quota de l'API).
+const MAX_EXTRA_REPOS: usize = 2;
+
+/// Dépôts alternatifs détaillés au plus quand on ouvre la fiche d'un modèle ([`enrich`]).
+const MAX_ENRICH_ALTERNATIVES: usize = 10;
 
 #[derive(Debug, Clone)]
 pub struct SyncOptions {
@@ -314,6 +324,7 @@ struct Progress<'a, T> {
 }
 
 impl<'a, T: Transport> Progress<'a, T> {
+    /// Rien n'est émis pour une étape vide. L'étape `Details` peut se répéter (alternatives).
     fn start(hub: &'a Hub<T>, phase: SyncPhase, total: usize) -> Self {
         let p = Self {
             hub,
@@ -321,7 +332,9 @@ impl<'a, T: Transport> Progress<'a, T> {
             done: AtomicU32::new(0),
             total: total as u32,
         };
-        p.emit(0);
+        if total > 0 {
+            p.emit(0);
+        }
         p
     }
 
@@ -383,44 +396,63 @@ async fn sync_online<T: Transport>(
     tracing::info!(repos = repos.len(), "dépôts GGUF retenus");
     let groups = group_repos(repos, Uploaders::embedded());
 
-    // 4. Pré-classement et détails.
+    // 4. Pré-classement et détails. Le cache (par commit) sert pour tous les dépôts de tous
+    //    les groupes ; le réseau, pour les N premiers groupes seulement.
     let mut entries: Vec<ModelEntry> = prerank(&groups)
         .into_iter()
         .map(|i| entry_from_group(&groups[i]))
         .collect();
-    let mut dropped = vec![false; entries.len()];
-    let mut to_fetch = Vec::new();
-    for (i, e) in entries.iter_mut().enumerate() {
-        match cache.load_detail(&e.repo_id, &e.sha) {
-            Some(d) => dropped[i] = !apply_detail(e, &d),
-            None if i < opts.detail_groups => to_fetch.push(i),
-            None => {}
-        }
-    }
-    let progress = Progress::start(hub, SyncPhase::Details, to_fetch.len());
-    let results = join_all(to_fetch.iter().map(|&i| {
-        let repo = entries[i].repo_id.clone();
-        let progress = &progress;
-        async move {
-            let r = fetch_detail(hub, &repo).await;
-            progress.step();
-            (i, r)
-        }
-    }))
-    .await;
-    for (i, r) in results {
-        match r {
-            Ok(d) => {
-                if let Err(e) = cache.save_detail(&d) {
-                    tracing::warn!("détail non mis en cache : {e}");
-                }
-                dropped[i] = !apply_detail(&mut entries[i], &d);
+    // Détails de chaque modèle, un emplacement par dépôt : canonique (0) puis alternatives.
+    let mut details: Vec<Vec<Option<RepoDetail>>> = entries
+        .iter()
+        .map(|e| {
+            repo_slots(e)
+                .map(|(repo, sha)| cache.load_detail(repo, sha))
+                .collect()
+        })
+        .collect();
+    let top = entries.len().min(opts.detail_groups);
+
+    // 4a. Dépôts canoniques.
+    let jobs: Vec<(usize, usize)> = (0..top)
+        .filter(|&i| details[i][0].is_none())
+        .map(|i| (i, 0))
+        .collect();
+    fetch_details(hub, cache, &entries, &mut details, jobs, &mut warnings).await?;
+
+    // 4b. Alternatives, quand les quantifications réunies ne suffisent pas (dépôt officiel
+    //     limité à Q4_K_M et au-dessus, par exemple) : un dépôt de plus par passe.
+    let mut next_alt = vec![1usize; entries.len()];
+    for _ in 0..MAX_EXTRA_REPOS {
+        let mut jobs = Vec::new();
+        for i in 0..top {
+            if details[i][0].is_none() {
+                continue;
             }
-            Err(e) if e.is_global() => return Err(e),
-            Err(e) => warnings.push(format!(
-                "Détail de {} indisponible : {e}",
-                entries[i].repo_id
-            )),
+            let present: Vec<&RepoDetail> = details[i].iter().flatten().collect();
+            apply_details(&mut entries[i], &present);
+            if variants_complete(&entries[i].variants) {
+                continue;
+            }
+            while next_alt[i] < details[i].len() && details[i][next_alt[i]].is_some() {
+                next_alt[i] += 1;
+            }
+            if next_alt[i] < details[i].len() {
+                jobs.push((i, next_alt[i]));
+                next_alt[i] += 1;
+            }
+        }
+        if jobs.is_empty() {
+            break;
+        }
+        fetch_details(hub, cache, &entries, &mut details, jobs, &mut warnings).await?;
+    }
+
+    let mut dropped = vec![false; entries.len()];
+    for (i, e) in entries.iter_mut().enumerate() {
+        let present: Vec<&RepoDetail> = details[i].iter().flatten().collect();
+        if !present.is_empty() {
+            dropped[i] = !apply_details(e, &present);
         }
     }
 
@@ -476,6 +508,53 @@ async fn sync_online<T: Transport>(
     Ok((catalog, warnings))
 }
 
+/// Dépôts d'un modèle, (identifiant, commit) : canonique puis alternatives.
+fn repo_slots(e: &ModelEntry) -> impl Iterator<Item = (&str, &str)> {
+    std::iter::once((e.repo_id.as_str(), e.sha.as_str())).chain(
+        e.alternatives
+            .iter()
+            .map(|a| (a.repo_id.as_str(), a.sha.as_str())),
+    )
+}
+
+/// Télécharge et met en cache les détails `(modèle, emplacement)` demandés.
+async fn fetch_details<T: Transport>(
+    hub: &Hub<T>,
+    cache: &Cache,
+    entries: &[ModelEntry],
+    details: &mut [Vec<Option<RepoDetail>>],
+    jobs: Vec<(usize, usize)>,
+    warnings: &mut Vec<String>,
+) -> Result<()> {
+    let progress = &Progress::start(hub, SyncPhase::Details, jobs.len());
+    let results = join_all(jobs.into_iter().map(|(i, slot)| {
+        let repo = repo_slots(&entries[i])
+            .nth(slot)
+            .map(|(r, _)| r.to_owned())
+            .unwrap_or_default();
+        async move {
+            let r = fetch_detail(hub, &repo).await;
+            progress.step();
+            (i, slot, repo, r)
+        }
+    }))
+    .await;
+    for (i, slot, repo, r) in results {
+        match r {
+            Ok(d) => {
+                if let Err(e) = cache.save_detail(&d) {
+                    tracing::warn!("détail non mis en cache : {e}");
+                }
+                details[i][slot] = Some(d);
+            }
+            Err(e) if e.is_global() => return Err(e),
+            Err(e) if slot == 0 => warnings.push(format!("Détail de {repo} indisponible : {e}")),
+            Err(e) => tracing::debug!(repo, "détail d'un dépôt alternatif indisponible : {e}"),
+        }
+    }
+    Ok(())
+}
+
 async fn fetch_detail<T: Transport>(hub: &Hub<T>, repo: &str) -> Result<RepoDetail> {
     let url = api::detail_url(hub.base(), repo);
     let m: ApiModel = hub.get_json(url.clone()).await?;
@@ -484,9 +563,29 @@ async fn fetch_detail<T: Transport>(hub: &Hub<T>, repo: &str) -> Result<RepoDeta
 
 /// Architecture d'un modèle détaillé : en-tête GGUF du plus petit fichier (première partie
 /// s'il est découpé), sinon `config.json` du modèle de base. `Ok(None)` si rien n'est lisible.
+/// Fichier dont on lit l'en-tête : la plus petite variante du dépôt canonique, sinon la plus
+/// petite variante tout court. (dépôt, révision, fichier).
+fn header_source(e: &ModelEntry) -> Option<(&str, &str, &str)> {
+    let v = e
+        .variants
+        .iter()
+        .find(|v| v.repo_id == e.repo_id)
+        .or_else(|| e.variants.first())?;
+    let sha = if v.repo_id == e.repo_id {
+        e.sha.as_str()
+    } else {
+        e.alternatives
+            .iter()
+            .find(|a| a.repo_id == v.repo_id)
+            .map_or("", |a| a.sha.as_str())
+    };
+    let revision = if sha.is_empty() { "main" } else { sha };
+    Some((v.repo_id.as_str(), revision, v.files.first()?.as_str()))
+}
+
 async fn fetch_arch<T: Transport>(hub: &Hub<T>, e: &ModelEntry) -> Result<Option<ArchRecord>> {
-    if let Some(file) = e.variants.first().and_then(|v| v.files.first()) {
-        let url = api::resolve_url(hub.base(), &e.repo_id, &e.sha, file);
+    if let Some((repo, revision, file)) = header_source(e) {
+        let url = api::resolve_url(hub.base(), repo, revision, file);
         for len in HEADER_READS {
             let resp = match hub.get(&Request::resolver(url.clone(), Some(0..len))).await {
                 Ok(r) => r,
@@ -539,24 +638,47 @@ async fn fetch_arch<T: Transport>(hub: &Hub<T>, e: &ModelEntry) -> Result<Option
 }
 
 /// Charge à la demande les tailles réelles et l'architecture d'un modèle (fiche détail,
-/// commande `get_model_detail`).
+/// commande `get_model_detail`), en réunissant les quantifications de tous ses dépôts.
 pub async fn enrich<T: Transport>(
     hub: &Hub<T>,
     cache: &Cache,
     entry: &ModelEntry,
 ) -> Result<ModelEntry> {
     let mut e = entry.clone();
-    let detail = match cache.load_detail(&e.repo_id, &e.sha) {
-        Some(d) => d,
-        None => {
-            let d = fetch_detail(hub, &e.repo_id).await?;
-            if let Err(err) = cache.save_detail(&d) {
-                tracing::warn!("détail non mis en cache : {err}");
-            }
-            d
+    // Tous les dépôts du groupe (dans la limite de MAX_ENRICH_ALTERNATIVES alternatives).
+    let slots: Vec<(String, String)> = repo_slots(&e)
+        .take(1 + MAX_ENRICH_ALTERNATIVES)
+        .map(|(r, s)| (r.to_owned(), s.to_owned()))
+        .collect();
+    let results = join_all(
+        slots
+            .iter()
+            .enumerate()
+            .map(|(slot, (repo, sha))| async move {
+                if let Some(d) = cache.load_detail(repo, sha) {
+                    return (slot, Ok(d));
+                }
+                let r = fetch_detail(hub, repo).await;
+                if let Ok(d) = &r
+                    && let Err(err) = cache.save_detail(d)
+                {
+                    tracing::warn!("détail non mis en cache : {err}");
+                }
+                (slot, r)
+            }),
+    )
+    .await;
+    let mut present = Vec::new();
+    for (slot, r) in results {
+        match r {
+            Ok(d) => present.push((slot, d)),
+            Err(err) if slot == 0 || err.is_global() => return Err(err),
+            Err(err) => tracing::debug!(slot, "détail d'un dépôt alternatif indisponible : {err}"),
         }
-    };
-    apply_detail(&mut e, &detail);
+    }
+    present.sort_by_key(|(slot, _)| *slot);
+    let refs: Vec<&RepoDetail> = present.iter().map(|(_, d)| d).collect();
+    apply_details(&mut e, &refs);
     if e.arch.is_none() && !e.variants.is_empty() {
         let arch = match cache.load_arch(&e.repo_id, &e.sha) {
             Some(a) => Some(a),

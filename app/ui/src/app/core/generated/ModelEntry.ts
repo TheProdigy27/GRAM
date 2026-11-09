@@ -2,6 +2,7 @@
 import type { ArchInfo } from "./ArchInfo";
 import type { Pipeline } from "./Pipeline";
 import type { QuantVariant } from "./QuantVariant";
+import type { RepoRef } from "./RepoRef";
 import type { UseCase } from "./UseCase";
 
 /**
@@ -9,7 +10,8 @@ import type { UseCase } from "./UseCase";
  */
 export type ModelEntry = { 
 /**
- * Dépôt canonique (ex. « bartowski/Qwen_Qwen3-8B-GGUF »).
+ * Dépôt canonique (ex. « Qwen/Qwen3-8B-GGUF ») : organisation officielle, sinon uploader
+ * prioritaire, sinon le plus téléchargé.
  */
 repoId: string, sha: string, 
 /**
@@ -41,8 +43,9 @@ createdAt: string | null, lastModified: string | null,
  */
 gated: boolean, 
 /**
- * Une entrée par quantification, de la plus petite à la plus grosse. Vide tant que le
- * détail du dépôt n'a pas été chargé (tailles réelles inconnues).
+ * Une entrée par quantification, de la plus petite à la plus grosse, réunies depuis le
+ * dépôt canonique et les alternatives détaillées (le dépôt prioritaire l'emporte pour un
+ * même libellé). Vide tant qu'aucun détail n'a été chargé (tailles réelles inconnues).
  */
 variants: Array<QuantVariant>, 
 /**
@@ -50,6 +53,6 @@ variants: Array<QuantVariant>,
  */
 mmprojBytes: number | null, 
 /**
- * Autres dépôts GGUF du même modèle de base.
+ * Autres dépôts GGUF du même modèle de base, par ordre de priorité.
  */
-alternatives: Array<string>, };
+alternatives: Array<RepoRef>, };

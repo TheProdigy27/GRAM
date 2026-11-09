@@ -171,9 +171,9 @@ struct Group {
     total_parts: u32,
 }
 
-/// Regroupe les fichiers GGUF par quantification. `params_total` sert au calcul des bits
-/// par poids (`taille × 8 / paramètres`) ; 0 si inconnu.
-pub fn analyze(files: &[RepoFile], params_total: u64) -> RepoFiles {
+/// Regroupe les fichiers GGUF du dépôt `repo_id` par quantification. `params_total` sert au
+/// calcul des bits par poids (`taille × 8 / paramètres`) ; 0 si inconnu.
+pub fn analyze(repo_id: &str, files: &[RepoFile], params_total: u64) -> RepoFiles {
     let mut groups: BTreeMap<(String, String), Group> = BTreeMap::new();
     let mut mmprojs: Vec<(u8, &RepoFile)> = Vec::new();
 
@@ -241,6 +241,7 @@ pub fn analyze(files: &[RepoFile], params_total: u64) -> RepoFiles {
         }
         variants.push(QuantVariant {
             label: g.label,
+            repo_id: repo_id.to_owned(),
             files: g.parts.into_iter().map(|(_, p, _)| p).collect(),
             size_bytes,
             bpw,
@@ -266,6 +267,8 @@ mod tests {
     use super::*;
     use crate::api::ApiModel;
     use crate::test_support::fixture;
+
+    const REPO: &str = "test/repo-GGUF";
 
     fn load(name: &str) -> (Vec<RepoFile>, u64) {
         let m: ApiModel =
@@ -332,13 +335,14 @@ mod tests {
     #[test]
     fn bartowski() {
         let (files, params) = load("bartowski--Qwen_Qwen3-8B-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         assert_eq!(r.variants.len(), 24);
         assert!(r.mmproj.is_none());
         let first = &r.variants[0];
         assert_eq!(first.label, "IQ2_M");
         assert_eq!(first.size_bytes, 3_051_914_784);
         assert_eq!(first.files, vec!["Qwen_Qwen3-8B-IQ2_M.gguf"]);
+        assert_eq!(first.repo_id, REPO);
         assert!(first.exact);
         assert!((first.bpw - 2.98).abs() < 0.01, "{}", first.bpw);
         let q4 = r.variants.iter().find(|v| v.label == "Q4_K_M").unwrap();
@@ -355,7 +359,7 @@ mod tests {
     #[test]
     fn unsloth_ud_et_mmproj() {
         let (files, params) = load("unsloth--Qwen3.5-9B-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         let l = labels(&r);
         assert_eq!(r.variants.len(), 22, "{l:?}");
         assert!(l.contains(&"UD-Q4_K_XL") && l.contains(&"Q4_K_M") && l.contains(&"BF16"));
@@ -376,7 +380,7 @@ mod tests {
     #[test]
     fn sous_dossiers_et_fichiers_decoupes() {
         let (files, params) = load("unsloth--Ornith-1.5-122B-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         assert_eq!(
             labels(&r),
             vec![
@@ -408,7 +412,7 @@ mod tests {
     #[test]
     fn decoupage_en_minuscules() {
         let (files, params) = load("Qwen--Qwen2.5-7B-Instruct-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         assert_eq!(
             labels(&r),
             vec![
@@ -426,7 +430,7 @@ mod tests {
     #[test]
     fn parties_mradermacher() {
         let (files, params) = load("mradermacher--Llama-3.3-70B-Instruct-abliterated-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         assert_eq!(r.variants.len(), 11);
         let q8 = r.variants.iter().find(|v| v.label == "Q8_0").unwrap();
         assert_eq!(
@@ -442,7 +446,7 @@ mod tests {
     #[test]
     fn fichiers_auxiliaires_ecartes() {
         let (files, params) = load("ggml-org--Qwen3.6-35B-A3B-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         // `dflash-…` (brouillon) et `mtp-…` (têtes MTP) ne sont pas des quantifications du modèle.
         assert_eq!(labels(&r), vec!["Q4_K_M", "Q8_0", "BF16"]);
         assert_eq!(r.variants[0].size_bytes, 20_542_732_576);
@@ -453,7 +457,7 @@ mod tests {
     #[test]
     fn mmproj_ggml_org() {
         let (files, params) = load("ggml-org--gemma-3-4b-it-GGUF");
-        let r = analyze(&files, params);
+        let r = analyze(REPO, &files, params);
         assert_eq!(labels(&r), vec!["Q4_K_M", "Q8_0", "F16"]);
         assert_eq!(r.mmproj.unwrap().size, 851_251_104);
     }
@@ -476,7 +480,7 @@ mod tests {
             // Brouillon pour le décodage spéculatif, même sans préfixe.
             f("Bonsai-9B-DFlash2-Q8_0.gguf", 6_000_000_000),
         ];
-        let r = analyze(&files, 8_000_000_000);
+        let r = analyze(REPO, &files, 8_000_000_000);
         assert_eq!(labels(&r), vec!["model-custom"]);
         assert!((r.variants[0].bpw - 5.0).abs() < 1e-3);
         assert_eq!(r.rejected, 1);
@@ -489,11 +493,11 @@ mod tests {
             f("Q-27B-Q4_K_P.gguf", 17_900_000_000),
             f("Q-27B-Q8_K_P.gguf", 31_400_000_000),
         ];
-        let r = analyze(&files, 1_863_907_840);
+        let r = analyze(REPO, &files, 1_863_907_840);
         assert_eq!(r.variants.len(), 1);
         assert!(r.params_suspect());
         // Paramètres inconnus : pas de contrôle des bits par poids.
-        let r = analyze(&[f("x-Q4_K_M.gguf", 10)], 0);
+        let r = analyze(REPO, &[f("x-Q4_K_M.gguf", 10)], 0);
         assert_eq!(r.variants[0].bpw, 0.0);
     }
 }
