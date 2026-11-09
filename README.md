@@ -25,6 +25,9 @@ cargo run -p gram-cli -- hw --raw    # données brutes, à enregistrer dans test
 cargo run -p gram-cli -- sync        # catalogue Hugging Face (cache de 24 h ; --force pour resynchroniser)
 cargo run -p gram-cli -- sync --offline   # catalogue du cache, sans réseau
 cargo run -p gram-cli -- snapshot    # régénère data/seed_catalog.json (catalogue embarqué)
+cargo run -p gram-cli -- estimate Qwen3-8B             # chaque quantification estimée pour cette machine
+cargo run -p gram-cli -- estimate Qwen3-8B --ctx 32768 --kv q8_0 --vision
+cargo run -p gram-cli -- estimate Llama-3.3-70B --profile tests/fixtures/profiles/p3-rtx4090-24go-64go-ddr5.json
 
 powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complète
 ```
@@ -36,11 +39,11 @@ powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complè
 | `crates/gram-core` | Types, moteur d'estimation, scoring (pur, sans I/O) |
 | `crates/gram-hw` | Détection matériel et runtimes installés (Windows) |
 | `crates/gram-hub` | Client Hugging Face, cache, parseur GGUF, dédoublonnage, catalogue embarqué |
-| `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `rank`, `snapshot` |
+| `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `estimate`, `rank`, `snapshot` |
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements |
 | `app/ui` | Frontend Angular + Angular Material |
-| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `seed_catalog.json` (catalogue de démarrage, généré) |
-| `tests/fixtures` | Données réelles pour les tests (dumps matériels `gram-cli hw --raw`, réponses Hugging Face) |
+| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques, pour les modèles pas encore détaillés), `seed_catalog.json` (catalogue de démarrage, généré) |
+| `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`) et modèles réels du catalogue (`models/`) |
 
 Les types Rust exposés au frontend sont convertis en TypeScript par `ts-rs` dans `app/ui/src/app/core/generated/` à chaque `cargo test`. Ne pas modifier ces fichiers à la main.
 
@@ -67,3 +70,26 @@ Une première synchronisation coûte environ 230 appels API et 150 appels resolv
 - Hors ligne, ou si Hugging Face est injoignable : cache, puis catalogue embarqué (`data/seed_catalog.json`).
 - Token optionnel (quotas plus larges) : variable `HF_TOKEN` pour `gram-cli`. Il n'est jamais affiché ni écrit.
 - Tests : réponses réelles enregistrées dans `tests/fixtures/hf/` (voir son README), aucun appel réseau.
+
+## Estimation
+
+`gram-core::estimate` calcule, pour un modèle, une quantification et une machine, la mémoire nécessaire, le mode d'exécution, le contexte maximal et la vitesse de génération (§8 du plan). C'est du calcul pur, sans I/O.
+
+1. **Mémoire utilisable** (`MemoryBudget::from_profile`) : `min(VRAM × 90 %, VRAM libre + 256 Mio)` sur le GPU retenu, et `min(RAM disponible, RAM × 75 %)`. Le réglage « je ferme tout » passe à `RAM − 4 Go`. Un iGPU compte comme du CPU.
+2. **Besoin** : poids (taille réelle des fichiers) + cache KV (`2 × couches d'attention × têtes KV × head_dim × octets`, f16 / q8_0 / q4_0) + 0,5 Go de surcoût (+ le projecteur vision si l'usage vision est demandé).
+3. **Mode** : GPU si tout tient en VRAM ; sinon hybride (KV et surcoût en VRAM, puis des couches entières : le `-ngl` de llama.cpp) ; sinon CPU. Si rien ne tient, le contexte est divisé par deux jusqu'à 2 048 tokens, puis le modèle est déclaré trop gros.
+4. **Vitesse** : la génération est limitée par la bande passante. `tok/s = 0,55 / (octets GPU / BW GPU + octets RAM / BW RAM)`, où un MoE ne lit que ses paramètres actifs.
+5. **Adéquation** : parfait (GPU, ≤ 80 % de la VRAM utilisable), bon (GPU ≤ 95 %, ou au moins 75 % des couches sur le GPU), limite (autre hybride, CPU), trop juste.
+
+Les quantifications sous 2,5 bits par poids ne sont pas proposées. Sans tailles réelles (modèle pas encore détaillé), l'estimation part de l'échelle Q8_0 → Q2_K de `data/quant_quality.json`. Sans architecture, elle prend un cache KV prudent. Ces deux cas sont marqués « estimation approximative ».
+
+Limites connues (prévues pour plus tard) : l'attention à fenêtre glissante (Gemma, gpt-oss) n'est pas modélisée, donc le KV est surestimé (c'est signalé). Le traitement du prompt n'est pas estimé. La précision visée est de ±30 %.
+
+Profils types du §15 (`tests/fixtures/profiles/`), testés dans `crates/gram-core/tests/profiles.rs` avec des modèles réels du catalogue, contexte 8k :
+
+| Profil | Qwen3-8B Q4_K_M (4,7 Go) | Llama-3.3-70B Q4_K_M (39,6 Go) |
+|---|---|---|
+| P1 : portable iGPU, 16 Go DDR4-3200 | CPU, ~5,6 tok/s | trop gros |
+| P2 : RTX 3060 12 Go + 32 Go DDR4-3600 | GPU, ~39 tok/s, parfait | trop gros |
+| P3 : RTX 4090 24 Go + 64 Go DDR5-6000 | GPU, ~110 tok/s, parfait | hybride 37/80 couches, ~2,1 tok/s |
+| P4 : RX 7800 XT 16 Go + 32 Go DDR5-6000 | GPU, ~68 tok/s, parfait | trop gros |

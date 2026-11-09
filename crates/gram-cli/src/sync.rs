@@ -3,7 +3,7 @@
 use crate::fmt::{gb, num, thousands};
 use anyhow::{Context, Result};
 use chrono::Local;
-use gram_core::{DataSourceKind, ModelEntry, SyncPhase, SyncSummary};
+use gram_core::{DataSource, DataSourceKind, ModelEntry, SyncPhase, SyncSummary};
 use gram_hub::{
     Cache, Catalog, HfToken, Hub, HubEvent, ReqwestTransport, SyncOptions, api::SizeBucket,
     snapshot,
@@ -20,7 +20,7 @@ pub struct SyncArgs {
     pub cache_dir: Option<PathBuf>,
 }
 
-fn cache(dir: Option<PathBuf>) -> Result<Cache> {
+pub(crate) fn cache(dir: Option<PathBuf>) -> Result<Cache> {
     let root = dir
         .or_else(Cache::default_root)
         .context("dossier %LOCALAPPDATA% introuvable : préciser --cache-dir")?;
@@ -128,7 +128,8 @@ fn line(out: &mut String, label: &str, text: &str) {
     let _ = writeln!(out, "{label:<LABEL_WIDTH$}{text}");
 }
 
-fn params(n: u64) -> String {
+/// Nombre de paramètres : « 8,2B », « 70B ».
+pub(crate) fn params(n: u64) -> String {
     let b = n as f64 / 1e9;
     format!("{}B", num(b, if b < 10.0 { 1 } else { 0 }))
 }
@@ -197,20 +198,23 @@ fn model_row(i: usize, m: &ModelEntry) -> String {
     )
 }
 
-pub fn render(s: &SyncSummary, c: &Catalog, cache_root: &Path) -> String {
-    let mut out = String::new();
-    let when = s
-        .source
+/// « en ligne (…) », « cache (synchronisé le …) », « catalogue embarqué (snapshot du …) ».
+pub(crate) fn source_label(source: &DataSource) -> String {
+    let when = source
         .fetched_at
         .with_timezone(&Local)
         .format("%d/%m/%Y %H:%M");
-    let source = match s.source.kind {
+    match source.kind {
         DataSourceKind::Online => format!("en ligne ({when})"),
         DataSourceKind::Cache => format!("cache (synchronisé le {when})"),
         DataSourceKind::Snapshot => format!("catalogue embarqué (snapshot du {when})"),
-    };
+    }
+}
+
+pub fn render(s: &SyncSummary, c: &Catalog, cache_root: &Path) -> String {
+    let mut out = String::new();
     out.push('\n');
-    line(&mut out, "Source", &source);
+    line(&mut out, "Source", &source_label(&s.source));
     line(
         &mut out,
         "Catalogue",

@@ -1,12 +1,13 @@
 //! `gram-cli` : binaire de debug pour valider chaque brique de GRAM sans l'interface.
 
+mod estimate;
 mod fmt;
 mod hw;
 mod sync;
 
 use anyhow::{Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
-use gram_core::UseCase;
+use gram_core::{KvCacheType, UseCase};
 use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
@@ -46,6 +47,30 @@ enum Command {
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
+    /// Estime toutes les quantifications d'un modèle du catalogue (sans réseau).
+    Estimate {
+        /// Dépôt, nom ou modèle de base (recherche sans tenir compte de la casse).
+        model: String,
+        /// Contexte souhaité en tokens.
+        #[arg(long, default_value_t = 8192)]
+        ctx: u32,
+        /// Usage vision : ajoute le projecteur (mmproj) au besoin mémoire.
+        #[arg(long)]
+        vision: bool,
+        /// Type du cache KV.
+        #[arg(long, value_enum, default_value_t = Kv::F16)]
+        kv: Kv,
+        /// Profil matériel JSON (`HardwareProfile`) à la place de cette machine,
+        /// ex. tests/fixtures/profiles/p2-rtx3060-12go-32go-ddr4.json.
+        #[arg(long)]
+        profile: Option<PathBuf>,
+        /// Sortie JSON (budget mémoire et estimation de chaque quantification).
+        #[arg(long)]
+        json: bool,
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+    },
     /// Classe les modèles pour cette machine.
     Rank {
         #[arg(long, value_enum, default_value_t = Usage::General)]
@@ -73,6 +98,25 @@ enum Usage {
     Reasoning,
     FastChat,
     Vision,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Kv {
+    F16,
+    #[value(name = "q8_0")]
+    Q8_0,
+    #[value(name = "q4_0")]
+    Q4_0,
+}
+
+impl From<Kv> for KvCacheType {
+    fn from(k: Kv) -> Self {
+        match k {
+            Kv::F16 => KvCacheType::F16,
+            Kv::Q8_0 => KvCacheType::Q8_0,
+            Kv::Q4_0 => KvCacheType::Q4_0,
+        }
+    }
 }
 
 impl From<Usage> for UseCase {
@@ -108,6 +152,23 @@ fn main() -> Result<()> {
             force,
             offline,
             all_sizes,
+            json,
+            cache_dir,
+        }),
+        Command::Estimate {
+            model,
+            ctx,
+            vision,
+            kv,
+            profile,
+            json,
+            cache_dir,
+        } => estimate::run(estimate::EstimateArgs {
+            query: model,
+            ctx,
+            vision,
+            kv_cache: kv.into(),
+            profile,
             json,
             cache_dir,
         }),
@@ -156,6 +217,37 @@ mod tests {
             }
             _ => panic!("sous-commande inattendue"),
         }
+    }
+
+    #[test]
+    fn parse_estimate() {
+        let cli = Cli::try_parse_from([
+            "gram-cli",
+            "estimate",
+            "Qwen3-8B",
+            "--kv",
+            "q8_0",
+            "--profile",
+            "p2.json",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Estimate {
+                model,
+                ctx,
+                vision,
+                kv,
+                profile,
+                ..
+            } => {
+                assert_eq!(model, "Qwen3-8B");
+                assert_eq!((ctx, vision), (8192, false));
+                assert_eq!(KvCacheType::from(kv), KvCacheType::Q8_0);
+                assert_eq!(profile, Some(PathBuf::from("p2.json")));
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
+        assert!(Cli::try_parse_from(["gram-cli", "estimate"]).is_err());
     }
 
     #[test]

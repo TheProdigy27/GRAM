@@ -1,0 +1,35 @@
+{
+  "repoId": "Qwen/Qwen3-30B-A3B-GGUF",
+  "sha": "e4d4bafdfb96a411a163846265362aceb0b9c63a",
+  "baseModel": "Qwen/Qwen3-30B-A3B",
+  "displayName": "Qwen3-30B-A3B",
+  "paramsTotal": 30532122624,
+  "paramsActive": 3000000000,
+  "arch": null,
+  "ctxTrain": 40960,
+  "pipeline": "text-generation",
+  "useCases": [
+    "general"
+  ],
+  "downloads": 205761,
+  "likes": 392,
+  "createdAt": "2025-04-28T13:48:41Z",
+  "lastModified": "2025-06-08T08:10:02Z",
+  "gated": false,
+  "variants": [],
+  "mmprojBytes": null,
+  "alternatives": [
+    {
+      "repoId": "unsloth/Qwen3-30B-A3B-GGUF",
+      "sha": "d5b1d57bd0b504ac62ae6c725904e96ef228dc74",
+      "downloads": 50509,
+      "gated": false
+    },
+    {
+      "repoId": "MaziyarPanahi/Qwen3-30B-A3B-GGUF",
+      "sha": "6443554b0ef1176268cae69212105bf4c7187091",
+      "downloads": 28166,
+      "gated": false
+    }
+  ]
+}

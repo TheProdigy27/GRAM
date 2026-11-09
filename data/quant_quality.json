@@ -1,0 +1,11 @@
+{
+  "about": "Bits par poids typiques des quantifications GGUF, pour estimer la taille d'un modèle dont les fichiers n'ont pas été détaillés (échelle de repli du §8.5, de la plus fidèle à la plus compacte). Valeurs mesurées sur des dépôts réels (unsloth/Llama-3.1-8B-Instruct-GGUF et Qwen/Qwen3-8B-GGUF : bpw = taille × 8 / paramètres). Les petits modèles ont des bpw un peu plus élevés (embeddings gardés en haute précision), les très gros un peu plus faibles.",
+  "fallback": [
+    { "label": "Q8_0", "bpw": 8.5 },
+    { "label": "Q6_K", "bpw": 6.57 },
+    { "label": "Q5_K_M", "bpw": 5.71 },
+    { "label": "Q4_K_M", "bpw": 4.9 },
+    { "label": "Q3_K_M", "bpw": 4.0 },
+    { "label": "Q2_K", "bpw": 3.2 }
+  ]
+}

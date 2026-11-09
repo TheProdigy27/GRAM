@@ -1,0 +1,319 @@
+{
+  "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+  "sha": "12393612fd4f730ff5aadc23e9b8f9648aa49ceb",
+  "baseModel": "ornith-ai/Ornith-1.5-35B-A3B",
+  "displayName": "Ornith-1.5-35B-A3B",
+  "paramsTotal": 35505251456,
+  "paramsActive": 3519489152,
+  "arch": {
+    "architecture": "qwen35moe",
+    "nLayers": 41,
+    "nHeads": 16,
+    "nKvHeads": 2,
+    "headDim": 256,
+    "kvLayers": 10,
+    "embeddingLength": 2048,
+    "expertCount": 256,
+    "expertUsedCount": 8,
+    "slidingWindow": null,
+    "source": "ggufHeader"
+  },
+  "ctxTrain": 262144,
+  "pipeline": "image-text-to-text",
+  "useCases": [
+    "general",
+    "vision"
+  ],
+  "downloads": 4278296,
+  "likes": 719,
+  "createdAt": "2026-08-18T06:38:41Z",
+  "lastModified": "2026-10-28T08:51:31Z",
+  "gated": false,
+  "variants": [
+    {
+      "label": "IQ2_XXS",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ2_XXS.gguf"
+      ],
+      "sizeBytes": 10255140512,
+      "bpw": 2.3106759,
+      "exact": true
+    },
+    {
+      "label": "IQ2_XS",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ2_XS.gguf"
+      ],
+      "sizeBytes": 11273832096,
+      "bpw": 2.5402062,
+      "exact": true
+    },
+    {
+      "label": "IQ2_S",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ2_S.gguf"
+      ],
+      "sizeBytes": 11486963360,
+      "bpw": 2.5882287,
+      "exact": true
+    },
+    {
+      "label": "IQ2_M",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ2_M.gguf"
+      ],
+      "sizeBytes": 12543403680,
+      "bpw": 2.8262644,
+      "exact": true
+    },
+    {
+      "label": "Q2_K",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q2_K.gguf"
+      ],
+      "sizeBytes": 13085779616,
+      "bpw": 2.948472,
+      "exact": true
+    },
+    {
+      "label": "Q2_K_L",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q2_K_L.gguf"
+      ],
+      "sizeBytes": 13582419616,
+      "bpw": 3.0603743,
+      "exact": true
+    },
+    {
+      "label": "IQ3_XXS",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ3_XXS.gguf"
+      ],
+      "sizeBytes": 15340447392,
+      "bpw": 3.456491,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_S",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q3_K_S.gguf"
+      ],
+      "sizeBytes": 15983920800,
+      "bpw": 3.6014776,
+      "exact": true
+    },
+    {
+      "label": "IQ3_XS",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ3_XS.gguf"
+      ],
+      "sizeBytes": 16689088160,
+      "bpw": 3.760365,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_M",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q3_K_M.gguf"
+      ],
+      "sizeBytes": 16696952480,
+      "bpw": 3.762137,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_L",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q3_K_L.gguf"
+      ],
+      "sizeBytes": 17356900000,
+      "bpw": 3.9108355,
+      "exact": true
+    },
+    {
+      "label": "IQ3_M",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ3_M.gguf"
+      ],
+      "sizeBytes": 17370662560,
+      "bpw": 3.9139366,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_XL",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q3_K_XL.gguf"
+      ],
+      "sizeBytes": 17801889440,
+      "bpw": 4.0111,
+      "exact": true
+    },
+    {
+      "label": "IQ4_XS",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ4_XS.gguf"
+      ],
+      "sizeBytes": 19278554784,
+      "bpw": 4.3438206,
+      "exact": true
+    },
+    {
+      "label": "IQ4_NL",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-IQ4_NL.gguf"
+      ],
+      "sizeBytes": 20333979296,
+      "bpw": 4.5816274,
+      "exact": true
+    },
+    {
+      "label": "Q4_0",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q4_0.gguf"
+      ],
+      "sizeBytes": 20415243936,
+      "bpw": 4.599938,
+      "exact": true
+    },
+    {
+      "label": "Q4_K_S",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q4_K_S.gguf"
+      ],
+      "sizeBytes": 21065361056,
+      "bpw": 4.7464213,
+      "exact": true
+    },
+    {
+      "label": "Q4_K_M",
+      "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-Q4_K_M.gguf"
+      ],
+      "sizeBytes": 21713463040,
+      "bpw": 4.892451,
+      "exact": true
+    },
+    {
+      "label": "Q4_K_L",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q4_K_L.gguf"
+      ],
+      "sizeBytes": 22241527456,
+      "bpw": 5.011434,
+      "exact": true
+    },
+    {
+      "label": "Q4_1",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q4_1.gguf"
+      ],
+      "sizeBytes": 22447449760,
+      "bpw": 5.0578322,
+      "exact": true
+    },
+    {
+      "label": "Q5_K_S",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q5_K_S.gguf"
+      ],
+      "sizeBytes": 24630879904,
+      "bpw": 5.5498,
+      "exact": true
+    },
+    {
+      "label": "Q5_K_M",
+      "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-Q5_K_M.gguf"
+      ],
+      "sizeBytes": 25347532544,
+      "bpw": 5.711275,
+      "exact": true
+    },
+    {
+      "label": "Q5_K_L",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q5_K_L.gguf"
+      ],
+      "sizeBytes": 25806063264,
+      "bpw": 5.814591,
+      "exact": true
+    },
+    {
+      "label": "Q6_K",
+      "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-Q6_K.gguf"
+      ],
+      "sizeBytes": 29208731392,
+      "bpw": 6.581276,
+      "exact": true
+    },
+    {
+      "label": "Q6_K_L",
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-A3B-Q6_K_L.gguf"
+      ],
+      "sizeBytes": 30772643488,
+      "bpw": 6.9336543,
+      "exact": true
+    },
+    {
+      "label": "Q8_0",
+      "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-Q8_0.gguf"
+      ],
+      "sizeBytes": 37802149280,
+      "bpw": 8.517534,
+      "exact": true
+    },
+    {
+      "label": "BF16",
+      "repoId": "ornith-ai/Ornith-1.5-35B-A3B-GGUF",
+      "files": [
+        "Ornith-1.5-35B-BF16.gguf"
+      ],
+      "sizeBytes": 71066994400,
+      "bpw": 16.012728,
+      "exact": true
+    }
+  ],
+  "mmprojBytes": 902822240,
+  "alternatives": [
+    {
+      "repoId": "bartowski/Ornith-1.5-35B-A3B-GGUF",
+      "sha": "64b0493d34a5ca4c1b4ad67bb99b41d74b4f07d6",
+      "downloads": 50242,
+      "gated": false
+    },
+    {
+      "repoId": "AtomicChat/Ornith-1.5-35B-A3B-GGUF",
+      "sha": "385f6c4c886f2376659fd964be85bff09a77c791",
+      "downloads": 48417,
+      "gated": false
+    }
+  ]
+}

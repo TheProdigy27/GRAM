@@ -1,0 +1,51 @@
+{
+  "cpu": {
+    "name": "AMD Ryzen 7 5800X 8-Core Processor",
+    "coresPhysical": 8,
+    "coresLogical": 16,
+    "maxClockMhz": 3801,
+    "avx2": true,
+    "avx512": false,
+    "fma": true,
+    "f16c": true
+  },
+  "ram": {
+    "total": 34282147840,
+    "available": 21474836480,
+    "installed": 34359738368,
+    "kind": "ddr4",
+    "speedMts": 3600,
+    "modules": 2,
+    "slots": 4,
+    "channels": 2,
+    "channelsSource": "estimated",
+    "bandwidthGbs": 57.6
+  },
+  "gpu": {
+    "index": 0,
+    "name": "NVIDIA GeForce RTX 3060",
+    "vendor": "nvidia",
+    "vramTotal": 12884901888,
+    "vramFree": 11811160064,
+    "sharedMem": 17141073920,
+    "integrated": false,
+    "bandwidthGbs": 360.0,
+    "bandwidthSource": "table",
+    "cudaCc": [8, 6]
+  },
+  "otherGpus": [],
+  "backends": {
+    "cuda": true,
+    "cudaDriverVersion": "13.0",
+    "vulkan": true
+  },
+  "disks": [
+    {
+      "mount": "C:\\",
+      "total": 1000202039296,
+      "available": 225485783040
+    }
+  ],
+  "overrides": {},
+  "warnings": []
+}

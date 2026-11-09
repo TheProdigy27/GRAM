@@ -3,6 +3,12 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+/// Bande passante prudente d'un GPU discret absent de la table et sans NVML (§6.3).
+pub const DEFAULT_GPU_BANDWIDTH_GBS: f32 = 200.0;
+
+/// Bande passante prudente de la RAM quand sa vitesse est inconnue : DDR4-2400 en double canal.
+pub const DEFAULT_RAM_BANDWIDTH_GBS: f32 = 38.4;
+
 /// Profil matériel complet de la machine.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

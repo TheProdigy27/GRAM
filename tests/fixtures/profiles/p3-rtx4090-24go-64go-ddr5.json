@@ -1,0 +1,64 @@
+{
+  "cpu": {
+    "name": "AMD Ryzen 9 7950X 16-Core Processor",
+    "coresPhysical": 16,
+    "coresLogical": 32,
+    "maxClockMhz": 4501,
+    "avx2": true,
+    "avx512": true,
+    "fma": true,
+    "f16c": true
+  },
+  "ram": {
+    "total": 68451041280,
+    "available": 51539607552,
+    "installed": 68719476736,
+    "kind": "ddr5",
+    "speedMts": 6000,
+    "modules": 2,
+    "slots": 4,
+    "channels": 2,
+    "channelsSource": "estimated",
+    "bandwidthGbs": 96.0
+  },
+  "gpu": {
+    "index": 0,
+    "name": "NVIDIA GeForce RTX 4090",
+    "vendor": "nvidia",
+    "vramTotal": 25757220864,
+    "vramFree": 24159191040,
+    "sharedMem": 34225520640,
+    "integrated": false,
+    "bandwidthGbs": 1008.0,
+    "bandwidthSource": "table",
+    "cudaCc": [8, 9]
+  },
+  "otherGpus": [
+    {
+      "index": 1,
+      "name": "AMD Radeon(TM) Graphics",
+      "vendor": "amd",
+      "vramTotal": 536870912,
+      "vramFree": 536870912,
+      "sharedMem": 34225520640,
+      "integrated": true,
+      "bandwidthGbs": 96.0,
+      "bandwidthSource": "estimated",
+      "cudaCc": null
+    }
+  ],
+  "backends": {
+    "cuda": true,
+    "cudaDriverVersion": "13.0",
+    "vulkan": true
+  },
+  "disks": [
+    {
+      "mount": "C:\\",
+      "total": 2000381014016,
+      "available": 812997435392
+    }
+  ],
+  "overrides": {},
+  "warnings": []
+}

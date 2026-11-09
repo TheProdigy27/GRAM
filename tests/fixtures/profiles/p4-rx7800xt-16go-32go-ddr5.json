@@ -1,0 +1,51 @@
+{
+  "cpu": {
+    "name": "AMD Ryzen 7 7700X 8-Core Processor",
+    "coresPhysical": 8,
+    "coresLogical": 16,
+    "maxClockMhz": 4501,
+    "avx2": true,
+    "avx512": true,
+    "fma": true,
+    "f16c": true
+  },
+  "ram": {
+    "total": 34174967808,
+    "available": 22548578304,
+    "installed": 34359738368,
+    "kind": "ddr5",
+    "speedMts": 6000,
+    "modules": 2,
+    "slots": 4,
+    "channels": 2,
+    "channelsSource": "estimated",
+    "bandwidthGbs": 96.0
+  },
+  "gpu": {
+    "index": 0,
+    "name": "AMD Radeon RX 7800 XT",
+    "vendor": "amd",
+    "vramTotal": 17163091968,
+    "vramFree": 16106127360,
+    "sharedMem": 17087483904,
+    "integrated": false,
+    "bandwidthGbs": 624.0,
+    "bandwidthSource": "table",
+    "cudaCc": null
+  },
+  "otherGpus": [],
+  "backends": {
+    "cuda": false,
+    "cudaDriverVersion": null,
+    "vulkan": true
+  },
+  "disks": [
+    {
+      "mount": "C:\\",
+      "total": 1000202039296,
+      "available": 401893539840
+    }
+  ],
+  "overrides": {},
+  "warnings": []
+}

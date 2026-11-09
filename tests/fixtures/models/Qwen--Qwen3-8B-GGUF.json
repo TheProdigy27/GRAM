@@ -1,0 +1,320 @@
+{
+  "repoId": "Qwen/Qwen3-8B-GGUF",
+  "sha": "7c41481f57cb95916b40956ab2f0b139b296d974",
+  "baseModel": "Qwen/Qwen3-8B",
+  "displayName": "Qwen3-8B",
+  "paramsTotal": 8190735360,
+  "paramsActive": null,
+  "arch": {
+    "architecture": "qwen3",
+    "nLayers": 36,
+    "nHeads": 32,
+    "nKvHeads": 8,
+    "headDim": 128,
+    "kvLayers": null,
+    "embeddingLength": 4096,
+    "expertCount": null,
+    "expertUsedCount": null,
+    "slidingWindow": null,
+    "source": "ggufHeader"
+  },
+  "ctxTrain": 40960,
+  "pipeline": "text-generation",
+  "useCases": [
+    "general"
+  ],
+  "downloads": 1108080,
+  "likes": 602,
+  "createdAt": "2025-04-28T12:58:24Z",
+  "lastModified": "2025-06-08T08:09:00Z",
+  "gated": false,
+  "variants": [
+    {
+      "label": "UD-IQ1_S",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-IQ1_S.gguf"
+      ],
+      "sizeBytes": 2275379008,
+      "bpw": 2.2223928,
+      "exact": true
+    },
+    {
+      "label": "UD-IQ1_M",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-IQ1_M.gguf"
+      ],
+      "sizeBytes": 2396489536,
+      "bpw": 2.3406832,
+      "exact": true
+    },
+    {
+      "label": "UD-IQ2_XXS",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-IQ2_XXS.gguf"
+      ],
+      "sizeBytes": 2605221696,
+      "bpw": 2.5445547,
+      "exact": true
+    },
+    {
+      "label": "UD-IQ2_M",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-IQ2_M.gguf"
+      ],
+      "sizeBytes": 3110897472,
+      "bpw": 3.0384548,
+      "exact": true
+    },
+    {
+      "label": "Q2_K",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q2_K.gguf"
+      ],
+      "sizeBytes": 3281733440,
+      "bpw": 3.2053127,
+      "exact": true
+    },
+    {
+      "label": "UD-IQ3_XXS",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-IQ3_XXS.gguf"
+      ],
+      "sizeBytes": 3410265920,
+      "bpw": 3.330852,
+      "exact": true
+    },
+    {
+      "label": "Q2_K_L",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q2_K_L.gguf"
+      ],
+      "sizeBytes": 3427592000,
+      "bpw": 3.3477747,
+      "exact": true
+    },
+    {
+      "label": "UD-Q2_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q2_K_XL.gguf"
+      ],
+      "sizeBytes": 3501975360,
+      "bpw": 3.420426,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_S",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q3_K_S.gguf"
+      ],
+      "sizeBytes": 3769612096,
+      "bpw": 3.6818302,
+      "exact": true
+    },
+    {
+      "label": "Q3_K_M",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q3_K_M.gguf"
+      ],
+      "sizeBytes": 4124161856,
+      "bpw": 4.028124,
+      "exact": true
+    },
+    {
+      "label": "UD-Q3_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q3_K_XL.gguf"
+      ],
+      "sizeBytes": 4307052352,
+      "bpw": 4.206755,
+      "exact": true
+    },
+    {
+      "label": "IQ4_XS",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-IQ4_XS.gguf"
+      ],
+      "sizeBytes": 4581287744,
+      "bpw": 4.4746046,
+      "exact": true
+    },
+    {
+      "label": "IQ4_NL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-IQ4_NL.gguf"
+      ],
+      "sizeBytes": 4793624384,
+      "bpw": 4.681997,
+      "exact": true
+    },
+    {
+      "label": "Q4_K_S",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q4_K_S.gguf"
+      ],
+      "sizeBytes": 4802012992,
+      "bpw": 4.69019,
+      "exact": true
+    },
+    {
+      "label": "Q4_K_M",
+      "repoId": "Qwen/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q4_K_M.gguf"
+      ],
+      "sizeBytes": 5027783488,
+      "bpw": 4.9107027,
+      "exact": true
+    },
+    {
+      "label": "UD-Q4_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q4_K_XL.gguf"
+      ],
+      "sizeBytes": 5135722304,
+      "bpw": 5.016128,
+      "exact": true
+    },
+    {
+      "label": "Q4_1",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q4_1.gguf"
+      ],
+      "sizeBytes": 5247756096,
+      "bpw": 5.125553,
+      "exact": true
+    },
+    {
+      "label": "Q5_0",
+      "repoId": "Qwen/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q5_0.gguf"
+      ],
+      "sizeBytes": 5720761152,
+      "bpw": 5.5875435,
+      "exact": true
+    },
+    {
+      "label": "Q5_K_S",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q5_K_S.gguf"
+      ],
+      "sizeBytes": 5720762176,
+      "bpw": 5.5875444,
+      "exact": true
+    },
+    {
+      "label": "Q5_K_M",
+      "repoId": "Qwen/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q5_K_M.gguf"
+      ],
+      "sizeBytes": 5851112224,
+      "bpw": 5.714859,
+      "exact": true
+    },
+    {
+      "label": "UD-Q5_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q5_K_XL.gguf"
+      ],
+      "sizeBytes": 5878081344,
+      "bpw": 5.7412,
+      "exact": true
+    },
+    {
+      "label": "Q6_K",
+      "repoId": "Qwen/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q6_K.gguf"
+      ],
+      "sizeBytes": 6725899040,
+      "bpw": 6.569275,
+      "exact": true
+    },
+    {
+      "label": "UD-Q6_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q6_K_XL.gguf"
+      ],
+      "sizeBytes": 7490549568,
+      "bpw": 7.316119,
+      "exact": true
+    },
+    {
+      "label": "Q8_0",
+      "repoId": "Qwen/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-Q8_0.gguf"
+      ],
+      "sizeBytes": 8709518112,
+      "bpw": 8.506702,
+      "exact": true
+    },
+    {
+      "label": "UD-Q8_K_XL",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-UD-Q8_K_XL.gguf"
+      ],
+      "sizeBytes": 10824038208,
+      "bpw": 10.571981,
+      "exact": true
+    },
+    {
+      "label": "BF16",
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "files": [
+        "Qwen3-8B-BF16.gguf"
+      ],
+      "sizeBytes": 16388044384,
+      "bpw": 16.00642,
+      "exact": true
+    }
+  ],
+  "mmprojBytes": null,
+  "alternatives": [
+    {
+      "repoId": "unsloth/Qwen3-8B-GGUF",
+      "sha": "a6adef130ffb23ddaf1a62fec9dced968c9bc482",
+      "downloads": 161994,
+      "gated": false
+    },
+    {
+      "repoId": "bartowski/Qwen_Qwen3-8B-GGUF",
+      "sha": "0b69f75b7472688e6808490aa2b85efdb81b5ce7",
+      "downloads": 45341,
+      "gated": false
+    },
+    {
+      "repoId": "lmstudio-community/Qwen3-8B-GGUF",
+      "sha": "07ebe812301319d9947477e3a94ab8aa587bb3af",
+      "downloads": 43744,
+      "gated": false
+    },
+    {
+      "repoId": "MaziyarPanahi/Qwen3-8B-GGUF",
+      "sha": "ac6dd95cf227fe9138362c0536fe3c3802008ccf",
+      "downloads": 31049,
+      "gated": false
+    }
+  ]
+}

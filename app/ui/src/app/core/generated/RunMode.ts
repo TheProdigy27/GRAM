@@ -3,4 +3,4 @@
 /**
  * Mode d'exécution estimé.
  */
-export type RunMode = { "kind": "gpu" } | { "kind": "hybrid", gpuLayers: number, } | { "kind": "cpu" } | { "kind": "tooBig" };
+export type RunMode = { "kind": "gpu" } | { "kind": "hybrid", gpuLayers: number, layers: number, } | { "kind": "cpu" } | { "kind": "tooBig" };

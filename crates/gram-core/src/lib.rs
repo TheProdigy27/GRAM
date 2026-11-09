@@ -16,10 +16,13 @@ pub mod runtime;
 pub use catalog::{
     DataSource, DataSourceKind, RateLimitInfo, SyncPhase, SyncProgress, SyncSummary,
 };
-pub use estimate::{Estimate, FitLevel, RunMode};
+pub use estimate::{
+    Estimate, EstimateParams, FitLevel, KvCacheType, MemoryBreakdown, MemoryBudget, QuantTable,
+    RunMode, VariantEstimate, Workload, estimate_variants,
+};
 pub use hardware::{
-    Backends, CpuInfo, DiskInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, RamKind, Source,
-    Vendor,
+    Backends, CpuInfo, DEFAULT_GPU_BANDWIDTH_GBS, DEFAULT_RAM_BANDWIDTH_GBS, DiskInfo, GpuInfo,
+    HardwareProfile, Overrides, RamInfo, RamKind, Source, Vendor,
 };
 pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};
 pub use runtime::{RuntimeStatus, RuntimesStatus};

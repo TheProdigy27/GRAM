@@ -1,0 +1,53 @@
+{
+  "cpu": {
+    "name": "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
+    "coresPhysical": 4,
+    "coresLogical": 8,
+    "maxClockMhz": 2419,
+    "avx2": true,
+    "avx512": true,
+    "fma": true,
+    "f16c": true
+  },
+  "ram": {
+    "total": 16850018304,
+    "available": 8589934592,
+    "installed": 17179869184,
+    "kind": "ddr4",
+    "speedMts": 3200,
+    "modules": 2,
+    "slots": 2,
+    "channels": 2,
+    "channelsSource": "estimated",
+    "bandwidthGbs": 51.2
+  },
+  "gpu": {
+    "index": 0,
+    "name": "Intel(R) Iris(R) Xe Graphics",
+    "vendor": "intel",
+    "vramTotal": 134217728,
+    "vramFree": null,
+    "sharedMem": 8425009152,
+    "integrated": true,
+    "bandwidthGbs": 51.2,
+    "bandwidthSource": "estimated",
+    "cudaCc": null
+  },
+  "otherGpus": [],
+  "backends": {
+    "cuda": false,
+    "cudaDriverVersion": null,
+    "vulkan": true
+  },
+  "disks": [
+    {
+      "mount": "C:\\",
+      "total": 511101108224,
+      "available": 120259084288
+    }
+  ],
+  "overrides": {},
+  "warnings": [
+    "Seul un GPU intégré est disponible : il partage la RAM. llama.cpp ou LM Studio (Vulkan) peuvent l'exploiter ; Ollama l'ignore souvent par défaut."
+  ]
+}

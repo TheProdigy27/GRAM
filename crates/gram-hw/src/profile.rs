@@ -4,10 +4,8 @@ use crate::gpu;
 use crate::ram;
 use crate::raw::{RawAdapter, RawCpu, RawHardware, RawMemory, RawNvmlDevice};
 use crate::specs::GpuSpecs;
+pub use gram_core::DEFAULT_GPU_BANDWIDTH_GBS;
 use gram_core::{Backends, CpuInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, Source, Vendor};
-
-/// Bande passante prudente d'un GPU discret absent de la table et sans NVML (§6.3).
-pub const DEFAULT_GPU_BANDWIDTH_GBS: f32 = 200.0;
 
 /// Construit le profil avec la table GPU embarquée.
 pub fn build_profile(raw: &RawHardware, overrides: &Overrides) -> HardwareProfile {
