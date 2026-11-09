@@ -10,6 +10,7 @@
 pub mod estimate;
 pub mod hardware;
 pub mod model;
+pub mod runtime;
 
 pub use estimate::{Estimate, FitLevel, RunMode};
 pub use hardware::{
@@ -17,6 +18,7 @@ pub use hardware::{
     Vendor,
 };
 pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, UseCase};
+pub use runtime::{RuntimeStatus, RuntimesStatus};
 
 /// Version du crate, affichée dans l'interface.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

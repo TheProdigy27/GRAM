@@ -1,0 +1,126 @@
+{
+  "cpu": {
+    "name": "AMD Ryzen 7 9800X3D 8-Core Processor",
+    "coresPhysical": 8,
+    "coresLogical": 16,
+    "maxClockMhz": 4700,
+    "x86": true,
+    "avx2": true,
+    "avx512": true,
+    "fma": true,
+    "f16c": true
+  },
+  "memory": {
+    "total": 66095271936,
+    "available": 50815094784,
+    "modules": [
+      {
+        "capacity": 34359738368,
+        "speed": 4800,
+        "configuredSpeed": 6000,
+        "smbiosType": 34,
+        "dataWidth": 64,
+        "deviceLocator": "DIMMA2",
+        "bankLabel": "P0 CHANNEL A"
+      },
+      {
+        "capacity": 34359738368,
+        "speed": 4800,
+        "configuredSpeed": 6000,
+        "smbiosType": 34,
+        "dataWidth": 64,
+        "deviceLocator": "DIMMB2",
+        "bankLabel": "P0 CHANNEL B"
+      }
+    ],
+    "slots": 4
+  },
+  "adapters": [
+    {
+      "index": 0,
+      "name": "NVIDIA GeForce RTX 5080",
+      "vendorId": 4318,
+      "deviceId": 11266,
+      "subSysId": 1393890402,
+      "dedicatedVideoMemory": 16753098752,
+      "dedicatedSystemMemory": 0,
+      "sharedSystemMemory": 48915402752,
+      "budget": 15947792384,
+      "software": false,
+      "integrated": false,
+      "hardware": true
+    },
+    {
+      "index": 1,
+      "name": "AMD Radeon(TM) Graphics",
+      "vendorId": 4098,
+      "deviceId": 5056,
+      "subSysId": 2118587490,
+      "dedicatedVideoMemory": 2119979008,
+      "dedicatedSystemMemory": 0,
+      "sharedSystemMemory": 48915402752,
+      "budget": 50230075392,
+      "software": false,
+      "integrated": true,
+      "hardware": true
+    },
+    {
+      "index": 2,
+      "name": "NVIDIA GeForce RTX 5080",
+      "vendorId": 4318,
+      "deviceId": 11266,
+      "subSysId": 1393890402,
+      "dedicatedVideoMemory": 16753098752,
+      "dedicatedSystemMemory": 0,
+      "sharedSystemMemory": 48915402752,
+      "budget": 15947792384,
+      "software": false,
+      "integrated": null,
+      "hardware": null
+    },
+    {
+      "index": 3,
+      "name": "Microsoft Basic Render Driver",
+      "vendorId": 5140,
+      "deviceId": 140,
+      "subSysId": 0,
+      "dedicatedVideoMemory": 0,
+      "dedicatedSystemMemory": 0,
+      "sharedSystemMemory": 48915402752,
+      "budget": 48110096384,
+      "software": true,
+      "integrated": false,
+      "hardware": false
+    }
+  ],
+  "nvml": {
+    "cudaDriverVersion": "13.4",
+    "devices": [
+      {
+        "name": "NVIDIA GeForce RTX 5080",
+        "pciDeviceId": 738332894,
+        "pciSubSystemId": 1393890402,
+        "memoryTotal": 17094934528,
+        "memoryFree": 15339986944,
+        "cudaCc": [
+          12,
+          0
+        ],
+        "memoryBusWidth": 256,
+        "maxMemoryClockMhz": 15001
+      }
+    ]
+  },
+  "backends": {
+    "nvcuda": true,
+    "vulkan": true
+  },
+  "disks": [
+    {
+      "mount": "C:\\",
+      "total": 1999277912064,
+      "available": 1140181147648
+    }
+  ],
+  "notes": []
+}

@@ -2,7 +2,11 @@
 import type { Source } from "./Source";
 import type { Vendor } from "./Vendor";
 
-export type GpuInfo = { name: string, vendor: Vendor, 
+export type GpuInfo = { 
+/**
+ * Position de l'adaptateur dans l'énumération DXGI ; référence de `Overrides::gpu_index`.
+ */
+index: number, name: string, vendor: Vendor, 
 /**
  * VRAM dédiée, en octets.
  */

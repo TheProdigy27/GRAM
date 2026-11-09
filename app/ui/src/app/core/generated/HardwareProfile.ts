@@ -21,4 +21,8 @@ otherGpus: Array<GpuInfo>, backends: Backends, disks: Array<DiskInfo>,
 /**
  * Corrections manuelles et simulation.
  */
-overrides: Overrides, };
+overrides: Overrides, 
+/**
+ * Avertissements de détection, en français, affichés tels quels.
+ */
+warnings: Array<string>, };

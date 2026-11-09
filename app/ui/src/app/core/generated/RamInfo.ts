@@ -4,13 +4,17 @@ import type { Source } from "./Source";
 
 export type RamInfo = { 
 /**
- * Octets.
+ * Mémoire vue par Windows (installée moins la mémoire réservée au matériel), en octets.
  */
 total: number, 
 /**
  * Octets.
  */
-available: number, kind: RamKind, 
+available: number, 
+/**
+ * Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), en octets.
+ */
+installed: number | null, kind: RamKind, 
 /**
  * Vitesse configurée en MT/s.
  */
@@ -19,6 +23,10 @@ speedMts: number | null,
  * Nombre de barrettes détectées.
  */
 modules: number, 
+/**
+ * Nombre d'emplacements de la carte mère.
+ */
+slots: number | null, 
 /**
  * Nombre de canaux estimé (64 bits chacun).
  */

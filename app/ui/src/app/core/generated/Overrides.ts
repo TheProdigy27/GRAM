@@ -5,11 +5,12 @@
  */
 export type Overrides = { ramChannels: number | null, gpuBandwidthGbs: number | null, gpuIntegrated: boolean | null, 
 /**
- * Index du GPU retenu parmi les GPU détectés.
+ * GPU retenu (`GpuInfo::index`) à la place du plus gros GPU.
  */
 gpuIndex: number | null, 
 /**
- * Simulation : nom d'un GPU de `gpu_specs.json` à la place du GPU réel.
+ * Simulation : libellé d'un GPU de `gpu_specs.json` (ex. « NVIDIA GeForce RTX 3060 12 Go »)
+ * à la place du GPU réel.
  */
 simulatedGpu: string | null, 
 /**

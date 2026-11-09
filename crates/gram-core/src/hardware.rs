@@ -18,6 +18,15 @@ pub struct HardwareProfile {
     pub disks: Vec<DiskInfo>,
     /// Corrections manuelles et simulation.
     pub overrides: Overrides,
+    /// Avertissements de détection, en français, affichés tels quels.
+    pub warnings: Vec<String>,
+}
+
+impl HardwareProfile {
+    /// Tous les GPU détectés (le GPU retenu en premier), pour choisir le GPU retenu.
+    pub fn all_gpus(&self) -> impl Iterator<Item = &GpuInfo> {
+        self.gpu.iter().chain(&self.other_gpus)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -51,15 +60,19 @@ pub enum RamKind {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RamInfo {
-    /// Octets.
+    /// Mémoire vue par Windows (installée moins la mémoire réservée au matériel), en octets.
     pub total: u64,
     /// Octets.
     pub available: u64,
+    /// Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), en octets.
+    pub installed: Option<u64>,
     pub kind: RamKind,
     /// Vitesse configurée en MT/s.
     pub speed_mts: Option<u32>,
     /// Nombre de barrettes détectées.
     pub modules: u32,
+    /// Nombre d'emplacements de la carte mère.
+    pub slots: Option<u32>,
     /// Nombre de canaux estimé (64 bits chacun).
     pub channels: u32,
     pub channels_source: Source,
@@ -101,6 +114,8 @@ pub enum Source {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct GpuInfo {
+    /// Position de l'adaptateur dans l'énumération DXGI ; référence de `Overrides::gpu_index`.
+    pub index: u32,
     pub name: String,
     pub vendor: Vendor,
     /// VRAM dédiée, en octets.
@@ -147,9 +162,10 @@ pub struct Overrides {
     pub ram_channels: Option<u32>,
     pub gpu_bandwidth_gbs: Option<f32>,
     pub gpu_integrated: Option<bool>,
-    /// Index du GPU retenu parmi les GPU détectés.
+    /// GPU retenu (`GpuInfo::index`) à la place du plus gros GPU.
     pub gpu_index: Option<u32>,
-    /// Simulation : nom d'un GPU de `gpu_specs.json` à la place du GPU réel.
+    /// Simulation : libellé d'un GPU de `gpu_specs.json` (ex. « NVIDIA GeForce RTX 3060 12 Go »)
+    /// à la place du GPU réel.
     pub simulated_gpu: Option<String>,
     /// Simulation : quantité de RAM totale, en octets.
     pub simulated_ram_total: Option<u64>,
@@ -174,14 +190,17 @@ mod tests {
             ram: RamInfo {
                 total: 32 << 30,
                 available: 20 << 30,
+                installed: Some(32 << 30),
                 kind: RamKind::Ddr4,
                 speed_mts: Some(3600),
                 modules: 2,
+                slots: Some(4),
                 channels: 2,
                 channels_source: Source::Estimated,
                 bandwidth_gbs: Some(57.6),
             },
             gpu: Some(GpuInfo {
+                index: 0,
                 name: "NVIDIA GeForce RTX 3060".into(),
                 vendor: Vendor::Nvidia,
                 vram_total: 12 << 30,
@@ -204,6 +223,7 @@ mod tests {
                 available: 210 << 30,
             }],
             overrides: Overrides::default(),
+            warnings: vec![],
         }
     }
 

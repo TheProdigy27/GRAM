@@ -1,5 +1,8 @@
 //! `gram-cli` : binaire de debug pour valider chaque brique de GRAM sans l'interface.
 
+mod fmt;
+mod hw;
+
 use anyhow::{Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 use gram_core::UseCase;
@@ -14,11 +17,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Affiche le matériel détecté.
+    /// Affiche le matériel détecté et les runtimes installés.
     Hw {
-        /// Sortie JSON (HardwareProfile).
+        /// Sortie JSON : `{ hardware: HardwareProfile, runtimes: RuntimesStatus }`.
         #[arg(long)]
         json: bool,
+        /// Données brutes de détection (JSON), à enregistrer comme fixture de test.
+        #[arg(long, conflicts_with = "json")]
+        raw: bool,
     },
     /// Synchronise le catalogue Hugging Face.
     Sync {
@@ -71,7 +77,7 @@ fn main() -> Result<()> {
     tracing::debug!(version = gram_core::VERSION, "gram-cli démarré");
 
     match cli.command {
-        Command::Hw { .. } => bail!("`hw` n'est pas encore implémenté (phase 1)"),
+        Command::Hw { json, raw } => hw::run(json, raw),
         Command::Sync { .. } => bail!("`sync` n'est pas encore implémenté (phase 2)"),
         Command::Rank { usage, .. } => {
             let _usage = UseCase::from(usage);
