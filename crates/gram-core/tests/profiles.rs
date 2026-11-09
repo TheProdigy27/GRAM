@@ -218,7 +218,13 @@ fn modele_non_detaille() {
     let q4 = all.iter().find(|v| v.variant.label == "Q4_K_M").unwrap();
     // ~17,4 Gio estimés : tient sur la RTX 4090.
     assert_eq!(q4.estimate.mode, RunMode::Gpu);
-    assert!(q4.estimate.tok_s > 300.0, "MoE : {}", q4.estimate.tok_s);
+    // Vitesses publiées pour ce modèle sur RTX 4090 : de l'ordre de 190 tok/s. Sans temps fixe
+    // par token, la formule en donnait ~330.
+    assert!(
+        (150.0..=250.0).contains(&q4.estimate.tok_s),
+        "MoE : {}",
+        q4.estimate.tok_s
+    );
     // Repli prudent : plus que le KV réel de Qwen3-30B-A3B (48 couches, 4 têtes KV × 128 = 96 Kio).
     assert!(q4.estimate.kv_per_token > 96 << 10);
 }

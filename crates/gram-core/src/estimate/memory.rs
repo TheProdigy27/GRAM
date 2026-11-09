@@ -31,6 +31,10 @@ pub struct EstimateParams {
     pub overhead_bytes: u64,
     /// Facteur d'efficacité de la vitesse (fraction de la bande passante réellement exploitée).
     pub efficiency: f32,
+    /// Temps fixe par token, en millisecondes : lancement des calculs, routage des experts,
+    /// synchronisations. Il domine quand un token lit peu d'octets (MoE, petits modèles) et
+    /// plafonne la vitesse à `1000 / token_overhead_ms` tok/s.
+    pub token_overhead_ms: f32,
     pub kv_cache: KvCacheType,
     /// Les quantifications sous ce nombre de bits par poids ne sont pas proposées.
     pub min_bpw: f32,
@@ -46,6 +50,10 @@ impl Default for EstimateParams {
             close_apps: false,
             overhead_bytes: 512 * MIB,
             efficiency: 0.55,
+            // Valeur prudente, tirée de vitesses publiées et non mesurée ici : Qwen3-30B-A3B en
+            // Q4_K_M sur RTX 4090 tourne vers 190 tok/s, alors que la formule sans temps fixe en
+            // donne ~280. À calibrer avec la phase 7 (un modèle dense et un MoE).
+            token_overhead_ms: 1.5,
             kv_cache: KvCacheType::F16,
             min_bpw: 2.5,
             min_ctx: 2048,

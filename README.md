@@ -78,7 +78,7 @@ Une première synchronisation coûte environ 230 appels API et 150 appels resolv
 1. **Mémoire utilisable** (`MemoryBudget::from_profile`) : `min(VRAM × 90 %, VRAM libre + 256 Mio)` sur le GPU retenu, et `min(RAM disponible, RAM × 75 %)`. Le réglage « je ferme tout » passe à `RAM − 4 Go`. Un iGPU compte comme du CPU.
 2. **Besoin** : poids (taille réelle des fichiers) + cache KV (`2 × couches d'attention × têtes KV × head_dim × octets`, f16 / q8_0 / q4_0) + 0,5 Go de surcoût (+ le projecteur vision si l'usage vision est demandé).
 3. **Mode** : GPU si tout tient en VRAM ; sinon hybride (KV et surcoût en VRAM, puis des couches entières : le `-ngl` de llama.cpp) ; sinon CPU. Si rien ne tient, le contexte est divisé par deux jusqu'à 2 048 tokens, puis le modèle est déclaré trop gros.
-4. **Vitesse** : la génération est limitée par la bande passante. `tok/s = 0,55 / (octets GPU / BW GPU + octets RAM / BW RAM)`, où un MoE ne lit que ses paramètres actifs.
+4. **Vitesse** : la génération est limitée par la bande passante, plus un temps fixe par token. `temps = (octets GPU / BW GPU + octets RAM / BW RAM) / 0,55 + 1,5 ms` et `tok/s = 1 / temps`. Un MoE ne lit que ses paramètres actifs. Le temps fixe (lancement des calculs, routage des experts) compte surtout quand un token lit peu d'octets : sans lui, un MoE à 3B actifs ou un modèle de 0,6B serait surestimé d'un facteur 1,5 à 2 sur GPU. Les valeurs 0,55 et 1,5 ms sont prudentes, tirées de vitesses publiées ; la phase 7 les calibrera sur la machine.
 5. **Adéquation** : parfait (GPU, ≤ 80 % de la VRAM utilisable), bon (GPU ≤ 95 %, ou au moins 75 % des couches sur le GPU), limite (autre hybride, CPU), trop juste.
 
 Les quantifications sous 2,5 bits par poids ne sont pas proposées. Sans tailles réelles (modèle pas encore détaillé), l'estimation part de l'échelle Q8_0 → Q2_K de `data/quant_quality.json`. Sans architecture, elle prend un cache KV prudent. Ces deux cas sont marqués « estimation approximative ».
@@ -90,6 +90,6 @@ Profils types du §15 (`tests/fixtures/profiles/`), testés dans `crates/gram-co
 | Profil | Qwen3-8B Q4_K_M (4,7 Go) | Llama-3.3-70B Q4_K_M (39,6 Go) |
 |---|---|---|
 | P1 : portable iGPU, 16 Go DDR4-3200 | CPU, ~5,6 tok/s | trop gros |
-| P2 : RTX 3060 12 Go + 32 Go DDR4-3600 | GPU, ~39 tok/s, parfait | trop gros |
-| P3 : RTX 4090 24 Go + 64 Go DDR5-6000 | GPU, ~110 tok/s, parfait | hybride 37/80 couches, ~2,1 tok/s |
-| P4 : RX 7800 XT 16 Go + 32 Go DDR5-6000 | GPU, ~68 tok/s, parfait | trop gros |
+| P2 : RTX 3060 12 Go + 32 Go DDR4-3600 | GPU, ~37 tok/s, parfait | trop gros |
+| P3 : RTX 4090 24 Go + 64 Go DDR5-6000 | GPU, ~95 tok/s, parfait | hybride 37/80 couches, ~2,1 tok/s |
+| P4 : RX 7800 XT 16 Go + 32 Go DDR5-6000 | GPU, ~62 tok/s, parfait | trop gros |

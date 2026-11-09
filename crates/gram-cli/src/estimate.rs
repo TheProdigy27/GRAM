@@ -372,7 +372,7 @@ mod tests {
         assert!(out.contains("contexte 8 192 tokens · cache KV f16 (144 Kio par token)"));
         let q4 = out.lines().find(|l| l.starts_with("Q4_K_M ")).unwrap();
         assert!(
-            q4.contains("GPU") && q4.contains("~39") && q4.ends_with("parfait"),
+            q4.contains("GPU") && q4.contains("~37") && q4.ends_with("parfait"),
             "{q4}"
         );
         let bf16 = out.lines().find(|l| l.starts_with("BF16 ")).unwrap();

@@ -25,7 +25,13 @@ overheadBytes: number,
 /**
  * Facteur d'efficacité de la vitesse (fraction de la bande passante réellement exploitée).
  */
-efficiency: number, kvCache: KvCacheType, 
+efficiency: number, 
+/**
+ * Temps fixe par token, en millisecondes : lancement des calculs, routage des experts,
+ * synchronisations. Il domine quand un token lit peu d'octets (MoE, petits modèles) et
+ * plafonne la vitesse à `1000 / token_overhead_ms` tok/s.
+ */
+tokenOverheadMs: number, kvCache: KvCacheType, 
 /**
  * Les quantifications sous ce nombre de bits par poids ne sont pas proposées.
  */

@@ -274,13 +274,7 @@ pub fn estimate(
         mem_usage,
         ctx_used: ctx,
         ctx_max: ctx_max(p.mode, weights, fixed, shape.kv_per_token, budget, ctx_cap).max(ctx),
-        tok_s: tok_s(
-            p.mode,
-            weights,
-            shape.active_ratio,
-            budget,
-            params.efficiency,
-        ),
+        tok_s: tok_s(p.mode, weights, shape.active_ratio, budget, params),
         fit: fit_level(p.mode, mem_usage),
         approximate,
         warnings,
@@ -362,9 +356,19 @@ fn ctx_max(
 }
 
 /// §8.4 : la génération est limitée par la bande passante mémoire. Chaque token lit les poids
-/// actifs une fois : `temps = octets GPU / BW GPU + octets RAM / BW RAM`, et
-/// `tok/s = efficacité / temps`. En hybride, les poids se répartissent selon les couches.
-fn tok_s(mode: RunMode, weights: u64, active_ratio: f64, b: &MemoryBudget, efficiency: f32) -> f32 {
+/// actifs une fois (seulement les paramètres actifs d'un MoE), plus un temps fixe :
+/// `temps = (octets GPU / BW GPU + octets RAM / BW RAM) / efficacité + temps fixe`, et
+/// `tok/s = 1 / temps`. En hybride, les poids se répartissent selon les couches.
+///
+/// Sans temps fixe, la vitesse d'un modèle qui lit peu d'octets par token (MoE à 3B actifs,
+/// modèle de 0,6B) serait surestimée : son coût n'est plus dominé par la bande passante.
+fn tok_s(
+    mode: RunMode,
+    weights: u64,
+    active_ratio: f64,
+    b: &MemoryBudget,
+    p: &EstimateParams,
+) -> f32 {
     let gpu_share = match mode {
         RunMode::Gpu => 1.0,
         RunMode::Hybrid { gpu_layers, layers } => f64::from(gpu_layers) / f64::from(layers),
@@ -374,9 +378,11 @@ fn tok_s(mode: RunMode, weights: u64, active_ratio: f64, b: &MemoryBudget, effic
     let bytes = weights as f64 * active_ratio;
     let gpu_bw = f64::from(b.gpu_bandwidth_gbs.unwrap_or(DEFAULT_GPU_BANDWIDTH_GBS)) * 1e9;
     let ram_bw = f64::from(b.ram_bandwidth_gbs) * 1e9;
-    let seconds = bytes * gpu_share / gpu_bw + bytes * (1.0 - gpu_share) / ram_bw;
-    if seconds > 0.0 {
-        (f64::from(efficiency) / seconds) as f32
+    let transfer = bytes * gpu_share / gpu_bw + bytes * (1.0 - gpu_share) / ram_bw;
+    let seconds =
+        transfer / f64::from(p.efficiency) + f64::from(p.token_overhead_ms.max(0.0)) / 1000.0;
+    if seconds.is_finite() && seconds > 0.0 {
+        (1.0 / seconds) as f32
     } else {
         0.0
     }

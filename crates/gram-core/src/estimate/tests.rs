@@ -443,26 +443,60 @@ fn contexte_d_entrainement_inconnu() {
 
 // ── Vitesse (§8.4) ──────────────────────────────────────────────────────────────────────────
 
+/// Paramètres par défaut, sans temps fixe par token : la formule de bande passante seule.
+fn bandwidth_only() -> EstimateParams {
+    EstimateParams {
+        token_overhead_ms: 0.0,
+        ..EstimateParams::default()
+    }
+}
+
 #[test]
-fn vitesse_ordres_de_grandeur() {
+fn vitesse_limitee_par_la_bande_passante() {
     let b = budget(12 * GIB, 32 * GIB);
+    let p = bandwidth_only();
     // 5 Go sur une RTX 3060 (360 Go/s) : ~40 tok/s ; sur DDR4-3200 double canal : ~5,6 tok/s.
-    let gpu = tok_s(RunMode::Gpu, 5_000_000_000, 1.0, &b, 0.55);
+    let gpu = tok_s(RunMode::Gpu, 5_000_000_000, 1.0, &b, &p);
     assert!((gpu - 39.6).abs() < 0.01, "{gpu}");
-    let cpu = tok_s(RunMode::Cpu, 5_000_000_000, 1.0, &b, 0.55);
+    let cpu = tok_s(RunMode::Cpu, 5_000_000_000, 1.0, &b, &p);
     assert!((cpu - 5.632).abs() < 0.001, "{cpu}");
     // Hybride, moitié des couches : 2,5 Go / 360 Go/s + 2,5 Go / 51,2 Go/s.
     let half = RunMode::Hybrid {
         gpu_layers: 16,
         layers: 32,
     };
-    let hybrid = tok_s(half, 5_000_000_000, 1.0, &b, 0.55);
+    let hybrid = tok_s(half, 5_000_000_000, 1.0, &b, &p);
     let expected = 0.55 / (2.5 / 360.0 + 2.5 / 51.2);
     assert!((f64::from(hybrid) - expected).abs() < 0.01, "{hybrid}");
     // MoE : seuls les paramètres actifs (10 %) sont lus à chaque token.
-    let moe = tok_s(RunMode::Gpu, 5_000_000_000, 0.1, &b, 0.55);
+    let moe = tok_s(RunMode::Gpu, 5_000_000_000, 0.1, &b, &p);
     assert!((moe - 396.0).abs() < 0.1, "{moe}");
-    assert_eq!(tok_s(RunMode::TooBig, 5_000_000_000, 1.0, &b, 0.55), 0.0);
+    assert_eq!(tok_s(RunMode::TooBig, 5_000_000_000, 1.0, &b, &p), 0.0);
+}
+
+#[test]
+fn temps_fixe_par_token() {
+    let b = budget(12 * GIB, 32 * GIB);
+    let p = EstimateParams::default();
+    let at = |bytes: u64| f64::from(tok_s(RunMode::Gpu, bytes, 1.0, &b, &p));
+    // 5 Go sur une RTX 3060 : 25,3 ms de lecture + 1,5 ms, soit ~37 tok/s au lieu de ~40.
+    let expected = 1.0 / (5e9 / (360e9 * 0.55) + 0.0015);
+    assert!((at(5_000_000_000) - expected).abs() < 0.01);
+    assert!((36.0..38.0).contains(&expected));
+    // Un token qui lit peu d'octets (MoE, petit modèle) bute sur le temps fixe :
+    // 500 Mo → ~250 tok/s au lieu de 396, et jamais plus de 1000 / 1,5 ≈ 667 tok/s.
+    let small = at(500_000_000);
+    assert!((240.0..260.0).contains(&small), "{small}");
+    assert!(at(1_000_000) < 667.0);
+    // Sur CPU, la bande passante domine toujours : moins de 1 % d'écart pour 5 Go.
+    let cpu = tok_s(RunMode::Cpu, 5_000_000_000, 1.0, &b, &p);
+    assert!((cpu - 5.632).abs() / 5.632 < 0.01, "{cpu}");
+    // Efficacité nulle (paramètre aberrant) : pas de vitesse infinie.
+    let broken = EstimateParams {
+        efficiency: 0.0,
+        ..p.clone()
+    };
+    assert_eq!(tok_s(RunMode::Gpu, 5_000_000_000, 1.0, &b, &broken), 0.0);
 }
 
 #[test]
@@ -470,14 +504,22 @@ fn vitesse_moe_dans_l_estimation() {
     let mut m = model(30_532_122_624, Some(arch(48, 4, 128)), 40_960);
     let v = variant("Q4_K_M", 17 * GIB, 4.8);
     let b = budget(80 * GIB, 32 * GIB);
-    let dense = estimate(&m, &v, &b, work(8192), &EstimateParams::default());
-    m.params_active = Some(3_053_212_262);
-    let moe = estimate(&m, &v, &b, work(8192), &EstimateParams::default());
-    assert_eq!(
-        moe.mem_gpu, dense.mem_gpu,
-        "même placement qu'un modèle dense"
-    );
-    assert!((moe.tok_s / dense.tok_s - 10.0).abs() < 0.01);
+    for (p, min, max) in [
+        (bandwidth_only(), 9.99, 10.01),
+        (EstimateParams::default(), 5.0, 9.5),
+    ] {
+        let dense = estimate(&m, &v, &b, work(8192), &p);
+        m.params_active = Some(3_053_212_262);
+        let moe = estimate(&m, &v, &b, work(8192), &p);
+        m.params_active = None;
+        assert_eq!(
+            moe.mem_gpu, dense.mem_gpu,
+            "même placement qu'un modèle dense"
+        );
+        // 10 fois moins d'octets lus ; le temps fixe réduit l'écart.
+        let ratio = moe.tok_s / dense.tok_s;
+        assert!((min..=max).contains(&ratio), "{ratio}");
+    }
 }
 
 // ── Adéquation (§9) ─────────────────────────────────────────────────────────────────────────
