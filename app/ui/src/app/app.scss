@@ -1,0 +1,32 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  gap: 12px;
+}
+
+.brand {
+  font: var(--mat-sys-title-large);
+  font-weight: 600;
+}
+
+.tagline {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.content {
+  padding: 24px;
+  max-width: 640px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.versions {
+  color: var(--mat-sys-on-surface-variant);
+}

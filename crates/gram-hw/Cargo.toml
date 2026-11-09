@@ -1,0 +1,13 @@
+[package]
+name = "gram-hw"
+description = "Détection du matériel et des runtimes installés (Windows ; stub ailleurs)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+gram-core.workspace = true
+
+[lints]
+workspace = true

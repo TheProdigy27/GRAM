@@ -1,0 +1,28 @@
+[package]
+name = "gram"
+description = "GRAM (GPU & RAM Aware Matcher) : quels modèles IA tournent en local sur cette machine ?"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+# Le suffixe `_lib` évite un conflit de nom entre la lib et le binaire sous Windows
+# (https://github.com/rust-lang/cargo/issues/8519).
+name = "gram_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+gram-core.workspace = true
+tauri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

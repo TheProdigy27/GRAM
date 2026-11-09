@@ -1,0 +1,8 @@
+# Rust
+/target/
+
+# Éditeurs / système
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

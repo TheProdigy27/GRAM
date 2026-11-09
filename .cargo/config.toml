@@ -1,0 +1,5 @@
+[env]
+# Dossier où `ts-rs` écrit les types TypeScript générés (lors de `cargo test`).
+TS_RS_EXPORT_DIR = { value = "app/ui/src/app/core/generated", relative = true }
+# Les tailles en octets (u64) restent des `number` côté TypeScript (exact jusqu'à 2^53, soit 9 Po).
+TS_RS_LARGE_INT = "number"

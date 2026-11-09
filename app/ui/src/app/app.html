@@ -1,0 +1,28 @@
+<mat-toolbar class="toolbar">
+  <mat-icon aria-hidden="true">memory</mat-icon>
+  <span class="brand">GRAM</span>
+  <span class="tagline">GPU &amp; RAM Aware Matcher</span>
+</mat-toolbar>
+
+<main class="content">
+  <mat-card appearance="outlined">
+    <mat-card-header>
+      <mat-card-title>Liaison avec le backend Rust</mat-card-title>
+      <mat-card-subtitle>Commande IPC « ping »</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (ping.isLoading()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Appel en cours" />
+      } @else if (pingError(); as message) {
+        <p class="error" role="alert">Échec de l'appel : {{ message }}</p>
+      } @else if (ping.hasValue()) {
+        <p class="pong">
+          Réponse : <strong data-testid="ping-message">{{ ping.value().message }}</strong>
+        </p>
+        <p class="versions">
+          GRAM {{ ping.value().appVersion }} · gram-core {{ ping.value().coreVersion }}
+        </p>
+      }
+    </mat-card-content>
+  </mat-card>
+</main>

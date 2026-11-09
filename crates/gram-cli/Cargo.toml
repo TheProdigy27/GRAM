@@ -1,0 +1,19 @@
+[package]
+name = "gram-cli"
+description = "Binaire de debug de GRAM : hw, sync, rank, snapshot."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+gram-core.workspace = true
+gram-hw.workspace = true
+gram-hub.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true
