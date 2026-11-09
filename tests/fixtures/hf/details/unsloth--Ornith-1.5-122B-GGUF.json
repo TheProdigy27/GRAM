@@ -1,0 +1,428 @@
+{
+ "_id": "6ad6df79575d0b5073de4187",
+ "id": "unsloth/Ornith-1.5-122B-GGUF",
+ "private": false,
+ "pipeline_tag": "text-generation",
+ "tags": [
+  "gguf",
+  "ornith",
+  "qwen3_5_moe",
+  "unsloth",
+  "text-generation",
+  "base_model:ornith-ai/Ornith-1.5-122B",
+  "base_model:quantized:ornith-ai/Ornith-1.5-122B",
+  "license:mit",
+  "endpoints_compatible",
+  "region:us",
+  "conversational"
+ ],
+ "downloads": 593201,
+ "likes": 98,
+ "modelId": "unsloth/Ornith-1.5-122B-GGUF",
+ "author": "unsloth",
+ "sha": "745bd742473a6cdddb1c6f78fb9a3b3a9293bd41",
+ "lastModified": "2026-10-21T20:05:20.000Z",
+ "gated": false,
+ "disabled": false,
+ "widgetData": [
+  {
+   "text": "Hi, what can you help me with?"
+  },
+  {
+   "text": "What is 84 * 3 / 2?"
+  },
+  {
+   "text": "Tell me an interesting fact about the universe!"
+  },
+  {
+   "text": "Explain quantum computing in simple terms."
+  }
+ ],
+ "model-index": null,
+ "config": {},
+ "cardData": {
+  "license": "mit",
+  "license_link": "https://huggingface.co/ornith-ai/Ornith-1.5-122B/blob/main/LICENSE",
+  "pipeline_tag": "text-generation",
+  "base_model": [
+   "ornith-ai/Ornith-1.5-122B"
+  ],
+  "tags": [
+   "ornith",
+   "qwen3_5_moe",
+   "unsloth"
+  ]
+ },
+ "gguf": {
+  "total": 124635206144,
+  "architecture": "qwen35moe",
+  "context_length": 262144,
+  "eos_token": "<|im_end|>",
+  "totalFileSize": 40356745472
+ },
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "blobId": "88277d964dedaf511a18452c150d9c3b8136f9db",
+   "size": 4258
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00001-of-00007.gguf",
+   "blobId": "4db445f9517930a1bcbe4bfe682c2a24c44964e9",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "17947a2c2ae365cd9bc644c73f5c7a4450f7ee4906dfb2a2e8c0b8aa088f5708",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00002-of-00007.gguf",
+   "blobId": "2bf053bcbc18800fa5fa74a3a74d54ec47227232",
+   "size": 48628603808,
+   "lfs": {
+    "sha256": "99c36b008b0a0038c83dd5fd24454617b94dd3fdc761abed46188f83832abd7b",
+    "size": 48628603808,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00003-of-00007.gguf",
+   "blobId": "d2134e125c3c58fc395ba84405e94a124b5c5be7",
+   "size": 48407443296,
+   "lfs": {
+    "sha256": "7b45959f9e06df8c54ae7033035dd1c04b9dc6d44c79c7fc0349f408494786d7",
+    "size": 48407443296,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00004-of-00007.gguf",
+   "blobId": "8c7ea40d981923a2e800b15051c7421f33bdb1e5",
+   "size": 48640204960,
+   "lfs": {
+    "sha256": "729c89c1f2011e0c965b6a898b534b0c7707a5ff628777811cc8b9666c8226d3",
+    "size": 48640204960,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00005-of-00007.gguf",
+   "blobId": "673d41db5e2051bfc8bf83658f14f6886d97b3c0",
+   "size": 48638053472,
+   "lfs": {
+    "sha256": "2930d2ee5c2385b820640e3037c9d65836305c3391bd7716a862e2847d9e22ea",
+    "size": 48638053472,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00006-of-00007.gguf",
+   "blobId": "35edd7e4720eec5974b85cfb93b389aecb2432b3",
+   "size": 48642405824,
+   "lfs": {
+    "sha256": "b27d6631a6a2ac162475d938518c1c2d1b2bb0bbce3714a13e410d4448c5b71c",
+    "size": 48642405824,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "BF16/Ornith-1.5-122B-BF16-00007-of-00007.gguf",
+   "blobId": "dc7f640daa9f163c3fbd4bbebd7a5df77c7f955c",
+   "size": 6395327232,
+   "lfs": {
+    "sha256": "1921823fba149da186dc3d1e504d1650c8d7cb9fb872dbd0e2f94ef64928b2df",
+    "size": 6395327232,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "Ornith-1.5-122B-UD-IQ1_M.gguf",
+   "blobId": "946ea7d688161d7531f7e561c8979afe652ac9fa",
+   "size": 40356745472,
+   "lfs": {
+    "sha256": "4715a8d5b5030a9c80ba53792a905f2d356bfcaaec67127ca995932f48c3fd00",
+    "size": 40356745472,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Ornith-1.5-122B-UD-IQ2_XXS.gguf",
+   "blobId": "9603c25ff7cdf737c8e345f713359c9ec41d9e0a",
+   "size": 41967395072,
+   "lfs": {
+    "sha256": "0497778d4f7f5008dec2d4b102183a699faf8433d0102dd143e86f9db13a3adc",
+    "size": 41967395072,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Ornith-1.5-122B-UD-IQ3_XXS.gguf",
+   "blobId": "b5bfd8e6e25a6a1391992e1d79fcdbe5aa336fd3",
+   "size": 49515667712,
+   "lfs": {
+    "sha256": "027a9a480e8bcc6079fcf834e368467a169953561fb4b98dc9528d6185c8a438",
+    "size": 49515667712,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Ornith-1.5-122B-UD-Q2_K_XL.gguf",
+   "blobId": "d71806f40fed7fd790838eb6656e121115a85e16",
+   "size": 44533952768,
+   "lfs": {
+    "sha256": "93fb32cfb1c31b34df426b4a41d961bdaffcddbbd217d850262136cf3689ba66",
+    "size": 44533952768,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Q8_0/Ornith-1.5-122B-Q8_0-00001-of-00004.gguf",
+   "blobId": "d6c729ed7ce19c2e07386f2846f2438bd01be0af",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "e9dbc5401757506c6bbb04dba3bf65decc6435aaf0733f1e95cc58a9332166fc",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "Q8_0/Ornith-1.5-122B-Q8_0-00002-of-00004.gguf",
+   "blobId": "163e5ca5c2988a7e5740c456501e4e8a6c17767e",
+   "size": 49855668288,
+   "lfs": {
+    "sha256": "c1ea340f63c932895417f7c2e7c4967b4b56f3e5a3f981242d0482c662aae2b8",
+    "size": 49855668288,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Q8_0/Ornith-1.5-122B-Q8_0-00003-of-00004.gguf",
+   "blobId": "c2f26659b09d0dc51290ea5f6115676520f7830d",
+   "size": 49903347168,
+   "lfs": {
+    "sha256": "644c26a3d8cab405186ef545e4071b433a23c2a359e45434c822d9c48884eb4c",
+    "size": 49903347168,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Q8_0/Ornith-1.5-122B-Q8_0-00004-of-00004.gguf",
+   "blobId": "5124774f34bc90a9da763af792f8daecf5be1c53",
+   "size": 32785752352,
+   "lfs": {
+    "sha256": "43bdc1b0cb764b5531d320816fb6004245256a414bfd55f1fdb69e3db42eaa57",
+    "size": 32785752352,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "README.md",
+   "blobId": "4a253a3bc0a76918148b80a0aadf0e12dd999f91",
+   "size": 24772
+  },
+  {
+   "rfilename": "UD-Q3_K_XL/Ornith-1.5-122B-UD-Q3_K_XL-00001-of-00003.gguf",
+   "blobId": "518b211b7a16fa4e9991835016d2452507b8eb91",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "d8a23c487741fdac7026e10013fa8e320502cf01048a2333b2db8ba2a9f74fe5",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "UD-Q3_K_XL/Ornith-1.5-122B-UD-Q3_K_XL-00002-of-00003.gguf",
+   "blobId": "7e95eee55e206e18b001d5ca5188188c8f1a40c5",
+   "size": 49791670080,
+   "lfs": {
+    "sha256": "95f76e67ffc49e2b0b4a4dfe5c42269b4b275ecf9e3696f599f3eeac92180323",
+    "size": 49791670080,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q3_K_XL/Ornith-1.5-122B-UD-Q3_K_XL-00003-of-00003.gguf",
+   "blobId": "6e5d65a7835c4c2fd79edb0587f783fc52b96ef3",
+   "size": 9958641536,
+   "lfs": {
+    "sha256": "1c4b52bbb1d45a21b5b7927429a5c80f264c688f2d14ed50ba0b6da0260d4028",
+    "size": 9958641536,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "UD-Q4_K_XL/Ornith-1.5-122B-UD-Q4_K_XL-00001-of-00003.gguf",
+   "blobId": "8eb37cb6211b732e188fd588f1e679101ead958c",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "7159d31a6a6ce5528500b490880383844c3c9b21fcdaad94e66c9e65233ff359",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "UD-Q4_K_XL/Ornith-1.5-122B-UD-Q4_K_XL-00002-of-00003.gguf",
+   "blobId": "a878a6102582b7e617f8c520d79ea95210f9e9b8",
+   "size": 49971099680,
+   "lfs": {
+    "sha256": "e66952128394bb4c75554c7e10a12a8b63dd1c7f049d876a02885a946e30c1c3",
+    "size": 49971099680,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q4_K_XL/Ornith-1.5-122B-UD-Q4_K_XL-00003-of-00003.gguf",
+   "blobId": "82961b9aad37b7a59b97b1d33cfd835bd281a1d2",
+   "size": 29731729056,
+   "lfs": {
+    "sha256": "21325ec18a9e3210eeffada0fc327a25a79171918f1d04f8f0a06b61866ac9ba",
+    "size": 29731729056,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q5_K_XL/Ornith-1.5-122B-UD-Q5_K_XL-00001-of-00003.gguf",
+   "blobId": "18729ff0211eeb0942081320c60362e628de4b44",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "8ef82af5830f24e93f1e18b58ec8281f77e6c35542f0965c4de1aa674419a06f",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "UD-Q5_K_XL/Ornith-1.5-122B-UD-Q5_K_XL-00002-of-00003.gguf",
+   "blobId": "7bbcd5bb59943db5f5d2cc1648b8b0b05fc22f31",
+   "size": 49598966816,
+   "lfs": {
+    "sha256": "7c8cd3439a301802d9888fe61b4c5206f7ff71d322e8060274b8d8e2839152d1",
+    "size": 49598966816,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q5_K_XL/Ornith-1.5-122B-UD-Q5_K_XL-00003-of-00003.gguf",
+   "blobId": "b29728696181caadd195368b24f8efa24de57c2d",
+   "size": 45002029760,
+   "lfs": {
+    "sha256": "4399a9fce998b7f3d57cea70eb0dfbc475e2776d73973b8b7dfd985fa421ba1e",
+    "size": 45002029760,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q6_K_XL/Ornith-1.5-122B-UD-Q6_K_XL-00001-of-00004.gguf",
+   "blobId": "e769f3018572fe64f6b4197b28cce250c7ec11fc",
+   "size": 10942929,
+   "lfs": {
+    "sha256": "45195675714ff99b0b0044e23c0bb2a7b6ab8f3e027baf48b5c995be2e5928c5",
+    "size": 10942929,
+    "pointerSize": 133
+   }
+  },
+  {
+   "rfilename": "UD-Q6_K_XL/Ornith-1.5-122B-UD-Q6_K_XL-00002-of-00004.gguf",
+   "blobId": "b18e7ce26fe7672bf105347e8bee309b58c18210",
+   "size": 49676529056,
+   "lfs": {
+    "sha256": "5a967c2810f1ed1d8ebe6b4803d99b4e31b700a38253b78726b57551df4d5886",
+    "size": 49676529056,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q6_K_XL/Ornith-1.5-122B-UD-Q6_K_XL-00003-of-00004.gguf",
+   "blobId": "0b6da3fbde58e1a5065b38a6d3baba1528ca69c8",
+   "size": 49911179808,
+   "lfs": {
+    "sha256": "d178535a1f0bb49fe15570a9768152df1e7ada5f851ca71a3f8845cda89d9f44",
+    "size": 49911179808,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "UD-Q6_K_XL/Ornith-1.5-122B-UD-Q6_K_XL-00004-of-00004.gguf",
+   "blobId": "b99ebc2a37c4639c73bfcc73bf54d2f89a3091c1",
+   "size": 14623756160,
+   "lfs": {
+    "sha256": "4c11e6227b6554352c82dbaa31a5c7f12dfabe58d232eadfacea40653c9b2bf2",
+    "size": 14623756160,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "assets/ornith_logo.png",
+   "blobId": "06459de44266843e631447a73b458e18d828467a",
+   "size": 962441,
+   "lfs": {
+    "sha256": "458ee0d85baea4d1fc0b099245f243b21006f696921f896a5b59980a6eadef6a",
+    "size": 962441,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "assets/size_vs_kld.png",
+   "blobId": "d74c6be8ec182f0fdec888b81881c69681677ebd",
+   "size": 319108,
+   "lfs": {
+    "sha256": "562ce72cd31f3bd887df67848ca53bba8fe0d732cb3a77711d45da461e0aea9e",
+    "size": 319108,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "assets/size_vs_top1.png",
+   "blobId": "eb67fd6155937bb19a933dec2cf39264b41c277e",
+   "size": 333205,
+   "lfs": {
+    "sha256": "919a9e025eaf9a0519908ccac0c8782218453fb655746ca228523ee48d96c9a2",
+    "size": 333205,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "imatrix_unsloth.gguf_file",
+   "blobId": "3e32640743f523aaedec8f2dec9cf5c113498cec",
+   "size": 358906304,
+   "lfs": {
+    "sha256": "6e5ada71fe8dc6b458d1087e1a753fa3e3b639c7ab207b644e8d11a14dc103ab",
+    "size": 358906304,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "mmproj-BF16.gguf",
+   "blobId": "d630deba26de316effacf22df4d31ee4d5226da6",
+   "size": 912263488,
+   "lfs": {
+    "sha256": "a5ff159216cd31b8f0c034cae37fb875b6480bd96c62433b6a4109f6ed273904",
+    "size": 912263488,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "mmproj-F16.gguf",
+   "blobId": "2bff7ac2e5d4321610061cc5a76996bba565283a",
+   "size": 908724544,
+   "lfs": {
+    "sha256": "39db176176a904b101f5173a4f03e785990f9279f94ab373c4fd629ae7011817",
+    "size": 908724544,
+    "pointerSize": 134
+   }
+  }
+ ],
+ "spaces": [
+  "fastgpu/vram-and-gpu-cost-calculator",
+  "600me/rag-web-scraping-cost-calculator",
+  "600me/ai-saas-stripe-vs-mor-tax-calculator",
+  "600me/pdf-api-cost-calculator",
+  "600me/seo-workflow-tco-calculator",
+  "Jhoni08/vram-and-gpu-cost-calculator",
+  "JUDY1024618/vram-and-gpu-cost-calculator",
+  "2023Ryan/vram-and-gpu-cost-calculator",
+  "Shanny1126/test2"
+ ],
+ "createdAt": "2026-10-20T03:26:49.000Z",
+ "usedStorage": 908783539448
+}

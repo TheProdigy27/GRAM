@@ -22,12 +22,18 @@ pub struct ModelEntry {
     /// Contexte d'entraînement, en tokens.
     pub ctx_train: u32,
     pub pipeline: Pipeline,
+    /// Toujours `General`, plus les cas d'usage déduits du nom, des tags et du pipeline.
     pub use_cases: Vec<UseCase>,
+    /// Somme des téléchargements (30 jours) de tous les dépôts du groupe.
     pub downloads: u64,
     pub likes: u64,
+    /// Création du plus ancien dépôt du groupe (approximation de la sortie du modèle).
     pub created_at: Option<DateTime<Utc>>,
     pub last_modified: Option<DateTime<Utc>>,
-    /// Une entrée par quantification.
+    /// Dépôt protégé : il faut accepter les conditions (et un token) pour télécharger.
+    pub gated: bool,
+    /// Une entrée par quantification, de la plus petite à la plus grosse. Vide tant que le
+    /// détail du dépôt n'a pas été chargé (tailles réelles inconnues).
     pub variants: Vec<QuantVariant>,
     /// Taille du projecteur vision (`mmproj-*.gguf`), en octets.
     pub mmproj_bytes: Option<u64>,
@@ -44,8 +50,12 @@ pub struct ArchInfo {
     pub architecture: String,
     pub n_layers: u32,
     pub n_heads: u32,
+    /// Têtes KV (le maximum si le nombre varie selon la couche).
     pub n_kv_heads: u32,
     pub head_dim: u32,
+    /// Couches qui ont réellement un cache KV, quand ce n'est pas toutes (modèles hybrides
+    /// attention + Mamba / attention linéaire). `None` = toutes les couches.
+    pub kv_layers: Option<u32>,
     pub embedding_length: Option<u32>,
     pub expert_count: Option<u32>,
     pub expert_used_count: Option<u32>,

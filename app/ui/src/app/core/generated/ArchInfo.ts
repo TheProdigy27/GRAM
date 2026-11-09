@@ -8,4 +8,13 @@ export type ArchInfo = {
 /**
  * `general.architecture` (ex. « qwen3 »).
  */
-architecture: string, nLayers: number, nHeads: number, nKvHeads: number, headDim: number, embeddingLength: number | null, expertCount: number | null, expertUsedCount: number | null, slidingWindow: number | null, source: ArchSource, };
+architecture: string, nLayers: number, nHeads: number, 
+/**
+ * Têtes KV (le maximum si le nombre varie selon la couche).
+ */
+nKvHeads: number, headDim: number, 
+/**
+ * Couches qui ont réellement un cache KV, quand ce n'est pas toutes (modèles hybrides
+ * attention + Mamba / attention linéaire). `None` = toutes les couches.
+ */
+kvLayers: number | null, embeddingLength: number | null, expertCount: number | null, expertUsedCount: number | null, slidingWindow: number | null, source: ArchSource, };

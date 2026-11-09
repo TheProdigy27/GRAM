@@ -23,9 +23,26 @@ paramsActive: number | null, arch: ArchInfo | null,
 /**
  * Contexte d'entraînement, en tokens.
  */
-ctxTrain: number, pipeline: Pipeline, useCases: Array<UseCase>, downloads: number, likes: number, createdAt: string | null, lastModified: string | null, 
+ctxTrain: number, pipeline: Pipeline, 
 /**
- * Une entrée par quantification.
+ * Toujours `General`, plus les cas d'usage déduits du nom, des tags et du pipeline.
+ */
+useCases: Array<UseCase>, 
+/**
+ * Somme des téléchargements (30 jours) de tous les dépôts du groupe.
+ */
+downloads: number, likes: number, 
+/**
+ * Création du plus ancien dépôt du groupe (approximation de la sortie du modèle).
+ */
+createdAt: string | null, lastModified: string | null, 
+/**
+ * Dépôt protégé : il faut accepter les conditions (et un token) pour télécharger.
+ */
+gated: boolean, 
+/**
+ * Une entrée par quantification, de la plus petite à la plus grosse. Vide tant que le
+ * détail du dépôt n'a pas été chargé (tailles réelles inconnues).
  */
 variants: Array<QuantVariant>, 
 /**

@@ -1,0 +1,185 @@
+{
+ "_id": "69e376b02ae0a29851d85511",
+ "id": "ggml-org/Qwen3.6-35B-A3B-GGUF",
+ "private": false,
+ "pipeline_tag": "image-text-to-text",
+ "tags": [
+  "gguf",
+  "quantized",
+  "image-text-to-text",
+  "base_model:Qwen/Qwen3.6-35B-A3B",
+  "base_model:quantized:Qwen/Qwen3.6-35B-A3B",
+  "license:apache-2.0",
+  "endpoints_compatible",
+  "region:us",
+  "conversational"
+ ],
+ "downloads": 197332,
+ "likes": 30,
+ "modelId": "ggml-org/Qwen3.6-35B-A3B-GGUF",
+ "author": "ggml-org",
+ "sha": "eb0b3cc97fecddab7eee6e6ffdbe92d2a00afcea",
+ "lastModified": "2026-11-08T04:19:45.000Z",
+ "gated": false,
+ "disabled": false,
+ "widgetData": [
+  {
+   "text": "Hi, what can you help me with?"
+  },
+  {
+   "text": "What is 84 * 3 / 2?"
+  },
+  {
+   "text": "Tell me an interesting fact about the universe!"
+  },
+  {
+   "text": "Explain quantum computing in simple terms."
+  }
+ ],
+ "model-index": null,
+ "config": {},
+ "cardData": {
+  "license": "apache-2.0",
+  "pipeline_tag": "image-text-to-text",
+  "tags": [
+   "gguf",
+   "quantized"
+  ],
+  "base_model": [
+   "Qwen/Qwen3.6-35B-A3B"
+  ]
+ },
+ "gguf": {
+  "total": 34660610688,
+  "architecture": "qwen35moe",
+  "context_length": 262144,
+  "bos_token": "<|endoftext|>",
+  "eos_token": "<|im_end|>",
+  "totalFileSize": 69376637536
+ },
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "blobId": "28610d46d11c7572932a9604aec7b95ec6543078",
+   "size": 2181
+  },
+  {
+   "rfilename": ".src_sha",
+   "blobId": "29089fa39f072291efb64844e4c9309d62f82345",
+   "size": 97
+  },
+  {
+   "rfilename": "Qwen3.6-35B-A3B-BF16.gguf",
+   "blobId": "fa512f48f13e967c5a837e768e21e45342b7df3c",
+   "size": 69376637536,
+   "lfs": {
+    "sha256": "ae2dcd020a5e2780d273c9fb70e4bdab3e73f1450c3352932ae1115b91338d8e",
+    "size": 69376637536,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Qwen3.6-35B-A3B-Q4_K_M.gguf",
+   "blobId": "39f0cf9721b5fe8413c5cc15da276774ef310d4b",
+   "size": 20542732576,
+   "lfs": {
+    "sha256": "f4ffe03c9139e6a905a5d346f77d9fabdd179367c3280dfd005d1e75ca5ed8c8",
+    "size": 20542732576,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "Qwen3.6-35B-A3B-Q8_0.gguf",
+   "blobId": "6be26ad51a469bc0ae390e38ee271545a530073d",
+   "size": 36903139616,
+   "lfs": {
+    "sha256": "f189cedbe18dc524dd74014b23431081262bc9fcc57c18fec7a7a25149246570",
+    "size": 36903139616,
+    "pointerSize": 136
+   }
+  },
+  {
+   "rfilename": "README.md",
+   "blobId": "4f89d64b25ce671a7b9a38339f059ebe8d684a2c",
+   "size": 506
+  },
+  {
+   "rfilename": "convert.log",
+   "blobId": "7a05268925e8ae35fac74614c9cfb5e39bb26f56",
+   "size": 483377
+  },
+  {
+   "rfilename": "dflash-Qwen3.6-35B-A3B-BF16.gguf",
+   "blobId": "7b3432369a6507250c1a55f027efe51c5e90e7cd",
+   "size": 782819776,
+   "lfs": {
+    "sha256": "d925c35af00835a0637b3d0c19ee3611a0fd72e025301f2b5c3b83c2f72845f6",
+    "size": 782819776,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "dflash-Qwen3.6-35B-A3B-Q8_0.gguf",
+   "blobId": "94bad2bf87f8f4b16deaab038eb2bd7869f54100",
+   "size": 421061056,
+   "lfs": {
+    "sha256": "fdc58dc581a1f5826383528660ebe7687fd187d9c18bab87e587661af546155c",
+    "size": 421061056,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "mmproj-Qwen3.6-35B-A3B-BF16.gguf",
+   "blobId": "d10ae9003a13b5fb4ec9ed753556124d7f45a845",
+   "size": 902822144,
+   "lfs": {
+    "sha256": "360c746ddf38fb67c06f83a0a88742492aa231e59e335cd980e6302f59ea6089",
+    "size": 902822144,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "mmproj-Qwen3.6-35B-A3B-Q8_0.gguf",
+   "blobId": "efd881bc2123ed97db1b6da3bdcd13b6623d6179",
+   "size": 614194304,
+   "lfs": {
+    "sha256": "904cbf8c8e876220066ab3bf676c7efa40f3da372276fdaf8b01d2fb2a37a51d",
+    "size": 614194304,
+    "pointerSize": 134
+   }
+  },
+  {
+   "rfilename": "mtp-Qwen3.6-35B-A3B-BF16.gguf",
+   "blobId": "b2b6e0639c968d15912045e6d3f54c98aa898d32",
+   "size": 3735545920,
+   "lfs": {
+    "sha256": "4188485f4b762c3bc2d778c706b11d651b6080fc8f76967db3d3a6716a388a6f",
+    "size": 3735545920,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "mtp-Qwen3.6-35B-A3B-Q4_0.gguf",
+   "blobId": "ba6cf868c96154f786d2ba6ae37bf9934ccffe23",
+   "size": 1060038720,
+   "lfs": {
+    "sha256": "44464ffa579a6607aebb99ef2ed34eb486a30e5ac2285a27ed0217eb2550c9f1",
+    "size": 1060038720,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "mtp-Qwen3.6-35B-A3B-Q8_0.gguf",
+   "blobId": "aac132ead35e012b5cab8251d6cb77e13005a2f9",
+   "size": 1990649920,
+   "lfs": {
+    "sha256": "8c59eac56ba630eeba657700fc7c4d252a8c9eea8dd4eb793e46558c14762ed0",
+    "size": 1990649920,
+    "pointerSize": 135
+   }
+  }
+ ],
+ "spaces": [],
+ "createdAt": "2026-04-18T12:18:56.000Z",
+ "usedStorage": 380961651680
+}

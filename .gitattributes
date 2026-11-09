@@ -4,3 +4,6 @@
 *.ico binary
 *.icns binary
 *.woff2 binary
+*.bin binary
+# Catalogue embarqué, généré par `gram-cli snapshot` (une seule ligne de JSON compact).
+data/seed_catalog.json -diff linguist-generated=true

@@ -1,0 +1,14 @@
+{
+  "about": "Dédoublonnage (§7.5 du plan) : quand plusieurs dépôts GGUF publient le même modèle, le dépôt canonique est celui de l'organisation officielle du modèle de base, sinon le premier uploader de cette liste (ordre de priorité), sinon le plus téléchargé. Les uploaders qui proposent le plus de quantifications sont en tête : seules les variantes du dépôt canonique sont évaluées. Comparaison insensible à la casse.",
+  "uploaders": [
+    "unsloth",
+    "bartowski",
+    "lmstudio-community",
+    "ggml-org",
+    "mradermacher",
+    "MaziyarPanahi",
+    "QuantFactory",
+    "second-state",
+    "TheBloke"
+  ]
+}

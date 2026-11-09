@@ -2,10 +2,12 @@
 
 mod fmt;
 mod hw;
+mod sync;
 
 use anyhow::{Result, bail};
 use clap::{Parser, Subcommand, ValueEnum};
 use gram_core::UseCase;
+use std::path::PathBuf;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -26,11 +28,23 @@ enum Command {
         #[arg(long, conflicts_with = "json")]
         raw: bool,
     },
-    /// Synchronise le catalogue Hugging Face.
+    /// Synchronise le catalogue Hugging Face (token optionnel : variable HF_TOKEN).
     Sync {
-        /// Ignore le cache.
+        /// Ignore le catalogue en cache, même récent (les détails par commit restent utilisés).
         #[arg(long)]
         force: bool,
+        /// Aucun appel réseau : catalogue du cache, sinon catalogue embarqué.
+        #[arg(long, conflicts_with = "force")]
+        offline: bool,
+        /// Toutes les tranches de taille, sans tenir compte du matériel de cette machine.
+        #[arg(long)]
+        all_sizes: bool,
+        /// Sortie JSON (`SyncSummary`).
+        #[arg(long)]
+        json: bool,
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
     },
     /// Classe les modèles pour cette machine.
     Rank {
@@ -43,7 +57,13 @@ enum Command {
         json: bool,
     },
     /// Génère `data/seed_catalog.json` (catalogue embarqué pour le hors ligne).
-    Snapshot,
+    Snapshot {
+        #[arg(long, default_value = "data/seed_catalog.json")]
+        output: PathBuf,
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -78,12 +98,24 @@ fn main() -> Result<()> {
 
     match cli.command {
         Command::Hw { json, raw } => hw::run(json, raw),
-        Command::Sync { .. } => bail!("`sync` n'est pas encore implémenté (phase 2)"),
+        Command::Sync {
+            force,
+            offline,
+            all_sizes,
+            json,
+            cache_dir,
+        } => sync::run(sync::SyncArgs {
+            force,
+            offline,
+            all_sizes,
+            json,
+            cache_dir,
+        }),
         Command::Rank { usage, .. } => {
             let _usage = UseCase::from(usage);
             bail!("`rank` n'est pas encore implémenté (phase 4)")
         }
-        Command::Snapshot => bail!("`snapshot` n'est pas encore implémenté (phase 2)"),
+        Command::Snapshot { output, cache_dir } => sync::snapshot(&output, cache_dir),
     }
 }
 
@@ -95,6 +127,35 @@ mod tests {
     #[test]
     fn definition_cli_valide() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn parse_sync_et_snapshot() {
+        let cli = Cli::try_parse_from(["gram-cli", "sync", "--offline", "--cache-dir", "D:/cache"])
+            .unwrap();
+        match cli.command {
+            Command::Sync {
+                offline,
+                force,
+                cache_dir,
+                ..
+            } => {
+                assert!(offline && !force);
+                assert_eq!(cache_dir, Some(PathBuf::from("D:/cache")));
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
+        // Hors ligne et forcé : contradictoire.
+        assert!(Cli::try_parse_from(["gram-cli", "sync", "--offline", "--force"]).is_err());
+        match Cli::try_parse_from(["gram-cli", "snapshot"])
+            .unwrap()
+            .command
+        {
+            Command::Snapshot { output, .. } => {
+                assert_eq!(output, PathBuf::from("data/seed_catalog.json"));
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
     }
 
     #[test]

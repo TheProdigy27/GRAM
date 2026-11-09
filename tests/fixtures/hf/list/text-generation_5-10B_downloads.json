@@ -1,0 +1,6088 @@
+[
+ {
+  "_id": "6a84f2a4e3b80a40c641b592",
+  "id": "ornith-ai/Ornith-1.5-9B-GGUF",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "mit",
+   "license_link": "https://huggingface.co/ornith-ai/Ornith-1.5-9B/blob/main/LICENSE",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-08-24T02:45:24.000Z",
+  "likes": 654,
+  "trendingScore": 26,
+  "sha": "abdd624b12ebf020b767fff532ff44fe552b28c3",
+  "downloads": 5766523,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 18407321184
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "text-generation",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-19T00:02:44.000Z"
+ },
+ {
+  "_id": "6a3cb4edb9ef7094c0c80d35",
+  "id": "ornith-ai/Ornith-1.0-9B-GGUF",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "mit",
+   "license_link": "https://huggingface.co/deepreinforce-ai/Ornith-1.0-9B-GGUF/blob/main/LICENSE",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-06-25T14:12:12.000Z",
+  "likes": 699,
+  "trendingScore": 0,
+  "sha": "3296bc7a404871a72ac3f1903f561459c09b5c17",
+  "downloads": 2385287,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 17920696512
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "text-generation",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-06-25T04:56:13.000Z"
+ },
+ {
+  "_id": "6815b8d70e2525074c399975",
+  "id": "Qwen/Qwen3-8B-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "base_model": "Qwen/Qwen3-8B"
+  },
+  "gated": false,
+  "lastModified": "2025-05-21T06:31:50.000Z",
+  "likes": 376,
+  "trendingScore": 5,
+  "sha": "7c41481f57cb95916b40956ab2f0b139b296d974",
+  "downloads": 825952,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5027783488
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "arxiv:2309.00071",
+   "arxiv:2505.09388",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-05-03T06:33:59.000Z"
+ },
+ {
+  "_id": "66e98b007a7dc0987822b768",
+  "id": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/blob/main/LICENSE",
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "base_model": "Qwen/Qwen2.5-7B-Instruct",
+   "tags": [
+    "chat"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-09-20T06:38:28.000Z",
+  "likes": 212,
+  "trendingScore": 3,
+  "sha": "bb5d59e06d9551d752d08b292a50eb208b07ab1f",
+  "downloads": 738477,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 131072,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 3015940000
+  },
+  "tags": [
+   "gguf",
+   "chat",
+   "text-generation",
+   "en",
+   "arxiv:2407.10671",
+   "base_model:Qwen/Qwen2.5-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-17T13:58:24.000Z"
+ },
+ {
+  "_id": "6ad044c9c5f9d8985054e850",
+  "id": "OsaurusAI/Diplodocus-preview-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "library_name": "gguf",
+   "license": "apache-2.0",
+   "pipeline_tag": "text-generation",
+   "base_model": "IFM/K2-Horizon-7B",
+   "tags": [
+    "gguf",
+    "llama.cpp",
+    "quantized",
+    "imatrix",
+    "reasoning",
+    "tool-use",
+    "finance",
+    "documents",
+    "spreadsheets",
+    "k2_horizon"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-15T03:56:03.000Z",
+  "likes": 1,
+  "trendingScore": 1,
+  "sha": "7072381575adfe4e528349799f30d27488a4ca89",
+  "downloads": 663298,
+  "gguf": {
+   "total": 8999178240,
+   "architecture": "k2-horizon",
+   "context_length": 524288,
+   "quantize_imatrix_file": "imatrix-preview4.gguf",
+   "bos_token": "<|ifm|begin_of_text|>",
+   "eos_token": "<|ifm|endoftext|>",
+   "totalFileSize": 6327738208
+  },
+  "tags": [
+   "gguf",
+   "llama.cpp",
+   "quantized",
+   "imatrix",
+   "reasoning",
+   "tool-use",
+   "finance",
+   "documents",
+   "spreadsheets",
+   "k2_horizon",
+   "text-generation",
+   "en",
+   "base_model:IFM/K2-Horizon-7B",
+   "base_model:quantized:IFM/K2-Horizon-7B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-15T03:13:13.000Z"
+ },
+ {
+  "_id": "6a80ab2c622d55cc15d31136",
+  "id": "empero-ai/Qwen3.8-9B-Distill-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": "empero-ai/Qwen3.8-9B",
+   "base_model_relation": "quantized",
+   "language": [
+    "en"
+   ],
+   "library_name": "gguf",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "gguf",
+    "llama.cpp",
+    "quantized",
+    "empero-ai",
+    "qwen3.5",
+    "qwen3.8",
+    "distillation",
+    "reasoning",
+    "gated-deltanet"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-08-16T01:00:49.000Z",
+  "likes": 349,
+  "trendingScore": 11,
+  "sha": "760121cd70bb4c36b2b5ec58eb765e0df5987efe",
+  "downloads": 540062,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 18407320896
+  },
+  "tags": [
+   "gguf",
+   "llama.cpp",
+   "quantized",
+   "empero-ai",
+   "qwen3.5",
+   "qwen3.8",
+   "distillation",
+   "reasoning",
+   "gated-deltanet",
+   "text-generation",
+   "en",
+   "base_model:empero-ai/Qwen3.8-9B-Distill",
+   "base_model:quantized:empero-ai/Qwen3.8-9B-Distill",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-15T18:08:44.000Z"
+ },
+ {
+  "_id": "6adb2d4b1af4133aa9a033a0",
+  "id": "unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF",
+  "cardData": {
+   "license": "other",
+   "license_name": "openmdw-1.1",
+   "license_link": "https://openmdw.ai/license/1-1/",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en",
+    "ar",
+    "bg",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "es",
+    "et",
+    "fi",
+    "fr",
+    "hi",
+    "hr",
+    "hu",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "lt",
+    "lv",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sk",
+    "sl",
+    "sv",
+    "th",
+    "tr",
+    "uk",
+    "vi",
+    "zh"
+   ],
+   "tags": [
+    "nvidia",
+    "pytorch",
+    "nemotron-3.5",
+    "unsloth"
+   ],
+   "base_model": "nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "base_model_relation": "quantized",
+   "datasets": [
+    "nvidia/nemotron-post-training-v3",
+    "nvidia/nemotron-pre-training-datasets"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-24T04:00:15.000Z",
+  "likes": 179,
+  "trendingScore": 15,
+  "sha": "b738967d6da3441a7d1c71fcec15e49e32e16ecd",
+  "downloads": 481135,
+  "gguf": {
+   "total": 7518069290,
+   "architecture": "gemma4",
+   "context_length": 131072,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 15053099936
+  },
+  "tags": [
+   "gguf",
+   "nvidia",
+   "pytorch",
+   "nemotron-3.5",
+   "unsloth",
+   "text-generation",
+   "en",
+   "ar",
+   "bg",
+   "cs",
+   "da",
+   "de",
+   "el",
+   "es",
+   "et",
+   "fi",
+   "fr",
+   "hi",
+   "hr",
+   "hu",
+   "id",
+   "it",
+   "ja",
+   "ko",
+   "lt",
+   "lv",
+   "nl",
+   "no",
+   "pl",
+   "pt",
+   "ro",
+   "ru",
+   "sk",
+   "sl",
+   "sv",
+   "th",
+   "tr",
+   "uk",
+   "vi",
+   "zh",
+   "dataset:nvidia/nemotron-post-training-v3",
+   "dataset:nvidia/nemotron-pre-training-datasets",
+   "base_model:nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "base_model:quantized:nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-23T09:47:55.000Z"
+ },
+ {
+  "_id": "65c0f283272604d95a0a7b54",
+  "id": "defog/sqlcoder-7b-2",
+  "cardData": {
+   "license": "cc-by-sa-4.0",
+   "library_name": "transformers",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2024-02-12T14:06:11.000Z",
+  "likes": 452,
+  "trendingScore": 0,
+  "sha": "7e5b6f7981c0aa7d143f6bec6fa26625bdfcbe66",
+  "downloads": 440608,
+  "gguf": {
+   "total": 6738546688,
+   "architecture": "llama",
+   "context_length": 16384,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 4783256288
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "gguf",
+   "llama",
+   "text-generation",
+   "license:cc-by-sa-4.0",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "deploy:azure",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-02-05T14:36:51.000Z"
+ },
+ {
+  "_id": "6a5a22aefff0320368aba6de",
+  "id": "unsloth/Ornith-1.0-9B-GGUF",
+  "cardData": {
+   "tags": [
+    "unsloth",
+    "qwen3_5_moe"
+   ],
+   "base_model": [
+    "deepreinforce-ai/Ornith-1.0-9B"
+   ],
+   "license": "mit",
+   "license_link": "https://huggingface.co/deepreinforce-ai/Ornith-1.0-9B/blob/main/LICENSE",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-07-18T05:20:59.000Z",
+  "likes": 65,
+  "trendingScore": 1,
+  "sha": "a674c5a128bb74049b1bb3619f1355073db5b48c",
+  "downloads": 417763,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 17920697184
+  },
+  "tags": [
+   "gguf",
+   "unsloth",
+   "qwen3_5_moe",
+   "text-generation",
+   "base_model:ornith-ai/Ornith-1.0-9B",
+   "base_model:quantized:ornith-ai/Ornith-1.0-9B",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-07-17T12:40:14.000Z"
+ },
+ {
+  "_id": "66eabc37bcfa5271dcd6824a",
+  "id": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/blob/main/LICENSE",
+   "language": [
+    "en"
+   ],
+   "base_model": [
+    "Qwen/Qwen2.5-Coder-7B-Instruct"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "transformers",
+   "tags": [
+    "code",
+    "codeqwen",
+    "chat",
+    "qwen",
+    "qwen-coder"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-11-12T07:59:32.000Z",
+  "likes": 643,
+  "trendingScore": 11,
+  "sha": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+  "downloads": 376004,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 131072,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853184
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "code",
+   "codeqwen",
+   "chat",
+   "qwen",
+   "qwen-coder",
+   "text-generation",
+   "en",
+   "arxiv:2409.12186",
+   "arxiv:2407.10671",
+   "base_model:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-18T11:40:39.000Z"
+ },
+ {
+  "_id": "669fce02988201fd4f9ceddc",
+  "id": "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th"
+   ],
+   "license": "llama3.1",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ],
+   "quantized_by": "bartowski",
+   "extra_gated_prompt": "### LLAMA 3.1 COMMUNITY LICENSE AGREEMENT\nLlama 3.1 Version Release Date: July 23, 2024\n\"Agreement\" means the terms and conditions for use, reproduction, distribution and modification of the  Llama Materials set forth herein.\n\"Documentation\" means the specifications, manuals and documentation accompanying Llama 3.1 distributed by Meta at https://llama.meta.com/doc/overview.\n\"Licensee\" or \"you\" means you, or your employer or any other person or entity (if you are entering into this Agreement on such person or entity’s behalf), of the age required under applicable laws, rules or regulations to provide legal consent and that has legal authority to bind your employer or such other person or entity if you are entering in this Agreement on their behalf.\n\"Llama 3.1\" means the foundational large language models and software and algorithms, including machine-learning model code, trained model weights, inference-enabling code, training-enabling code, fine-tuning enabling code and other elements of the foregoing distributed by Meta at https://llama.meta.com/llama-downloads.\n\"Llama Materials\" means, collectively, Meta’s proprietary Llama 3.1 and Documentation (and any portion thereof) made available under this Agreement.\n\"Meta\" or \"we\" means Meta Platforms Ireland Limited (if you are located in or, if you are an entity, your principal place of business is in the EEA or Switzerland) and Meta Platforms, Inc. (if you are located outside of the EEA or Switzerland).\n   \n1. License Rights and Redistribution.\na. Grant of Rights. You are granted a non-exclusive, worldwide, non-transferable and royalty-free limited license under Meta’s intellectual property or other rights owned by Meta embodied in the Llama Materials to use, reproduce, distribute, copy, create derivative works of, and make modifications to the Llama Materials.\nb. Redistribution and Use.\ni. If you distribute or make available the Llama Materials (or any derivative works thereof), or a product or service (including another AI model) that contains any of them, you shall (A) provide a copy of this Agreement with any such Llama Materials; and (B) prominently display “Built with Llama” on a related website, user interface, blogpost, about page, or product documentation. If you use the Llama Materials or any outputs or results of the Llama Materials to create, train, fine tune, or otherwise improve an AI model, which is distributed or made available, you shall also include “Llama” at the beginning of any such AI model name.\nii. If you receive Llama Materials, or any derivative works thereof, from a Licensee as part  of an integrated end user product, then Section 2 of this Agreement will not apply to you.\niii. You must retain in all copies of the Llama Materials that you distribute the following attribution notice within a “Notice” text file distributed as a part of such copies: “Llama 3.1 is licensed under the Llama 3.1 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.”\niv. Your use of the Llama Materials must comply with applicable laws and regulations (including trade compliance laws and regulations) and adhere to the Acceptable Use Policy for the Llama Materials (available at https://llama.meta.com/llama3_1/use-policy), which is hereby incorporated by reference into this Agreement.\n2. Additional Commercial Terms. If, on the Llama 3.1 version release date, the monthly active users of the products or services made available by or for Licensee, or Licensee’s affiliates, is greater than 700 million monthly active users in the preceding calendar month, you must request a license from Meta, which Meta may grant to you in its sole discretion, and you are not authorized to exercise any of the rights under this Agreement unless or until Meta otherwise expressly grants you such rights.\n3. Disclaimer of Warranty. UNLESS REQUIRED BY APPLICABLE LAW, THE LLAMA MATERIALS AND ANY OUTPUT AND RESULTS THEREFROM ARE PROVIDED ON AN “AS IS” BASIS, WITHOUT WARRANTIES OF ANY KIND, AND META DISCLAIMS ALL WARRANTIES OF ANY KIND, BOTH EXPRESS AND IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. YOU ARE SOLELY RESPONSIBLE FOR DETERMINING THE APPROPRIATENESS OF USING OR REDISTRIBUTING THE LLAMA MATERIALS AND ASSUME ANY RISKS ASSOCIATED WITH YOUR USE OF THE LLAMA MATERIALS AND ANY OUTPUT AND RESULTS.\n4. Limitation of Liability. IN NO EVENT WILL META OR ITS AFFILIATES BE LIABLE UNDER ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, TORT, NEGLIGENCE, PRODUCTS LIABILITY, OR OTHERWISE, ARISING OUT OF THIS AGREEMENT, FOR ANY LOST PROFITS OR ANY INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL, EXEMPLARY OR PUNITIVE DAMAGES, EVEN IF META OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF ANY OF THE FOREGOING.\n5. Intellectual Property.\na. No trademark licenses are granted under this Agreement, and in connection with the Llama Materials, neither Meta nor Licensee may use any name or mark owned by or associated with the other or any of its affiliates, except as required for reasonable and customary use in describing and redistributing the Llama Materials or as set forth in this Section 5(a). Meta hereby grants you a license to use “Llama” (the “Mark”) solely as required to comply with the last sentence of Section 1.b.i. You will comply with Meta’s brand guidelines (currently accessible at https://about.meta.com/brand/resources/meta/company-brand/ ). All goodwill arising out of your use of the Mark will inure to the benefit of Meta.\nb. Subject to Meta’s ownership of Llama Materials and derivatives made by or for Meta, with respect to any derivative works and modifications of the Llama Materials that are made by you, as between you and Meta, you are and will be the owner of such derivative works and modifications.\nc. If you institute litigation or other proceedings against Meta or any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Llama Materials or Llama 3.1 outputs or results, or any portion of any of the foregoing, constitutes infringement of intellectual property or other rights owned or licensable by you, then any licenses granted to you under this Agreement shall terminate as of the date such litigation or claim is filed or instituted. You will indemnify and hold harmless Meta from and against any claim by any third party arising out of or related to your use or distribution of the Llama Materials.\n6. Term and Termination. The term of this Agreement will commence upon your acceptance of this Agreement or access to the Llama Materials and will continue in full force and effect until terminated in accordance with the terms and conditions herein. Meta may terminate this Agreement if you are in breach of any term or condition of this Agreement. Upon termination of this Agreement, you shall delete and cease use of the Llama Materials. Sections 3, 4 and 7 shall survive the termination of this Agreement.\n7. Governing Law and Jurisdiction. This Agreement will be governed and construed under the laws of the State of California without regard to choice of law principles, and the UN Convention on Contracts for the International Sale of Goods does not apply to this Agreement. The courts of California shall have exclusive jurisdiction of any dispute arising out of this Agreement.\n### Llama 3.1 Acceptable Use Policy\nMeta is committed to promoting safe and fair use of its tools and features, including Llama 3.1. If you access or use Llama 3.1, you agree to this Acceptable Use Policy (“Policy”). The most recent copy of this policy can be found at [https://llama.meta.com/llama3_1/use-policy](https://llama.meta.com/llama3_1/use-policy)\n#### Prohibited Uses\nWe want everyone to use Llama 3.1 safely and responsibly. You agree you will not use, or allow others to use, Llama 3.1 to:\n 1. Violate the law or others’ rights, including to:\n    1. Engage in, promote, generate, contribute to, encourage, plan, incite, or further illegal or unlawful activity or content, such as:\n        1. Violence or terrorism\n        2. Exploitation or harm to children, including the solicitation, creation, acquisition, or dissemination of child exploitative content or failure to report Child Sexual Abuse Material\n        3. Human trafficking, exploitation, and sexual violence\n        4. The illegal distribution of information or materials to minors, including obscene materials, or failure to employ legally required age-gating in connection with such information or materials.\n        5. Sexual solicitation\n        6. Any other criminal activity\n    3. Engage in, promote, incite, or facilitate the harassment, abuse, threatening, or bullying of individuals or groups of individuals\n    4. Engage in, promote, incite, or facilitate discrimination or other unlawful or harmful conduct in the provision of employment, employment benefits, credit, housing, other economic benefits, or other essential goods and services\n    5. Engage in the unauthorized or unlicensed practice of any profession including, but not limited to, financial, legal, medical/health, or related professional practices\n    6. Collect, process, disclose, generate, or infer health, demographic, or other sensitive personal or private information about individuals without rights and consents required by applicable laws\n    7. Engage in or facilitate any action or generate any content that infringes, misappropriates, or otherwise violates any third-party rights, including the outputs or results of any products or services using the Llama Materials\n    8. Create, generate, or facilitate the creation of malicious code, malware, computer viruses or do anything else that could disable, overburden, interfere with or impair the proper working, integrity, operation or appearance of a website or computer system\n2. Engage in, promote, incite, facilitate, or assist in the planning or development of activities that present a risk of death or bodily harm to individuals, including use of Llama 3.1 related to the following:\n    1. Military, warfare, nuclear industries or applications, espionage, use for materials or activities that are subject to the International Traffic Arms Regulations (ITAR) maintained by the United States Department of State\n    2. Guns and illegal weapons (including weapon development)\n    3. Illegal drugs and regulated/controlled substances\n    4. Operation of critical infrastructure, transportation technologies, or heavy machinery\n    5. Self-harm or harm to others, including suicide, cutting, and eating disorders\n    6. Any content intended to incite or promote violence, abuse, or any infliction of bodily harm to an individual\n3. Intentionally deceive or mislead others, including use of Llama 3.1 related to the following:\n    1. Generating, promoting, or furthering fraud or the creation or promotion of disinformation\n    2. Generating, promoting, or furthering defamatory content, including the creation of defamatory statements, images, or other content\n    3. Generating, promoting, or further distributing spam\n    4. Impersonating another individual without consent, authorization, or legal right\n    5. Representing that the use of Llama 3.1 or outputs are human-generated\n    6. Generating or facilitating false online engagement, including fake reviews and other means of fake online engagement\n4. Fail to appropriately disclose to end users any known dangers of your AI system\nPlease report any violation of this Policy, software “bug,” or other problems that could lead to a violation of this Policy through one of the following means:\n    * Reporting issues with the model: [https://github.com/meta-llama/llama-models/issues](https://github.com/meta-llama/llama-models/issues)\n    * Reporting risky content generated by the model:\n    developers.facebook.com/llama_output_feedback\n    * Reporting bugs and security concerns: facebook.com/whitehat/info\n    * Reporting violations of the Acceptable Use Policy or unlicensed uses of Meta Llama 3: LlamaUseReport@meta.com",
+   "extra_gated_fields": {
+    "First Name": "text",
+    "Last Name": "text",
+    "Date of birth": "date_picker",
+    "Country": "country",
+    "Affiliation": "text",
+    "Job title": {
+     "type": "select",
+     "options": [
+      "Student",
+      "Research Graduate",
+      "AI researcher",
+      "AI developer/engineer",
+      "Reporter",
+      "Other"
+     ]
+    },
+    "geo": "ip_location",
+    "By clicking Submit below I accept the terms of the license and acknowledge that the information I provide will be collected stored processed and shared in accordance with the Meta Privacy Policy": "checkbox"
+   },
+   "extra_gated_description": "The information you provide will be collected, stored, processed and shared in accordance with the [Meta Privacy Policy](https://www.facebook.com/privacy/policy/).",
+   "extra_gated_button_content": "Submit"
+  },
+  "gated": false,
+  "lastModified": "2024-12-01T04:12:27.000Z",
+  "likes": 433,
+  "trendingScore": 3,
+  "sha": "bf5b95e96dac0462e2a09145ec66cae9a3f12067",
+  "downloads": 344407,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 32128885888
+  },
+  "tags": [
+   "gguf",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "base_model:meta-llama/Llama-3.1-8B-Instruct",
+   "base_model:quantized:meta-llama/Llama-3.1-8B-Instruct",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-23T15:36:34.000Z"
+ },
+ {
+  "_id": "6a8f8a62b38f31b735f52fb5",
+  "id": "OBLITERATUS/Ornith-1.5-9B-OBLITERATED",
+  "cardData": {
+   "license": "mit",
+   "base_model": "ornith-ai/Ornith-1.5-9B",
+   "tags": [
+    "abliterated",
+    "uncensored",
+    "ornith",
+    "qwen3.5",
+    "obliteratus"
+   ],
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-08-27T04:00:49.000Z",
+  "likes": 89,
+  "trendingScore": 0,
+  "sha": "82df4702cc5e716cf7573a8942fee28ae8f65088",
+  "downloads": 331612,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 18407320864
+  },
+  "tags": [
+   "safetensors",
+   "gguf",
+   "qwen3_5",
+   "abliterated",
+   "uncensored",
+   "ornith",
+   "qwen3.5",
+   "obliteratus",
+   "text-generation",
+   "conversational",
+   "en",
+   "base_model:ornith-ai/Ornith-1.5-9B",
+   "base_model:quantized:ornith-ai/Ornith-1.5-9B",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-27T00:52:50.000Z"
+ },
+ {
+  "_id": "66e83d0da3681387ffca8633",
+  "id": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen2.5-7B-Instruct",
+   "language": [
+    "en"
+   ],
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "chat"
+   ],
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-19T12:54:25.000Z",
+  "likes": 86,
+  "trendingScore": 0,
+  "sha": "8911e8a47f92bac19d6f5c64a2e2095bd2f7d031",
+  "downloads": 288242,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853600
+  },
+  "tags": [
+   "gguf",
+   "chat",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-16T14:13:33.000Z"
+ },
+ {
+  "_id": "6a7aa6ab19733d62047d4e20",
+  "id": "bloomer010/Ling-3.0-tiny-GGUF",
+  "cardData": {
+   "license": "mit",
+   "base_model": [
+    "inclusionAI/Ling-3.0-tiny"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "llama.cpp",
+   "tags": [
+    "gguf",
+    "bailingmoe3",
+    "mixture-of-experts",
+    "conversational"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-09-20T16:42:18.000Z",
+  "likes": 122,
+  "trendingScore": 2,
+  "sha": "9abc60203407b59a4f22eaeeb09b789717643fb0",
+  "downloads": 248401,
+  "gguf": {
+   "total": 7893392800,
+   "architecture": "bailingmoe3",
+   "context_length": 131072,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|role_end|>",
+   "totalFileSize": 15803475456
+  },
+  "tags": [
+   "llama.cpp",
+   "gguf",
+   "bailing_hybrid",
+   "bailingmoe3",
+   "mixture-of-experts",
+   "conversational",
+   "text-generation",
+   "custom_code",
+   "base_model:inclusionAI/Ling-3.0-tiny",
+   "base_model:quantized:inclusionAI/Ling-3.0-tiny",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-11T04:35:55.000Z"
+ },
+ {
+  "_id": "6a5618535d69526f3e503ff8",
+  "id": "AnkitAI/Parable-Qwen3-8B-Claude-Fable-5-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen3-8B",
+   "base_model_relation": "finetune",
+   "datasets": [
+    "Glint-Research/Fable-5-traces",
+    "Roman1111111/gpt5.5-terminal"
+   ],
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "gguf",
+   "tags": [
+    "gguf",
+    "qlora",
+    "agentic",
+    "agent",
+    "coding",
+    "tool-use",
+    "terminal",
+    "reasoning",
+    "thinking",
+    "claude",
+    "claude-fable-5",
+    "distillation",
+    "trace-training",
+    "llama.cpp",
+    "ollama",
+    "lm-studio",
+    "qwen3"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-09-22T12:41:07.000Z",
+  "likes": 8,
+  "trendingScore": 0,
+  "sha": "6d07b3bc329fb55e5d1bf2ddcb9244f4e5753553",
+  "downloads": 212036,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388043744
+  },
+  "tags": [
+   "gguf",
+   "qlora",
+   "agentic",
+   "agent",
+   "coding",
+   "tool-use",
+   "terminal",
+   "reasoning",
+   "thinking",
+   "claude",
+   "claude-fable-5",
+   "distillation",
+   "trace-training",
+   "llama.cpp",
+   "ollama",
+   "lm-studio",
+   "qwen3",
+   "text-generation",
+   "en",
+   "dataset:Glint-Research/Fable-5-traces",
+   "dataset:Roman1111111/gpt5.5-terminal",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:finetune:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-07-14T11:06:59.000Z"
+ },
+ {
+  "_id": "65c5577b1080431ea9e083cd",
+  "id": "google/gemma-7b",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "gemma",
+   "extra_gated_heading": "Access Gemma on Hugging Face",
+   "extra_gated_prompt": "To access Gemma on Hugging Face, you’re required to review and agree to Google’s usage license. To do this, please ensure you’re logged-in to Hugging Face and click below. Requests are processed immediately.",
+   "extra_gated_button_content": "Acknowledge license"
+  },
+  "gated": "manual",
+  "lastModified": "2024-06-27T14:09:40.000Z",
+  "likes": 3470,
+  "trendingScore": 1,
+  "sha": "ff6768d9368919a1f025a54f9f5aa0ee591730bb",
+  "downloads": 200487,
+  "gguf": {
+   "total": 8538074112,
+   "architecture": "gemma",
+   "context_length": 8192,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 34158344288
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "gguf",
+   "gemma",
+   "text-generation",
+   "arxiv:2305.14314",
+   "arxiv:2312.11805",
+   "arxiv:2009.03300",
+   "arxiv:1905.07830",
+   "arxiv:1911.11641",
+   "arxiv:1904.09728",
+   "arxiv:1905.10044",
+   "arxiv:1907.10641",
+   "arxiv:1811.00937",
+   "arxiv:1809.02789",
+   "arxiv:1911.01547",
+   "arxiv:1705.03551",
+   "arxiv:2107.03374",
+   "arxiv:2108.07732",
+   "arxiv:2110.14168",
+   "arxiv:2304.06364",
+   "arxiv:2206.04615",
+   "arxiv:1804.06876",
+   "arxiv:2110.08193",
+   "arxiv:2009.11462",
+   "arxiv:2101.11718",
+   "arxiv:1804.09301",
+   "arxiv:2109.07958",
+   "arxiv:2203.09509",
+   "license:gemma",
+   "eval-results",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "deploy:sagemaker",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-02-08T22:36:43.000Z"
+ },
+ {
+  "_id": "69e30f6fa8ad7ec14c245768",
+  "id": "prism-ml/Ternary-Bonsai-8B-gguf",
+  "cardData": {
+   "license": "apache-2.0",
+   "library_name": "gguf",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "ternary",
+    "1.58-bit",
+    "gguf",
+    "llama-cpp",
+    "q2_0",
+    "on-device",
+    "prismml",
+    "bonsai"
+   ],
+   "base_model": [
+    "prism-ml/Ternary-Bonsai-8B-unpacked"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-06-10T22:41:30.000Z",
+  "likes": 176,
+  "trendingScore": 0,
+  "sha": "c2aefbeb4b24469cd11579c3384b990404c17a30",
+  "downloads": 174181,
+  "gguf": {
+   "total": 8188548096,
+   "architecture": "qwen3",
+   "context_length": 65536,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16383663200
+  },
+  "tags": [
+   "gguf",
+   "ternary",
+   "1.58-bit",
+   "llama-cpp",
+   "q2_0",
+   "on-device",
+   "prismml",
+   "bonsai",
+   "text-generation",
+   "base_model:prism-ml/Ternary-Bonsai-8B-unpacked",
+   "base_model:quantized:prism-ml/Ternary-Bonsai-8B-unpacked",
+   "license:apache-2.0",
+   "eval-results",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-04-18T04:58:23.000Z"
+ },
+ {
+  "_id": "6a5491cdd50ac8b23d366211",
+  "id": "AnkitAI/Parable-Granite-4.1-8B-Claude-Fable-5-GGUF",
+  "cardData": {
+   "base_model": "ibm-granite/granite-4.1-8b",
+   "base_model_relation": "finetune",
+   "datasets": [
+    "Glint-Research/Fable-5-traces",
+    "Roman1111111/gpt5.5-terminal"
+   ],
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "gguf",
+   "tags": [
+    "gguf",
+    "qlora",
+    "agentic",
+    "agent",
+    "coding",
+    "tool-use",
+    "terminal",
+    "reasoning",
+    "thinking",
+    "claude",
+    "claude-fable-5",
+    "distillation",
+    "trace-training",
+    "llama.cpp",
+    "ollama",
+    "lm-studio",
+    "granite"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-09-22T12:40:46.000Z",
+  "likes": 5,
+  "trendingScore": 0,
+  "sha": "4765dbfbfa456722b52ec0d48259f977a2dc31eb",
+  "downloads": 162031,
+  "gguf": {
+   "total": 8380551168,
+   "architecture": "granite",
+   "context_length": 131072,
+   "bos_token": "<|end_of_text|>",
+   "eos_token": "<|end_of_text|>",
+   "totalFileSize": 16765334208
+  },
+  "tags": [
+   "gguf",
+   "qlora",
+   "agentic",
+   "agent",
+   "coding",
+   "tool-use",
+   "terminal",
+   "reasoning",
+   "thinking",
+   "claude",
+   "claude-fable-5",
+   "distillation",
+   "trace-training",
+   "llama.cpp",
+   "ollama",
+   "lm-studio",
+   "granite",
+   "text-generation",
+   "en",
+   "dataset:Glint-Research/Fable-5-traces",
+   "dataset:Roman1111111/gpt5.5-terminal",
+   "base_model:ibm-granite/granite-4.1-8b",
+   "base_model:finetune:ibm-granite/granite-4.1-8b",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-07-13T07:20:45.000Z"
+ },
+ {
+  "_id": "680f8fa2384885553e2167cf",
+  "id": "unsloth/Qwen3-8B-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen3-8B",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE",
+   "license": "apache-2.0",
+   "tags": [
+    "qwen3",
+    "qwen",
+    "unsloth",
+    "transformers"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-06-08T08:09:00.000Z",
+  "likes": 160,
+  "trendingScore": 1,
+  "sha": "a6adef130ffb23ddaf1a62fec9dced968c9bc482",
+  "downloads": 161994,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388044384
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "qwen3",
+   "text-generation",
+   "qwen",
+   "unsloth",
+   "en",
+   "arxiv:2309.00071",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-28T14:24:34.000Z"
+ },
+ {
+  "_id": "68386c758c8e3b721707c6ae",
+  "id": "unsloth/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+  "cardData": {
+   "tags": [
+    "unsloth",
+    "deepseek",
+    "qwen"
+   ],
+   "base_model": [
+    "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"
+   ],
+   "license": "mit",
+   "library_name": "transformers"
+  },
+  "gated": false,
+  "lastModified": "2025-06-16T00:09:18.000Z",
+  "likes": 484,
+  "trendingScore": 2,
+  "sha": "eb48357c179d34dbf515983f798dfb8752a0f261",
+  "downloads": 160771,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 131072,
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 16388045056
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "qwen3",
+   "text-generation",
+   "unsloth",
+   "deepseek",
+   "qwen",
+   "arxiv:2501.12948",
+   "base_model:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-05-29T14:17:25.000Z"
+ },
+ {
+  "_id": "678e635064630f7fa5283e27",
+  "id": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+  },
+  "gated": false,
+  "lastModified": "2025-03-07T19:13:17.000Z",
+  "likes": 149,
+  "trendingScore": 0,
+  "sha": "361004151d4f4f6b446dc5e6d46fbf4422a80d5f",
+  "downloads": 139322,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 131072,
+   "quantize_imatrix_file": "/models_out/DeepSeek-R1-Distill-Qwen-7B-GGUF/DeepSeek-R1-Distill-Qwen-7B.imatrix",
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 15237853152
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-20T14:53:04.000Z"
+ },
+ {
+  "_id": "6ac32703e0196f73dd6ff878",
+  "id": "nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "other",
+   "license_name": "openmdw-1.1",
+   "license_link": "https://openmdw.ai/license/1-1/",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en",
+    "ar",
+    "bg",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "es",
+    "et",
+    "fi",
+    "fr",
+    "hi",
+    "hr",
+    "hu",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "lt",
+    "lv",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sk",
+    "sl",
+    "sv",
+    "th",
+    "tr",
+    "uk",
+    "vi",
+    "zh"
+   ],
+   "tags": [
+    "nvidia",
+    "pytorch",
+    "nemotron-3.5"
+   ],
+   "base_model": "nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "base_model_relation": "quantized",
+   "datasets": [
+    "nvidia/nemotron-post-training-v3",
+    "nvidia/nemotron-pre-training-datasets"
+   ],
+   "track_downloads": true
+  },
+  "gated": false,
+  "lastModified": "2026-10-23T19:03:57.000Z",
+  "likes": 394,
+  "trendingScore": 41,
+  "sha": "1db54d5b12533ff1bcaa8e42cf4c667988a1f1be",
+  "downloads": 132176,
+  "gguf": {
+   "total": 7518069290,
+   "architecture": "gemma4",
+   "context_length": 65536,
+   "quantize_imatrix_file": "/lustre/fsw/portfolios/llmservice/projects/llmservice_nemo_mlops/users/ameyasunilm/projects/gemma_nemotron/operations/bolt_iq4_",
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 6180446208
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "nvidia",
+   "pytorch",
+   "nemotron-3.5",
+   "text-generation",
+   "en",
+   "ar",
+   "bg",
+   "cs",
+   "da",
+   "de",
+   "el",
+   "es",
+   "et",
+   "fi",
+   "fr",
+   "hi",
+   "hr",
+   "hu",
+   "id",
+   "it",
+   "ja",
+   "ko",
+   "lt",
+   "lv",
+   "nl",
+   "no",
+   "pl",
+   "pt",
+   "ro",
+   "ru",
+   "sk",
+   "sl",
+   "sv",
+   "th",
+   "tr",
+   "uk",
+   "vi",
+   "zh",
+   "dataset:nvidia/nemotron-post-training-v3",
+   "dataset:nvidia/nemotron-pre-training-datasets",
+   "arxiv:2509.04292",
+   "base_model:nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "base_model:quantized:nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-05T04:26:43.000Z"
+ },
+ {
+  "_id": "6a6d464772a27275942302a0",
+  "id": "Jackrong/DeepSeek-V4-Pro-Qwen3.5-9B-MTP-GGUF",
+  "cardData": {
+   "base_model": "unsloth/Qwen3.5-9B",
+   "tags": [
+    "text-generation-inference",
+    "transformers",
+    "unsloth",
+    "qwen3_5",
+    "reasoning",
+    "distillation",
+    "deepseek",
+    "sft",
+    "rl",
+    "gspo",
+    "math",
+    "stem",
+    "tool-use",
+    "function-calling",
+    "mtp"
+   ],
+   "license": "apache-2.0",
+   "language": [
+    "en",
+    "zh",
+    "ko",
+    "ja",
+    "es",
+    "ru"
+   ],
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-11-07T15:17:46.000Z",
+  "likes": 147,
+  "trendingScore": 17,
+  "sha": "44e28a16a8bdb1e91d14c59e1de0937d8901aed2",
+  "downloads": 128506,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5357876320
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "text-generation-inference",
+   "unsloth",
+   "qwen3_5",
+   "reasoning",
+   "distillation",
+   "deepseek",
+   "sft",
+   "rl",
+   "gspo",
+   "math",
+   "stem",
+   "tool-use",
+   "function-calling",
+   "mtp",
+   "text-generation",
+   "en",
+   "zh",
+   "ko",
+   "ja",
+   "es",
+   "ru",
+   "base_model:unsloth/Qwen3.5-9B",
+   "base_model:quantized:unsloth/Qwen3.5-9B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-01T01:05:11.000Z"
+ },
+ {
+  "_id": "6a1378cde2d04d7730e17859",
+  "id": "LiquidAI/LFM2.5-8B-A1B-GGUF",
+  "cardData": {
+   "license": "other",
+   "license_name": "lfm1.0",
+   "license_link": "LICENSE",
+   "language": [
+    "en",
+    "ar",
+    "zh",
+    "fr",
+    "de",
+    "ja",
+    "ko",
+    "es"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "liquid",
+    "lfm2",
+    "edge",
+    "llama.cpp",
+    "gguf"
+   ],
+   "base_model": [
+    "LiquidAI/LFM2.5-8B-A1B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-08-24T19:41:51.000Z",
+  "likes": 330,
+  "trendingScore": 0,
+  "sha": "49c14831707011e64d70b2ebd8462ba08d608434",
+  "downloads": 114730,
+  "gguf": {
+   "total": 8467856832,
+   "architecture": "lfm2moe",
+   "context_length": 128000,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16947260640
+  },
+  "tags": [
+   "gguf",
+   "liquid",
+   "lfm2",
+   "edge",
+   "llama.cpp",
+   "text-generation",
+   "en",
+   "ar",
+   "zh",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "es",
+   "base_model:LiquidAI/LFM2.5-8B-A1B",
+   "base_model:quantized:LiquidAI/LFM2.5-8B-A1B",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-05-24T22:16:45.000Z"
+ },
+ {
+  "_id": "69bb13ea4c2c771b2a13c05e",
+  "id": "prism-ml/Bonsai-8B-gguf",
+  "cardData": {
+   "license": "apache-2.0",
+   "library_name": "llama.cpp",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "1-bit",
+    "gguf",
+    "llama-cpp",
+    "cuda",
+    "metal",
+    "on-device",
+    "prismml",
+    "bonsai"
+   ],
+   "base_model": [
+    "prism-ml/Bonsai-8B-unpacked"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-04-18T20:45:02.000Z",
+  "likes": 802,
+  "trendingScore": 0.5,
+  "sha": "48516770dd04643643e9f9019a2a349cf26c5dbd",
+  "downloads": 86545,
+  "gguf": {
+   "total": 8188548096,
+   "architecture": "qwen3",
+   "context_length": 65536,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 1158654496
+  },
+  "tags": [
+   "llama.cpp",
+   "gguf",
+   "1-bit",
+   "llama-cpp",
+   "cuda",
+   "metal",
+   "on-device",
+   "prismml",
+   "bonsai",
+   "text-generation",
+   "base_model:prism-ml/Bonsai-8B-unpacked",
+   "base_model:quantized:prism-ml/Bonsai-8B-unpacked",
+   "license:apache-2.0",
+   "eval-results",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-03-18T21:06:50.000Z"
+ },
+ {
+  "_id": "6668f427c4ef4175fb1b838a",
+  "id": "bartowski/L3-8B-Stheno-v3.2-GGUF",
+  "cardData": {
+   "license": "cc-by-nc-4.0",
+   "language": [
+    "en"
+   ],
+   "datasets": [
+    "Gryphe/Opus-WritingPrompts",
+    "Sao10K/Claude-3-Opus-Instruct-15K",
+    "Sao10K/Short-Storygen-v2",
+    "Sao10K/c2-Logs-Filtered"
+   ],
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2024-06-12T01:21:33.000Z",
+  "likes": 81,
+  "trendingScore": 0,
+  "sha": "dcf7446b0049ee524188ea0b15bd9a5e24cd889b",
+  "downloads": 72739,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 8192,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 32128880928
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "en",
+   "dataset:Gryphe/Opus-WritingPrompts",
+   "dataset:Sao10K/Claude-3-Opus-Instruct-15K",
+   "dataset:Sao10K/Short-Storygen-v2",
+   "dataset:Sao10K/c2-Logs-Filtered",
+   "license:cc-by-nc-4.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-06-12T01:04:39.000Z"
+ },
+ {
+  "_id": "698f66f62c8c0c0dce1b8ba3",
+  "id": "RavichandranJ/Dolphin3-Cyber-8B-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "license": "llama3.1",
+   "library_name": "transformers",
+   "tags": [
+    "GGUF",
+    "llama",
+    "llama-cpp",
+    "unsloth",
+    "cybersecurity",
+    "pentesting",
+    "security",
+    "abliterated",
+    "uncensored",
+    "ethical-hacking",
+    "red-team",
+    "blue-team",
+    "infosec",
+    "offensive-security",
+    "CTF",
+    "bug-bounty",
+    "conversational"
+   ],
+   "model_name": "Dolphin3-Cyber-8B-GGUF",
+   "base_model": "huihui-ai/Dolphin3.0-Llama3.1-8B-abliterated",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "RavichandranJ",
+   "datasets": [
+    "custom-cybersecurity-dataset"
+   ],
+   "model-index": [
+    {
+     "name": "Dolphin3-Cyber-8B",
+     "results": []
+    }
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-06-08T20:16:05.000Z",
+  "likes": 302,
+  "trendingScore": 10,
+  "sha": "145d66f096c8a99aad63be19ada1fbc46d3230bd",
+  "downloads": 72488,
+  "gguf": {
+   "total": 8030277696,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16068924352
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "llama",
+   "text-generation",
+   "GGUF",
+   "llama-cpp",
+   "unsloth",
+   "cybersecurity",
+   "pentesting",
+   "security",
+   "abliterated",
+   "uncensored",
+   "ethical-hacking",
+   "red-team",
+   "blue-team",
+   "infosec",
+   "offensive-security",
+   "CTF",
+   "bug-bounty",
+   "conversational",
+   "en",
+   "dataset:custom-cybersecurity-dataset",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-02-13T18:01:26.000Z"
+ },
+ {
+  "_id": "66e9d94ecc2b1a585291f3aa",
+  "id": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "code",
+    "codeqwen",
+    "chat",
+    "qwen",
+    "qwen-coder"
+   ],
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-19T14:54:16.000Z",
+  "likes": 78,
+  "trendingScore": 0,
+  "sha": "1f629da0c8bed16b9e50cee91c70693650e66c35",
+  "downloads": 69718,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853696
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "code",
+   "codeqwen",
+   "chat",
+   "qwen",
+   "qwen-coder",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-17T19:32:30.000Z"
+ },
+ {
+  "_id": "669fd7d6059d4083c2921cad",
+  "id": "lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ],
+   "license": "llama3.1",
+   "lm_studio": {
+    "param_count": "8b",
+    "use_case": "chat",
+    "release_date": "23-07-2024",
+    "model_creator": "Meta",
+    "prompt_template": "Llama 3",
+    "base_model": "llama",
+    "original_repo": "meta-llama/Meta-Llama-3.1-8B-Instruct"
+   },
+   "base_model": "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  },
+  "gated": false,
+  "lastModified": "2024-07-28T21:59:53.000Z",
+  "likes": 264,
+  "trendingScore": 0,
+  "sha": "8601e6db71269a2b12255ebdf09ab75becf22cc8",
+  "downloads": 67817,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "quantize_imatrix_file": "/models_out/Meta-Llama-3.1-8B-Instruct-GGUF/Meta-Llama-3.1-8B-Instruct.imatrix",
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 4447667552
+  },
+  "tags": [
+   "gguf",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "base_model:meta-llama/Llama-3.1-8B-Instruct",
+   "base_model:quantized:meta-llama/Llama-3.1-8B-Instruct",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-23T16:18:30.000Z"
+ },
+ {
+  "_id": "683860b1e4660611f7154899",
+  "id": "lmstudio-community/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "license": "mit",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-05-29T17:58:08.000Z",
+  "likes": 58,
+  "trendingScore": 0,
+  "sha": "335076f2c9044728bd2d906527150757e03ba35e",
+  "downloads": 67453,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 131072,
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 4431392832
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-05-29T13:27:13.000Z"
+ },
+ {
+  "_id": "67351f1562dfc86e344ef497",
+  "id": "bartowski/Qwen2.5-Coder-7B-Instruct-abliterated-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en"
+   ],
+   "license_link": "https://huggingface.co/huihui-ai/Qwen2.5-Coder-7B-Instruct-abliterated/blob/main/LICENSE",
+   "tags": [
+    "chat",
+    "abliterated",
+    "uncensored"
+   ],
+   "base_model": "huihui-ai/Qwen2.5-Coder-7B-Instruct-abliterated",
+   "license": "apache-2.0"
+  },
+  "gated": false,
+  "lastModified": "2024-11-14T01:17:38.000Z",
+  "likes": 101,
+  "trendingScore": 3,
+  "sha": "a416f57ecabe9841551055493e6945895e54e135",
+  "downloads": 65880,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853728
+  },
+  "tags": [
+   "gguf",
+   "chat",
+   "abliterated",
+   "uncensored",
+   "text-generation",
+   "en",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-11-13T21:50:13.000Z"
+ },
+ {
+  "_id": "64f60811b8cc49b414fe5cdf",
+  "id": "TheBloke/Llama-2-7B-Chat-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "license": "llama2",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-2"
+   ],
+   "model_name": "Llama 2 7B Chat",
+   "arxiv": 2307.09288,
+   "base_model": "meta-llama/Llama-2-7b-chat-hf",
+   "inference": false,
+   "model_creator": "Meta Llama 2",
+   "model_type": "llama",
+   "pipeline_tag": "text-generation",
+   "prompt_template": "[INST] <<SYS>>\nYou are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.\n<</SYS>>\n{prompt}[/INST]\n",
+   "quantized_by": "TheBloke"
+  },
+  "gated": false,
+  "lastModified": "2023-10-14T21:36:33.000Z",
+  "likes": 517,
+  "trendingScore": 0,
+  "sha": "191239b3e26b2882fb562ffccdd1cf0f65402adb",
+  "downloads": 63075,
+  "gguf": {
+   "total": 6738415616,
+   "architecture": "llama",
+   "context_length": 4096,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 2825940672
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "llama",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama-2",
+   "text-generation",
+   "en",
+   "arxiv:2307.09288",
+   "base_model:meta-llama/Llama-2-7b-chat-hf",
+   "base_model:quantized:meta-llama/Llama-2-7b-chat-hf",
+   "license:llama2",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2023-09-04T16:38:41.000Z"
+ },
+ {
+  "_id": "6a3d672c85afca5b7a17138a",
+  "id": "huihui-ai/Huihui-Qwythos-9B-Claude-Mythos-5-1M-abliterated-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "pipeline_tag": "text-generation",
+   "base_model": [
+    "empero-ai/Qwythos-9B-Claude-Mythos-5-1M"
+   ],
+   "tags": [
+    "qwen3.5",
+    "reasoning",
+    "uncensored",
+    "long-context",
+    "1M-context",
+    "function-calling",
+    "tool-use",
+    "sft",
+    "full-fine-tune",
+    "cybersecurity",
+    "biomedical",
+    "agentic",
+    "abliterated",
+    "uncensored",
+    "GGUF",
+    "MTP"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-06-25T18:11:47.000Z",
+  "likes": 231,
+  "trendingScore": 1,
+  "sha": "a56bb66534a758a99991ae502316b07c18950941",
+  "downloads": 61119,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 1048576,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 18407321760
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "qwen3.5",
+   "reasoning",
+   "uncensored",
+   "long-context",
+   "1M-context",
+   "function-calling",
+   "tool-use",
+   "sft",
+   "full-fine-tune",
+   "cybersecurity",
+   "biomedical",
+   "agentic",
+   "abliterated",
+   "GGUF",
+   "MTP",
+   "text-generation",
+   "en",
+   "base_model:empero-ai/Qwythos-9B-Claude-Mythos-5-1M",
+   "base_model:quantized:empero-ai/Qwythos-9B-Claude-Mythos-5-1M",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-06-25T17:36:44.000Z"
+ },
+ {
+  "_id": "6aa4413179bbad2bc2e6a813",
+  "id": "ManniX-ITA/JackOD-9B-Coder-MTP-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": [
+    "ManniX-ITA/JackOD-9B-Coder"
+   ],
+   "base_model_relation": "quantized",
+   "library_name": "gguf",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "agentic",
+    "code",
+    "gguf",
+    "imatrix",
+    "merge",
+    "qwen3.5",
+    "tool-calling"
+   ],
+   "model_name": "JackOD-9B-Coder-MTP-GGUF",
+   "author": "ManniX-ITA",
+   "architecture": "Qwen3.5",
+   "parameters": "9.65B",
+   "format": "GGUF",
+   "quantizations": [
+    "CD-Q2_K",
+    "CD-Q3_K_L",
+    "CD-Q4_K_M",
+    "CD-Q5_K_M",
+    "CD-Q6_K",
+    "F16",
+    "IQ2_M",
+    "IQ2_S",
+    "IQ2_XS",
+    "IQ3_M",
+    "IQ3_XS",
+    "IQ3_XXS",
+    "IQ4_NL",
+    "IQ4_XS",
+    "Q2_K_L",
+    "Q3_K_L",
+    "Q3_K_M",
+    "Q3_K_S",
+    "Q3_K_XL",
+    "Q4_K_L",
+    "Q4_K_M",
+    "Q4_K_S",
+    "Q5_K_L",
+    "Q5_K_M",
+    "Q5_K_S",
+    "Q6_K",
+    "Q6_K_L",
+    "Q8_0"
+   ],
+   "features": [
+    "MTP",
+    "code",
+    "imatrix",
+    "reasoning"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-25T12:19:38.000Z",
+  "likes": 5,
+  "trendingScore": 0,
+  "sha": "3ab35cec79dfa2c26ae22c353549fe1bb5a4cff8",
+  "downloads": 59091,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "quantize_imatrix_file": "/workspace/jackod_f15o30/quant_ac/imatrix.dat",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 3946328000
+  },
+  "tags": [
+   "gguf",
+   "agentic",
+   "code",
+   "imatrix",
+   "merge",
+   "qwen3.5",
+   "tool-calling",
+   "text-generation",
+   "en",
+   "base_model:ManniX-ITA/JackOD-9B-Coder",
+   "base_model:quantized:ManniX-ITA/JackOD-9B-Coder",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-11T17:58:09.000Z"
+ },
+ {
+  "_id": "678e49d9308aaf71687991ce",
+  "id": "unsloth/DeepSeek-R1-Distill-Llama-8B-GGUF",
+  "cardData": {
+   "base_model": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license": "llama3.1",
+   "tags": [
+    "deepseek",
+    "unsloth",
+    "transformers",
+    "llama",
+    "llama-3",
+    "meta"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-05-10T13:04:41.000Z",
+  "likes": 313,
+  "trendingScore": 0,
+  "sha": "615f8936e16dfde29dcc00be71145d4d5ce8ed53",
+  "downloads": 47934,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 16068893856
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "llama",
+   "text-generation",
+   "deepseek",
+   "unsloth",
+   "llama-3",
+   "meta",
+   "en",
+   "arxiv:2501.12948",
+   "base_model:deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-20T13:04:25.000Z"
+ },
+ {
+  "_id": "680f7b70e445a4be6af508b2",
+  "id": "bartowski/Qwen_Qwen3-8B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "license": "apache-2.0",
+   "base_model": "Qwen/Qwen3-8B",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-04-28T16:20:38.000Z",
+  "likes": 41,
+  "trendingScore": 0,
+  "sha": "0b69f75b7472688e6808490aa2b85efdb81b5ce7",
+  "downloads": 45341,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388044064
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-28T12:58:24.000Z"
+ },
+ {
+  "_id": "65778ac662d3ac1817cc9201",
+  "id": "TheBloke/Mistral-7B-Instruct-v0.2-GGUF",
+  "cardData": {
+   "base_model": "mistralai/Mistral-7B-Instruct-v0.2",
+   "inference": false,
+   "license": "apache-2.0",
+   "model_creator": "Mistral AI_",
+   "model_name": "Mistral 7B Instruct v0.2",
+   "model_type": "mistral",
+   "pipeline_tag": "text-generation",
+   "prompt_template": "<s>[INST] {prompt} [/INST]\n",
+   "quantized_by": "TheBloke",
+   "tags": [
+    "finetuned"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2023-12-11T22:23:10.000Z",
+  "likes": 523,
+  "trendingScore": 0,
+  "sha": "3a6fbf4a41a1d52e415a4958cde6856d34b2db93",
+  "downloads": 45050,
+  "gguf": {
+   "total": 7241732096,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 3083098400
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "finetuned",
+   "text-generation",
+   "arxiv:2310.06825",
+   "base_model:mistralai/Mistral-7B-Instruct-v0.2",
+   "base_model:quantized:mistralai/Mistral-7B-Instruct-v0.2",
+   "license:apache-2.0",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2023-12-11T22:18:46.000Z"
+ },
+ {
+  "_id": "6aafeb75b6dc6303fe8c9ddc",
+  "id": "prithivMLmods/Qwen-Image-2.1-PE-T2I-GGUF",
+  "cardData": {
+   "base_model": [
+    "Qwen/Qwen-Image-2.1-PE-T2I"
+   ],
+   "license": "other",
+   "license_name": "qwen-research",
+   "license_link": "https://huggingface.co/Qwen/Qwen-Image-2.1-PE-T2I/blob/main/LICENSE",
+   "tags": [
+    "text-generation-inference",
+    "llama-cpp",
+    "qwen",
+    "prompt-rewriting",
+    "image-editing"
+   ],
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "transformers"
+  },
+  "gated": false,
+  "lastModified": "2026-09-20T15:32:25.000Z",
+  "likes": 9,
+  "trendingScore": 1,
+  "sha": "e18d4a3e0830ab157770738b16830e6fcf5f57d4",
+  "downloads": 44195,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 17920696960
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "text-generation-inference",
+   "llama-cpp",
+   "qwen",
+   "prompt-rewriting",
+   "image-editing",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen-Image-2.1-PE-T2I",
+   "base_model:quantized:Qwen/Qwen-Image-2.1-PE-T2I",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-20T14:19:33.000Z"
+ },
+ {
+  "_id": "69dee862f5f5a426fc250b1c",
+  "id": "OBLITERATUS/gemma-4-E4B-it-OBLITERATED",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": "google/gemma-4-E4B-it",
+   "tags": [
+    "gemma4",
+    "abliterated",
+    "uncensored",
+    "obliteratus",
+    "refusal-removal",
+    "text-generation",
+    "gguf"
+   ],
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-04-19T21:43:06.000Z",
+  "likes": 833,
+  "trendingScore": 0,
+  "sha": "d8678bbb9e0d4f5729c115087485a4e25ba89d65",
+  "downloads": 43794,
+  "gguf": {
+   "total": 7518069290,
+   "architecture": "gemma4",
+   "context_length": 131072,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 5335289792
+  },
+  "tags": [
+   "safetensors",
+   "gguf",
+   "gemma4",
+   "abliterated",
+   "uncensored",
+   "obliteratus",
+   "refusal-removal",
+   "text-generation",
+   "conversational",
+   "base_model:google/gemma-4-E4B-it",
+   "base_model:quantized:google/gemma-4-E4B-it",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-04-15T01:22:42.000Z"
+ },
+ {
+  "_id": "680f7b852deb57008c82f3cb",
+  "id": "lmstudio-community/Qwen3-8B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "license": "apache-2.0",
+   "base_model": "Qwen/Qwen3-8B",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-04-29T14:53:15.000Z",
+  "likes": 14,
+  "trendingScore": 0,
+  "sha": "07ebe812301319d9947477e3a94ab8aa587bb3af",
+  "downloads": 43744,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 4431394080
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-28T12:58:45.000Z"
+ },
+ {
+  "_id": "664e3ef36bc1025819154a01",
+  "id": "bartowski/Mistral-7B-Instruct-v0.3-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2024-05-22T19:09:41.000Z",
+  "likes": 51,
+  "trendingScore": 0,
+  "sha": "61fd4167fff3ab01ee1cfe0da183fa27a944db48",
+  "downloads": 43163,
+  "gguf": {
+   "total": 7248023552,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 28992851904
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-05-22T18:52:35.000Z"
+ },
+ {
+  "_id": "66214dadecdd46cf556f7478",
+  "id": "MaziyarPanahi/Meta-Llama-3-8B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3",
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "16-bit",
+    "GGUF"
+   ],
+   "base_model": "meta-llama/Meta-Llama-3-8B-Instruct",
+   "inference": false,
+   "model_creator": "MaziyarPanahi",
+   "model_name": "Meta-Llama-3-8B-Instruct-GGUF",
+   "quantized_by": "MaziyarPanahi",
+   "license_name": "llama3"
+  },
+  "gated": false,
+  "lastModified": "2024-04-23T12:55:06.000Z",
+  "likes": 103,
+  "trendingScore": 0,
+  "sha": "4ece958b356f2ec00338e5898ba0a7254d976baf",
+  "downloads": 42363,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 8192,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 16069403840
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "16-bit",
+   "GGUF",
+   "text-generation",
+   "en",
+   "base_model:meta-llama/Meta-Llama-3-8B-Instruct",
+   "base_model:quantized:meta-llama/Meta-Llama-3-8B-Instruct",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-04-18T16:43:25.000Z"
+ },
+ {
+  "_id": "66e9d94e95c7a0c91b8669b0",
+  "id": "lmstudio-community/Qwen2.5-Coder-7B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "code",
+    "codeqwen",
+    "chat",
+    "qwen",
+    "qwen-coder"
+   ],
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-19T14:36:38.000Z",
+  "likes": 34,
+  "trendingScore": 0,
+  "sha": "ba62cce5619ff5abbe5eceefab7caa4b11c267bd",
+  "downloads": 39590,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 4088459776
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "code",
+   "codeqwen",
+   "chat",
+   "qwen",
+   "qwen-coder",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-Coder-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-17T19:32:30.000Z"
+ },
+ {
+  "_id": "66ac036402c2b31b12378139",
+  "id": "bartowski/DarkIdol-Llama-3.1-8B-Instruct-1.2-Uncensored-GGUF",
+  "cardData": {
+   "base_model": "aifeifei798/DarkIdol-Llama-3.1-8B-Instruct-1.2-Uncensored",
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th",
+    "zh",
+    "ko",
+    "ja"
+   ],
+   "license": "llama3.1",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "roleplay",
+    "llama3",
+    "sillytavern",
+    "idol",
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ],
+   "quantized_by": "bartowski",
+   "extra_gated_fields": {
+    "First Name": "text",
+    "Last Name": "text",
+    "Date of birth": "date_picker",
+    "Country": "country",
+    "Affiliation": "text",
+    "Job title": {
+     "type": "select",
+     "options": [
+      "Student",
+      "Research Graduate",
+      "AI researcher",
+      "AI developer/engineer",
+      "Reporter",
+      "Other"
+     ]
+    }
+   }
+  },
+  "gated": false,
+  "lastModified": "2024-08-05T19:13:21.000Z",
+  "likes": 51,
+  "trendingScore": 0,
+  "sha": "e71331f12f060a96e3e1fd93093ef1bab9c80b50",
+  "downloads": 38357,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 32128882048
+  },
+  "tags": [
+   "gguf",
+   "roleplay",
+   "llama3",
+   "sillytavern",
+   "idol",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "zh",
+   "ko",
+   "ja",
+   "base_model:aifeifei798/DarkIdol-Llama-3.1-8B-Instruct-1.2-Uncensored",
+   "base_model:quantized:aifeifei798/DarkIdol-Llama-3.1-8B-Instruct-1.2-Uncensored",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-08-01T21:51:32.000Z"
+ },
+ {
+  "_id": "66f46db1e0a132d3f4b2a428",
+  "id": "QuantFactory/Qwen2.5-7B-Instruct-abliterated-v2-GGUF",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/huihui-ai/Qwen2.5-7B-Instruct-abliterated-v2/blob/main/LICENSE",
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "base_model": "Qwen/Qwen2.5-7B-Instruct",
+   "tags": [
+    "chat",
+    "abliterated",
+    "uncensored"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-09-25T20:47:27.000Z",
+  "likes": 15,
+  "trendingScore": 1,
+  "sha": "4305048a10a6f3f255afe55485f80b6abd09d5bb",
+  "downloads": 35345,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 3015940480
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "chat",
+   "abliterated",
+   "uncensored",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-25T20:08:17.000Z"
+ },
+ {
+  "_id": "6acfb2c4a7cf62369eb9b062",
+  "id": "webAI-Official/TwIL-8B",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "pipeline_tag": "text-generation",
+   "base_model": "ibm-granite/granite-4.2-8b",
+   "license": "other",
+   "license_name": "webai-non-commercial-license-ver.-1.0",
+   "license_link": "https://huggingface.co/webAI-Official/TwIL-8B/blob/main/LICENSE.md",
+   "tags": [
+    "granite",
+    "granite-4.2",
+    "twil",
+    "reasoning",
+    "math",
+    "code",
+    "instruction-following",
+    "reinforcement-learning",
+    "grpo",
+    "gguf"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-11-08T09:57:35.000Z",
+  "likes": 248,
+  "trendingScore": 242,
+  "sha": "9563ba7dfb70eeca4a26654b195011cbf818e7d9",
+  "downloads": 34546,
+  "gguf": {
+   "total": 8791592960,
+   "architecture": "granite",
+   "context_length": 131072,
+   "bos_token": "<s>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 17587420608
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "gguf",
+   "granite",
+   "text-generation",
+   "granite-4.2",
+   "twil",
+   "reasoning",
+   "math",
+   "code",
+   "instruction-following",
+   "reinforcement-learning",
+   "grpo",
+   "conversational",
+   "en",
+   "arxiv:2607.02770",
+   "base_model:ibm-granite/granite-4.2-8b",
+   "base_model:quantized:ibm-granite/granite-4.2-8b",
+   "license:other",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-14T16:50:12.000Z"
+ },
+ {
+  "_id": "65146b42c75a3d4c44e41667",
+  "id": "TheBloke/Mistral-7B-Instruct-v0.1-GGUF",
+  "cardData": {
+   "base_model": "mistralai/Mistral-7B-Instruct-v0.1",
+   "inference": false,
+   "license": "apache-2.0",
+   "model_creator": "Mistral AI",
+   "model_name": "Mistral 7B Instruct v0.1",
+   "model_type": "mistral",
+   "pipeline_tag": "text-generation",
+   "prompt_template": "<s>[INST]{prompt} [/INST]\n",
+   "quantized_by": "TheBloke",
+   "tags": [
+    "finetuned"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2023-12-09T16:09:28.000Z",
+  "likes": 614,
+  "trendingScore": 0,
+  "sha": "731a9fc8f06f5f5e2db8a0cf9d256197eb6e05d1",
+  "downloads": 34434,
+  "gguf": {
+   "total": 7241732096,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 3083097760
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "finetuned",
+   "text-generation",
+   "base_model:mistralai/Mistral-7B-Instruct-v0.1",
+   "base_model:quantized:mistralai/Mistral-7B-Instruct-v0.1",
+   "license:apache-2.0",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2023-09-27T17:49:54.000Z"
+ },
+ {
+  "_id": "6621526e505072f98f7edc01",
+  "id": "QuantFactory/Meta-Llama-3-8B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ],
+   "license": "llama3",
+   "extra_gated_prompt": "### META LLAMA 3 COMMUNITY LICENSE AGREEMENT\nMeta Llama 3 Version Release Date: April 18, 2024\n\"Agreement\" means the terms and conditions for use, reproduction, distribution and modification of the Llama Materials set forth herein.\n\"Documentation\" means the specifications, manuals and documentation accompanying Meta Llama 3 distributed by Meta at https://llama.meta.com/get-started/.\n\"Licensee\" or \"you\" means you, or your employer or any other person or entity (if you are entering into this Agreement on such person or entity’s behalf), of the age required under applicable laws, rules or regulations to provide legal consent and that has legal authority to bind your employer or such other person or entity if you are entering in this Agreement on their behalf.\n\"Meta Llama 3\" means the foundational large language models and software and algorithms, including machine-learning model code, trained model weights, inference-enabling code, training-enabling code, fine-tuning enabling code and other elements of the foregoing distributed by Meta at https://llama.meta.com/llama-downloads.\n\"Llama Materials\" means, collectively, Meta’s proprietary Meta Llama 3 and Documentation (and any portion thereof) made available under this Agreement.\n\"Meta\" or \"we\" means Meta Platforms Ireland Limited (if you are located in or, if you are an entity, your principal place of business is in the EEA or Switzerland) and Meta Platforms, Inc. (if you are located outside of the EEA or Switzerland).\n   \n1. License Rights and Redistribution.\na. Grant of Rights. You are granted a non-exclusive, worldwide, non-transferable and royalty-free limited license under Meta’s intellectual property or other rights owned by Meta embodied in the Llama Materials to use, reproduce, distribute, copy, create derivative works of, and make modifications to the Llama Materials.\nb. Redistribution and Use.\ni. If you distribute or make available the Llama Materials (or any derivative works thereof), or a product or service that uses any of them, including another AI model, you shall (A) provide a copy of this Agreement with any such Llama Materials; and (B) prominently display “Built with Meta Llama 3” on a related website, user interface, blogpost, about page, or product documentation. If you use the Llama Materials to create, train, fine tune, or otherwise improve an AI model, which is distributed or made available, you shall also include “Llama 3” at the beginning of any such AI model name.\nii. If you receive Llama Materials, or any derivative works thereof, from a Licensee as part  of an integrated end user product, then Section 2 of this Agreement will not apply to you.\niii. You must retain in all copies of the Llama Materials that you distribute the following attribution notice within a “Notice” text file distributed as a part of such copies: “Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.”\niv. Your use of the Llama Materials must comply with applicable laws and regulations (including trade compliance laws and regulations) and adhere to the Acceptable Use Policy for the Llama Materials (available at https://llama.meta.com/llama3/use-policy), which is hereby incorporated by reference into this Agreement.\nv. You will not use the Llama Materials or any output or results of the Llama Materials to improve any other large language model (excluding Meta Llama 3 or derivative works thereof).\n2. Additional Commercial Terms. If, on the Meta Llama 3 version release date, the monthly active users of the products or services made available by or for Licensee, or Licensee’s affiliates, is greater than 700 million monthly active users in the preceding calendar month, you must request a license from Meta, which Meta may grant to you in its sole discretion, and you are not authorized to exercise any of the rights under this Agreement unless or until Meta otherwise expressly grants you such rights.\n3. Disclaimer of Warranty. UNLESS REQUIRED BY APPLICABLE LAW, THE LLAMA MATERIALS AND ANY OUTPUT AND RESULTS THEREFROM ARE PROVIDED ON AN “AS IS” BASIS, WITHOUT WARRANTIES OF ANY KIND, AND META DISCLAIMS ALL WARRANTIES OF ANY KIND, BOTH EXPRESS AND IMPLIED, INCLUDING, WITHOUT LIMITATION, ANY WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. YOU ARE SOLELY RESPONSIBLE FOR DETERMINING THE APPROPRIATENESS OF USING OR REDISTRIBUTING THE LLAMA MATERIALS AND ASSUME ANY RISKS ASSOCIATED WITH YOUR USE OF THE LLAMA MATERIALS AND ANY OUTPUT AND RESULTS.\n4. Limitation of Liability. IN NO EVENT WILL META OR ITS AFFILIATES BE LIABLE UNDER ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, TORT, NEGLIGENCE, PRODUCTS LIABILITY, OR OTHERWISE, ARISING OUT OF THIS AGREEMENT, FOR ANY LOST PROFITS OR ANY INDIRECT, SPECIAL, CONSEQUENTIAL, INCIDENTAL, EXEMPLARY OR PUNITIVE DAMAGES, EVEN IF META OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF ANY OF THE FOREGOING.\n5. Intellectual Property.\na. No trademark licenses are granted under this Agreement, and in connection with the Llama Materials, neither Meta nor Licensee may use any name or mark owned by or associated with the other or any of its affiliates, except as required for reasonable and customary use in describing and redistributing the Llama Materials or as set forth in this Section 5(a). Meta hereby grants you a license to use “Llama 3” (the “Mark”) solely as required to comply with the last sentence of Section 1.b.i. You will comply with Meta’s brand guidelines (currently accessible at https://about.meta.com/brand/resources/meta/company-brand/ ). All goodwill arising out of your use of the Mark will inure to the benefit of Meta.\nb. Subject to Meta’s ownership of Llama Materials and derivatives made by or for Meta, with respect to any derivative works and modifications of the Llama Materials that are made by you, as between you and Meta, you are and will be the owner of such derivative works and modifications.\nc. If you institute litigation or other proceedings against Meta or any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Llama Materials or Meta Llama 3 outputs or results, or any portion of any of the foregoing, constitutes infringement of intellectual property or other rights owned or licensable by you, then any licenses granted to you under this Agreement shall terminate as of the date such litigation or claim is filed or instituted. You will indemnify and hold harmless Meta from and against any claim by any third party arising out of or related to your use or distribution of the Llama Materials.\n6. Term and Termination. The term of this Agreement will commence upon your acceptance of this Agreement or access to the Llama Materials and will continue in full force and effect until terminated in accordance with the terms and conditions herein. Meta may terminate this Agreement if you are in breach of any term or condition of this Agreement. Upon termination of this Agreement, you shall delete and cease use of the Llama Materials. Sections 3, 4 and 7 shall survive the termination of this Agreement.\n7. Governing Law and Jurisdiction. This Agreement will be governed and construed under the laws of the State of California without regard to choice of law principles, and the UN Convention on Contracts for the International Sale of Goods does not apply to this Agreement. The courts of California shall have exclusive jurisdiction of any dispute arising out of this Agreement.\n### Meta Llama 3 Acceptable Use Policy\nMeta is committed to promoting safe and fair use of its tools and features, including Meta Llama 3. If you access or use Meta Llama 3, you agree to this Acceptable Use Policy (“Policy”). The most recent copy of this policy can be found at [https://llama.meta.com/llama3/use-policy](https://llama.meta.com/llama3/use-policy)\n#### Prohibited Uses\nWe want everyone to use Meta Llama 3 safely and responsibly. You agree you will not use, or allow others to use, Meta Llama 3 to: 1. Violate the law or others’ rights, including to:\n    1. Engage in, promote, generate, contribute to, encourage, plan, incite, or further illegal or unlawful activity or content, such as:\n        1. Violence or terrorism\n        2. Exploitation or harm to children, including the solicitation, creation, acquisition, or dissemination of child exploitative content or failure to report Child Sexual Abuse Material\n        3. Human trafficking, exploitation, and sexual violence\n        4. The illegal distribution of information or materials to minors, including obscene materials, or failure to employ legally required age-gating in connection with such information or materials.\n        5. Sexual solicitation\n        6. Any other criminal activity\n    2. Engage in, promote, incite, or facilitate the harassment, abuse, threatening, or bullying of individuals or groups of individuals\n    3. Engage in, promote, incite, or facilitate discrimination or other unlawful or harmful conduct in the provision of employment, employment benefits, credit, housing, other economic benefits, or other essential goods and services\n    4. Engage in the unauthorized or unlicensed practice of any profession including, but not limited to, financial, legal, medical/health, or related professional practices\n    5. Collect, process, disclose, generate, or infer health, demographic, or other sensitive personal or private information about individuals without rights and consents required by applicable laws\n    6. Engage in or facilitate any action or generate any content that infringes, misappropriates, or otherwise violates any third-party rights, including the outputs or results of any products or services using the Llama Materials\n    7. Create, generate, or facilitate the creation of malicious code, malware, computer viruses or do anything else that could disable, overburden, interfere with or impair the proper working, integrity, operation or appearance of a website or computer system\n2. Engage in, promote, incite, facilitate, or assist in the planning or development of activities that present a risk of death or bodily harm to individuals, including use of Meta Llama 3 related to the following:\n    1. Military, warfare, nuclear industries or applications, espionage, use for materials or activities that are subject to the International Traffic Arms Regulations (ITAR) maintained by the United States Department of State\n    2. Guns and illegal weapons (including weapon development)\n    3. Illegal drugs and regulated/controlled substances\n    4. Operation of critical infrastructure, transportation technologies, or heavy machinery\n    5. Self-harm or harm to others, including suicide, cutting, and eating disorders\n    6. Any content intended to incite or promote violence, abuse, or any infliction of bodily harm to an individual\n3. Intentionally deceive or mislead others, including use of Meta Llama 3 related to the following:\n    1. Generating, promoting, or furthering fraud or the creation or promotion of disinformation\n    2. Generating, promoting, or furthering defamatory content, including the creation of defamatory statements, images, or other content\n    3. Generating, promoting, or further distributing spam\n    4. Impersonating another individual without consent, authorization, or legal right\n    5. Representing that the use of Meta Llama 3 or outputs are human-generated\n    6. Generating or facilitating false online engagement, including fake reviews and other means of fake online engagement\n4. Fail to appropriately disclose to end users any known dangers of your AI system\nPlease report any violation of this Policy, software “bug,” or other problems that could lead to a violation of this Policy through one of the following means:\n    * Reporting issues with the model: [https://github.com/meta-llama/llama3](https://github.com/meta-llama/llama3)\n    * Reporting risky content generated by the model:\n    developers.facebook.com/llama_output_feedback\n    * Reporting bugs and security concerns: facebook.com/whitehat/info\n    * Reporting violations of the Acceptable Use Policy or unlicensed uses of Meta Llama 3: LlamaUseReport@meta.com",
+   "extra_gated_fields": {
+    "First Name": "text",
+    "Last Name": "text",
+    "Date of birth": "date_picker",
+    "Country": "country",
+    "Affiliation": "text",
+    "geo": "ip_location",
+    "By clicking Submit below I accept the terms of the license and acknowledge that the information I provide will be collected stored processed and shared in accordance with the Meta Privacy Policy": "checkbox"
+   },
+   "extra_gated_description": "The information you provide will be collected, stored, processed and shared in accordance with the [Meta Privacy Policy](https://www.facebook.com/privacy/policy/).",
+   "extra_gated_button_content": "Submit",
+   "widget": [
+    {
+     "example_title": "Hello",
+     "messages": [
+      {
+       "role": "user",
+       "content": "Hey my name is Julien! How are you?"
+      }
+     ]
+    },
+    {
+     "example_title": "Winter holidays",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are a helpful and honest assistant. Please, respond concisely and truthfully."
+      },
+      {
+       "role": "user",
+       "content": "Can you recommend a good destination for Winter holidays?"
+      }
+     ]
+    },
+    {
+     "example_title": "Programming assistant",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are a helpful and honest code and programming assistant. Please, respond concisely and truthfully."
+      },
+      {
+       "role": "user",
+       "content": "Write a function that computes the nth fibonacci number."
+      }
+     ]
+    }
+   ],
+   "inference": {
+    "parameters": {
+     "max_new_tokens": 300,
+     "stop": [
+      "<|end_of_text|>",
+      "<|eot_id|>"
+     ]
+    }
+   },
+   "base_model": [
+    "meta-llama/Meta-Llama-3-8B-Instruct"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-01-23T07:39:14.000Z",
+  "likes": 338,
+  "trendingScore": 0,
+  "sha": "a06c33ec89c1e3402009fb47f466a89127c6d223",
+  "downloads": 33088,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 8192,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 3179131456
+  },
+  "tags": [
+   "gguf",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "text-generation",
+   "en",
+   "base_model:meta-llama/Meta-Llama-3-8B-Instruct",
+   "base_model:quantized:meta-llama/Meta-Llama-3-8B-Instruct",
+   "license:llama3",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-04-18T17:03:42.000Z"
+ },
+ {
+  "_id": "6811653ba5048fc6a7a1a636",
+  "id": "bartowski/mlabonne_Qwen3-8B-abliterated-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "mlabonne/Qwen3-8B-abliterated",
+   "tags": [
+    "abliteration",
+    "abliterated"
+   ],
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-05-20T13:49:12.000Z",
+  "likes": 33,
+  "trendingScore": 0,
+  "sha": "0e66e6f836c802246b69941780ec8ef32670dc09",
+  "downloads": 32946,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388044096
+  },
+  "tags": [
+   "gguf",
+   "abliteration",
+   "abliterated",
+   "text-generation",
+   "base_model:mlabonne/Qwen3-8B-abliterated",
+   "base_model:quantized:mlabonne/Qwen3-8B-abliterated",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-29T23:48:11.000Z"
+ },
+ {
+  "_id": "68c62a1d26bea8cd92e4b759",
+  "id": "neuralcrew/neutrino-instruct",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "conversational",
+    "instruction-following",
+    "chat",
+    "gguf",
+    "llama.cpp",
+    "ollama",
+    "local-llm"
+   ],
+   "pipeline_tag": "text-generation",
+   "datasets": [
+    "HuggingFaceFW/finepdfs",
+    "fka/awesome-chatgpt-prompts",
+    "roneneldan/TinyStories",
+    "wikimedia/wikipedia",
+    "codeparrot/github-code",
+    "HuggingFaceFW/finewiki",
+    "karpathy/fineweb-edu-100b-shuffle"
+   ],
+   "library_name": "gguf",
+   "base_model": [
+    "neuralcrew/neutrino"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-07-17T04:24:36.000Z",
+  "likes": 7,
+  "trendingScore": 0,
+  "sha": "05a4367186579586ab9fddcc1ac6acdc271f46a6",
+  "downloads": 32141,
+  "gguf": {
+   "total": 7248023552,
+   "architecture": "llama",
+   "context_length": 32768,
+   "quantize_imatrix_file": "./imatrix.dat",
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 4144747488
+  },
+  "tags": [
+   "gguf",
+   "safetensors",
+   "neutrino",
+   "conversational",
+   "instruction-following",
+   "chat",
+   "llama.cpp",
+   "ollama",
+   "local-llm",
+   "text-generation",
+   "en",
+   "dataset:HuggingFaceFW/finepdfs",
+   "dataset:fka/awesome-chatgpt-prompts",
+   "dataset:roneneldan/TinyStories",
+   "dataset:wikimedia/wikipedia",
+   "dataset:codeparrot/github-code",
+   "dataset:HuggingFaceFW/finewiki",
+   "dataset:karpathy/fineweb-edu-100b-shuffle",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-09-14T02:36:13.000Z"
+ },
+ {
+  "_id": "66e9d8b40fdd0d38d7246d5a",
+  "id": "lmstudio-community/Qwen2.5-7B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen2.5-7B-Instruct",
+   "language": [
+    "en"
+   ],
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "chat"
+   ],
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-19T12:38:14.000Z",
+  "likes": 7,
+  "trendingScore": 0,
+  "sha": "a8bb3906b78b3009770d7ae7d116be2ea892802d",
+  "downloads": 31744,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 4088459680
+  },
+  "tags": [
+   "gguf",
+   "chat",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-17T19:29:56.000Z"
+ },
+ {
+  "_id": "6a84db58dfa1e74fe164fc07",
+  "id": "Noobito45/Qwen3.8-9B-heretic-uncensored-NVFP4-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "base_model": [
+    "empero-ai/Qwen3.8-9B"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "qwen3.8",
+    "qwen3.5",
+    "heretic",
+    "uncensored",
+    "abliteration",
+    "distillation",
+    "reasoning"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-08-21T10:49:34.000Z",
+  "likes": 48,
+  "trendingScore": 2,
+  "sha": "6a9d3ae466e566cd3319d0cbae3e1243279b62e3",
+  "downloads": 31292,
+  "gguf": {
+   "total": 8953803664,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5178305056
+  },
+  "tags": [
+   "gguf",
+   "qwen3.8",
+   "qwen3.5",
+   "heretic",
+   "uncensored",
+   "abliteration",
+   "distillation",
+   "reasoning",
+   "text-generation",
+   "en",
+   "base_model:empero-ai/Qwen3.8-9B-Distill",
+   "base_model:quantized:empero-ai/Qwen3.8-9B-Distill",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-18T22:23:20.000Z"
+ },
+ {
+  "_id": "680fefed611b27241b74cbb9",
+  "id": "MaziyarPanahi/Qwen3-8B-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen3-8B",
+   "inference": false,
+   "model_creator": "Qwen",
+   "model_name": "Qwen3-8B-GGUF",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi",
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-04-28T21:32:00.000Z",
+  "likes": 11,
+  "trendingScore": 0,
+  "sha": "ac6dd95cf227fe9138362c0536fe3c3802008ccf",
+  "downloads": 31049,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 40960,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16388044000
+  },
+  "tags": [
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "base_model:Qwen/Qwen3-8B",
+   "base_model:quantized:Qwen/Qwen3-8B",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-28T21:15:25.000Z"
+ },
+ {
+  "_id": "664e2b118e43ee411f6ca3c4",
+  "id": "MaziyarPanahi/Mistral-7B-Instruct-v0.3-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "transformers",
+    "safetensors",
+    "mistral",
+    "text-generation",
+    "conversational",
+    "license:apache-2.0",
+    "autotrain_compatible",
+    "endpoints_compatible",
+    "text-generation-inference",
+    "region:us",
+    "text-generation"
+   ],
+   "model_name": "Mistral-7B-Instruct-v0.3-GGUF",
+   "base_model": "mistralai/Mistral-7B-Instruct-v0.3",
+   "inference": false,
+   "model_creator": "mistralai",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-05-22T20:26:06.000Z",
+  "likes": 147,
+  "trendingScore": 0,
+  "sha": "ce89f595755a4bf2e2e05d155cc43cb847c78978",
+  "downloads": 30259,
+  "gguf": {
+   "total": 7248023552,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 14497337312
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "safetensors",
+   "text-generation",
+   "conversational",
+   "license:apache-2.0",
+   "autotrain_compatible",
+   "endpoints_compatible",
+   "text-generation-inference",
+   "region:us",
+   "base_model:mistralai/Mistral-7B-Instruct-v0.3",
+   "base_model:quantized:mistralai/Mistral-7B-Instruct-v0.3"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-05-22T17:27:45.000Z"
+ },
+ {
+  "_id": "677aba704e081b9260ae3809",
+  "id": "bartowski/Dolphin3.0-Llama3.1-8B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en"
+   ],
+   "base_model": "cognitivecomputations/Dolphin3.0-Llama3.1-8B",
+   "license": "llama3.1",
+   "datasets": [
+    "OpenCoder-LLM/opc-sft-stage1",
+    "OpenCoder-LLM/opc-sft-stage2",
+    "microsoft/orca-agentinstruct-1M-v1",
+    "microsoft/orca-math-word-problems-200k",
+    "NousResearch/hermes-function-calling-v1",
+    "AI-MO/NuminaMath-CoT",
+    "AI-MO/NuminaMath-TIR",
+    "allenai/tulu-3-sft-mixture",
+    "cognitivecomputations/dolphin-coder",
+    "HuggingFaceTB/smoltalk",
+    "cognitivecomputations/samantha-data",
+    "m-a-p/CodeFeedback-Filtered-Instruction",
+    "m-a-p/Code-Feedback"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-01-05T17:29:33.000Z",
+  "likes": 35,
+  "trendingScore": 0,
+  "sha": "a6274707ba8c5f12d4521eabbce1b318bb2f27f5",
+  "downloads": 29330,
+  "gguf": {
+   "total": 8030277696,
+   "architecture": "llama",
+   "context_length": 131072,
+   "quantize_imatrix_file": "/models_out/Dolphin3.0-Llama3.1-8B-GGUF/Dolphin3.0-Llama3.1-8B.imatrix",
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16068927840
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "en",
+   "dataset:OpenCoder-LLM/opc-sft-stage1",
+   "dataset:OpenCoder-LLM/opc-sft-stage2",
+   "dataset:microsoft/orca-agentinstruct-1M-v1",
+   "dataset:microsoft/orca-math-word-problems-200k",
+   "dataset:NousResearch/hermes-function-calling-v1",
+   "dataset:AI-MO/NuminaMath-CoT",
+   "dataset:AI-MO/NuminaMath-TIR",
+   "dataset:allenai/tulu-3-sft-mixture",
+   "dataset:cognitivecomputations/dolphin-coder",
+   "dataset:HuggingFaceTB/smoltalk",
+   "dataset:cognitivecomputations/samantha-data",
+   "dataset:m-a-p/CodeFeedback-Filtered-Instruction",
+   "dataset:m-a-p/Code-Feedback",
+   "base_model:dphn/Dolphin3.0-Llama3.1-8B",
+   "base_model:quantized:dphn/Dolphin3.0-Llama3.1-8B",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-05T16:59:28.000Z"
+ },
+ {
+  "_id": "667d887808289e6bddd446c7",
+  "id": "bartowski/gemma-2-9b-it-GGUF",
+  "cardData": {
+   "base_model": "google/gemma-2-9b-it",
+   "library_name": "transformers",
+   "license": "gemma",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "conversational"
+   ],
+   "quantized_by": "bartowski",
+   "extra_gated_heading": "Access Gemma on Hugging Face",
+   "extra_gated_prompt": "To access Gemma on Hugging Face, you’re required to review and agree to Google’s usage license. To do this, please ensure you’re logged in to Hugging Face and click below. Requests are processed immediately.",
+   "extra_gated_button_content": "Acknowledge license"
+  },
+  "gated": false,
+  "lastModified": "2024-07-15T18:57:00.000Z",
+  "likes": 238,
+  "trendingScore": 0,
+  "sha": "d731033f3dc4018261fd39896e50984d398b4ac5",
+  "downloads": 28258,
+  "gguf": {
+   "total": 9241705984,
+   "architecture": "gemma2",
+   "context_length": 8192,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 36972880544
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "conversational",
+   "text-generation",
+   "base_model:google/gemma-2-9b-it",
+   "base_model:quantized:google/gemma-2-9b-it",
+   "license:gemma",
+   "endpoints_compatible",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-06-27T15:42:48.000Z"
+ },
+ {
+  "_id": "6acaeb6481800b2f2d0d1f6d",
+  "id": "DICPlay/RusMind-Vspyshka",
+  "cardData": {
+   "license": "other",
+   "license_name": "rusmind-license",
+   "license_link": "LICENSE",
+   "language": [
+    "ru",
+    "en"
+   ],
+   "pipeline_tag": "text-generation",
+   "library_name": "gguf",
+   "tags": [
+    "rusmind",
+    "dicplay",
+    "russian",
+    "gguf",
+    "llama.cpp",
+    "on-device",
+    "offline"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-31T16:29:53.000Z",
+  "likes": 0,
+  "trendingScore": 0,
+  "sha": "0712feba5690d004891634f5514a38d393dc4976",
+  "downloads": 27727,
+  "gguf": {
+   "total": 7518069290,
+   "architecture": "gemma4",
+   "context_length": 131072,
+   "bos_token": "<bos>",
+   "eos_token": "<turn|>",
+   "totalFileSize": 4234287584
+  },
+  "tags": [
+   "gguf",
+   "rusmind",
+   "dicplay",
+   "russian",
+   "llama.cpp",
+   "on-device",
+   "offline",
+   "text-generation",
+   "ru",
+   "en",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-11T01:50:28.000Z"
+ },
+ {
+  "_id": "6abf501ba3c83f12705a7fbb",
+  "id": "DavidAU/LFM2.5-8B-A1B-Qwen3.8-Turbo-Brilliance-Power-X12-NEO-MAX-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "ar",
+    "zh",
+    "en",
+    "fr",
+    "de",
+    "hi",
+    "id",
+    "it",
+    "ja",
+    "ko",
+    "pl",
+    "pt",
+    "ru",
+    "es",
+    "th",
+    "vi"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "liquid",
+    "lfm2.5",
+    "mixture of experts",
+    "MOE",
+    "sparse moe",
+    "32 experts",
+    "4 active experts",
+    "edge",
+    "12 reasoning modes",
+    "Turbo-Brilliance",
+    "NEO Imatrix",
+    "Max Quants"
+   ],
+   "base_model": [
+    "LiquidAI/LFM2.5-8B-A1B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-11-09T05:11:02.000Z",
+  "likes": 65,
+  "trendingScore": 3,
+  "sha": "45ed10dec5f93e5e7b1ba08189c5792189938a64",
+  "downloads": 26480,
+  "gguf": {
+   "total": 8467856832,
+   "architecture": "lfm2moe",
+   "context_length": 128000,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16947292576
+  },
+  "tags": [
+   "gguf",
+   "liquid",
+   "lfm2.5",
+   "mixture of experts",
+   "MOE",
+   "sparse moe",
+   "32 experts",
+   "4 active experts",
+   "edge",
+   "12 reasoning modes",
+   "Turbo-Brilliance",
+   "NEO Imatrix",
+   "Max Quants",
+   "text-generation",
+   "ar",
+   "zh",
+   "en",
+   "fr",
+   "de",
+   "hi",
+   "id",
+   "it",
+   "ja",
+   "ko",
+   "pl",
+   "pt",
+   "ru",
+   "es",
+   "th",
+   "vi",
+   "arxiv:2511.23404",
+   "arxiv:2607.15232",
+   "base_model:LiquidAI/LFM2.5-8B-A1B",
+   "base_model:quantized:LiquidAI/LFM2.5-8B-A1B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-02T06:32:59.000Z"
+ },
+ {
+  "_id": "65cac0d27faf059c56a5821f",
+  "id": "google/gemma-7b-it",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "gemma",
+   "tags": [],
+   "widget": [
+    {
+     "messages": [
+      {
+       "role": "user",
+       "content": "How does the brain work?"
+      }
+     ]
+    }
+   ],
+   "inference": {
+    "parameters": {
+     "max_new_tokens": 200
+    }
+   },
+   "extra_gated_heading": "Access Gemma on Hugging Face",
+   "extra_gated_prompt": "To access Gemma on Hugging Face, you’re required to review and agree to Google’s usage license. To do this, please ensure you’re logged-in to Hugging Face and click below. Requests are processed immediately.",
+   "extra_gated_button_content": "Acknowledge license",
+   "base_model": "google/gemma-7b",
+   "base_model_relation": "finetune"
+  },
+  "gated": "manual",
+  "lastModified": "2024-08-14T08:36:20.000Z",
+  "likes": 1263,
+  "trendingScore": 1,
+  "sha": "9c5798d27f588501ce1e108079d2a19e4c3a2353",
+  "downloads": 25516,
+  "gguf": {
+   "total": 8538074112,
+   "architecture": "gemma",
+   "context_length": 8192,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 34158344288
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "gguf",
+   "gemma",
+   "text-generation",
+   "conversational",
+   "arxiv:2312.11805",
+   "arxiv:2009.03300",
+   "arxiv:1905.07830",
+   "arxiv:1911.11641",
+   "arxiv:1904.09728",
+   "arxiv:1905.10044",
+   "arxiv:1907.10641",
+   "arxiv:1811.00937",
+   "arxiv:1809.02789",
+   "arxiv:1911.01547",
+   "arxiv:1705.03551",
+   "arxiv:2107.03374",
+   "arxiv:2108.07732",
+   "arxiv:2110.14168",
+   "arxiv:2304.06364",
+   "arxiv:2206.04615",
+   "arxiv:1804.06876",
+   "arxiv:2110.08193",
+   "arxiv:2009.11462",
+   "arxiv:2101.11718",
+   "arxiv:1804.09301",
+   "arxiv:2109.07958",
+   "arxiv:2203.09509",
+   "base_model:google/gemma-7b",
+   "base_model:finetune:google/gemma-7b",
+   "license:gemma",
+   "eval-results",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "deploy:sagemaker",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-02-13T01:07:30.000Z"
+ },
+ {
+  "_id": "66292cf080afca4736bd5c79",
+  "id": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "text-generation"
+   ],
+   "model_name": "Llama-3-8B-Instruct-32k-v0.1-GGUF",
+   "base_model": "MaziyarPanahi/Llama-3-8B-Instruct-32k-v0.1",
+   "inference": false,
+   "model_creator": "MaziyarPanahi",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-06-28T10:42:58.000Z",
+  "likes": 59,
+  "trendingScore": 0,
+  "sha": "4251e4b7ec372ba0de6046137272a709e349f442",
+  "downloads": 24944,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 8192,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 16068890944
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-04-24T16:01:52.000Z"
+ },
+ {
+  "_id": "6a996dca0344f3cc139b455a",
+  "id": "IFM/K2-Horizon-7B-GGUF",
+  "cardData": {
+   "pipeline_tag": "text-generation",
+   "library_name": "transformers",
+   "model_name": "K2-Horizon-7B",
+   "language": [
+    "en"
+   ],
+   "license": "apache-2.0",
+   "datasets": [
+    "IFM/K2-Horizon-Pretrain-Data",
+    "IFM/K2-Horizon-Midtrain-Data"
+   ],
+   "tags": [
+    "k2-horizon",
+    "7b",
+    "dense",
+    "open-weights",
+    "ifm"
+   ],
+   "base_model": [
+    "IFM/K2-Horizon-7B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-15T21:56:02.000Z",
+  "likes": 83,
+  "trendingScore": 2,
+  "sha": "7a75dbda05e3d440351543131ff3f7fa5687e879",
+  "downloads": 24303,
+  "gguf": {
+   "total": 8999178240,
+   "architecture": "k2-horizon",
+   "context_length": 524288,
+   "bos_token": "<|ifm|begin_of_text|>",
+   "eos_token": "<|ifm|endoftext|>",
+   "totalFileSize": 18010413440
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "k2-horizon",
+   "7b",
+   "dense",
+   "open-weights",
+   "ifm",
+   "text-generation",
+   "en",
+   "dataset:IFM/K2-Horizon-Pretrain-Data",
+   "dataset:IFM/K2-Horizon-Midtrain-Data",
+   "base_model:IFM/K2-Horizon-7B",
+   "base_model:quantized:IFM/K2-Horizon-7B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-03T12:53:30.000Z"
+ },
+ {
+  "_id": "6a1958280fdefd634d109827",
+  "id": "unsloth/LFM2.5-8B-A1B-GGUF",
+  "cardData": {
+   "library_name": "transformers",
+   "license": "other",
+   "license_name": "lfm1.0",
+   "license_link": "https://huggingface.co/LiquidAI/LFM2.5-8B-A1B/blob/main/LICENSE",
+   "language": [
+    "en",
+    "ar",
+    "zh",
+    "fr",
+    "de",
+    "ja",
+    "ko",
+    "es",
+    "pt"
+   ],
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "liquid",
+    "unsloth",
+    "lfm2.5",
+    "edge"
+   ],
+   "base_model": [
+    "LiquidAI/LFM2.5-8B-A1B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-08-05T14:14:18.000Z",
+  "likes": 131,
+  "trendingScore": 2,
+  "sha": "37563684c4a625e9958906fd924e15095cf9c896",
+  "downloads": 23935,
+  "gguf": {
+   "total": 8467856832,
+   "architecture": "lfm2moe",
+   "context_length": 128000,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16947260768
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "liquid",
+   "unsloth",
+   "lfm2.5",
+   "edge",
+   "text-generation",
+   "en",
+   "ar",
+   "zh",
+   "fr",
+   "de",
+   "ja",
+   "ko",
+   "es",
+   "pt",
+   "arxiv:2511.23404",
+   "base_model:LiquidAI/LFM2.5-8B-A1B",
+   "base_model:quantized:LiquidAI/LFM2.5-8B-A1B",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-05-29T09:11:04.000Z"
+ },
+ {
+  "_id": "65c391706a29bb7649dff708",
+  "id": "Ttimofeyka/MistralRP-Noromaid-NSFW-Mistral-7B-GGUF",
+  "cardData": {
+   "base_model": [],
+   "library_name": "transformers",
+   "tags": [
+    "mergekit",
+    "merge"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-02-10T11:41:00.000Z",
+  "likes": 147,
+  "trendingScore": 0,
+  "sha": "dc414dd9e46fa0b2ca246c27f14ff2a98c243efe",
+  "downloads": 23880,
+  "gguf": {
+   "total": 7241732096,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 4140373696
+  },
+  "tags": [
+   "transformers",
+   "safetensors",
+   "gguf",
+   "mistral",
+   "text-generation",
+   "mergekit",
+   "merge",
+   "text-generation-inference",
+   "endpoints_compatible",
+   "region:us",
+   "not-for-all-audiences"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-02-07T14:19:28.000Z"
+ },
+ {
+  "_id": "64f5fd954d3b1dd311d30e28",
+  "id": "TheBloke/Llama-2-7B-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "license": "llama2",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-2"
+   ],
+   "model_name": "Llama 2 7B",
+   "base_model": "meta-llama/Llama-2-7b-hf",
+   "inference": false,
+   "model_creator": "Meta",
+   "model_type": "llama",
+   "pipeline_tag": "text-generation",
+   "prompt_template": "{prompt}\n",
+   "quantized_by": "TheBloke"
+  },
+  "gated": false,
+  "lastModified": "2023-10-24T07:32:45.000Z",
+  "likes": 207,
+  "trendingScore": 0,
+  "sha": "b4e04e128f421c93a5f1e34ac4d7ca9b0af47b80",
+  "downloads": 23759,
+  "gguf": {
+   "total": 6738415616,
+   "architecture": "llama",
+   "context_length": 4096,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 2825940672
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "llama",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama-2",
+   "text-generation",
+   "en",
+   "arxiv:2307.09288",
+   "base_model:meta-llama/Llama-2-7b-hf",
+   "base_model:quantized:meta-llama/Llama-2-7b-hf",
+   "license:llama2",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2023-09-04T15:53:57.000Z"
+ },
+ {
+  "_id": "68b1b547415f9943dd5c668c",
+  "id": "bartowski/nvidia_NVIDIA-Nemotron-Nano-9B-v2-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model_relation": "quantized",
+   "base_model": "nvidia/NVIDIA-Nemotron-Nano-9B-v2"
+  },
+  "gated": false,
+  "lastModified": "2025-08-29T14:53:51.000Z",
+  "likes": 37,
+  "trendingScore": 0,
+  "sha": "b2daccafb3d123ea94653720a0db1f5db9c698ff",
+  "downloads": 23571,
+  "gguf": {
+   "total": 8888227328,
+   "architecture": "nemotron_h",
+   "context_length": 1048576,
+   "bos_token": "<s>",
+   "eos_token": "<SPECIAL_12>",
+   "totalFileSize": 17788743232
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+   "base_model:quantized:nvidia/NVIDIA-Nemotron-Nano-9B-v2",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-08-29T14:12:23.000Z"
+ },
+ {
+  "_id": "669fd786bff08860422b5058",
+  "id": "MaziyarPanahi/Meta-Llama-3.1-8B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th"
+   ],
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "text-generation"
+   ],
+   "model_name": "Meta-Llama-3.1-8B-Instruct-GGUF",
+   "base_model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+   "inference": false,
+   "model_creator": "meta-llama",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi",
+   "license": "llama3.1"
+  },
+  "gated": false,
+  "lastModified": "2024-07-23T17:40:37.000Z",
+  "likes": 40,
+  "trendingScore": 0,
+  "sha": "1f301d86d760b435a11a56de3863bc0121bfb98f",
+  "downloads": 22316,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 131072,
+   "quantize_imatrix_file": "./Meta-Llama-3.1-8B-Instruct-GGUF_imatrix.dat",
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 3179131808
+  },
+  "tags": [
+   "gguf",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "arxiv:2204.05149",
+   "base_model:meta-llama/Llama-3.1-8B-Instruct",
+   "base_model:quantized:meta-llama/Llama-3.1-8B-Instruct",
+   "license:llama3.1",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-23T16:17:10.000Z"
+ },
+ {
+  "_id": "69325f60905f92e25d476553",
+  "id": "DavidAU/Qwen3-8B-Hivemind-Instruct-Heretic-Abliterated-Uncensored-NEO-Imatrix-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "256k context",
+    "Qwen3",
+    "All use cases",
+    "creative",
+    "creative writing",
+    "fiction writing",
+    "plot generation",
+    "sub-plot generation",
+    "fiction writing",
+    "story generation",
+    "scene continue",
+    "storytelling",
+    "fiction story",
+    "science fiction",
+    "romance",
+    "all genres",
+    "story",
+    "writing",
+    "vivid prosing",
+    "vivid writing",
+    "fiction",
+    "roleplaying",
+    "bfloat16",
+    "heretic",
+    "uncensored",
+    "decensored",
+    "abliterated",
+    "finetune",
+    "Neo Imatrix",
+    "Brainstorm 40x",
+    "not-for-all-audiences"
+   ],
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-11-09T04:30:10.000Z",
+  "likes": 98,
+  "trendingScore": 0.4,
+  "sha": "97773734e46b47752fa87dbdc222c2d6213c96c6",
+  "downloads": 22240,
+  "gguf": {
+   "total": 7655977472,
+   "architecture": "qwen3",
+   "context_length": 262144,
+   "quantize_imatrix_file": "E:/_imx/Qwen3-8B-Hivemind-Inst-Hrtic-Ablit-Uncensored-NEO.gguf",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 2755340160
+  },
+  "tags": [
+   "gguf",
+   "256k context",
+   "Qwen3",
+   "All use cases",
+   "creative",
+   "creative writing",
+   "fiction writing",
+   "plot generation",
+   "sub-plot generation",
+   "story generation",
+   "scene continue",
+   "storytelling",
+   "fiction story",
+   "science fiction",
+   "romance",
+   "all genres",
+   "story",
+   "writing",
+   "vivid prosing",
+   "vivid writing",
+   "fiction",
+   "roleplaying",
+   "bfloat16",
+   "heretic",
+   "uncensored",
+   "decensored",
+   "abliterated",
+   "finetune",
+   "Neo Imatrix",
+   "Brainstorm 40x",
+   "not-for-all-audiences",
+   "text-generation",
+   "en",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-12-05T04:28:16.000Z"
+ },
+ {
+  "_id": "6a83cae9ded99929f0537a7e",
+  "id": "bartowski/Ling-3.0-tiny-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "license": "mit",
+   "base_model": "inclusionAI/Ling-3.0-tiny",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2026-08-18T03:36:20.000Z",
+  "likes": 56,
+  "trendingScore": 2,
+  "sha": "ea072726af0d2e8ba325b2f90fc0efa762105a91",
+  "downloads": 22239,
+  "gguf": {
+   "total": 7893392800,
+   "architecture": "bailingmoe3",
+   "context_length": 131072,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|role_end|>",
+   "totalFileSize": 15803475264
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:inclusionAI/Ling-3.0-tiny",
+   "base_model:quantized:inclusionAI/Ling-3.0-tiny",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-18T03:00:57.000Z"
+ },
+ {
+  "_id": "66eb2d942f79fb99cc2840c0",
+  "id": "MaziyarPanahi/Qwen2.5-7B-Instruct-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "text-generation"
+   ],
+   "model_name": "Qwen2.5-7B-Instruct-GGUF",
+   "base_model": "Qwen/Qwen2.5-7B-Instruct",
+   "inference": false,
+   "model_creator": "Qwen",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-09-18T20:38:02.000Z",
+  "likes": 11,
+  "trendingScore": 0,
+  "sha": "113085215169f69e309fa57d351d7e2b06e1350e",
+  "downloads": 21916,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853632
+  },
+  "tags": [
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "base_model:Qwen/Qwen2.5-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-18T19:44:20.000Z"
+ },
+ {
+  "_id": "64e78cdac3b2443fb30b9dda",
+  "id": "TheBloke/CodeLlama-7B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "code"
+   ],
+   "license": "llama2",
+   "tags": [
+    "llama-2"
+   ],
+   "model_name": "CodeLlama 7B Instruct",
+   "base_model": "codellama/CodeLlama-7b-instruct-hf",
+   "inference": false,
+   "model_creator": "Meta",
+   "model_type": "llama",
+   "pipeline_tag": "text-generation",
+   "prompt_template": "[INST] Write code to solve the following coding problem that obeys the constraints and passes the example test cases. Please wrap your code answer using ```:\n{prompt}\n[/INST]\n",
+   "quantized_by": "TheBloke"
+  },
+  "gated": false,
+  "lastModified": "2023-09-27T12:46:02.000Z",
+  "likes": 152,
+  "trendingScore": 0,
+  "sha": "2f064ee0c6ae3f025ec4e392c6ba5dd049c77969",
+  "downloads": 21902,
+  "gguf": {
+   "total": 6738546688,
+   "architecture": "llama",
+   "context_length": 16384,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 2826016448
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "llama",
+   "llama-2",
+   "text-generation",
+   "code",
+   "arxiv:2308.12950",
+   "license:llama2",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2023-08-24T17:01:14.000Z"
+ },
+ {
+  "_id": "66e9d98576093e4bf290971d",
+  "id": "bartowski/Qwen2.5-Math-7B-Instruct-GGUF",
+  "cardData": {
+   "base_model": "Qwen/Qwen2.5-Math-7B-Instruct",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-Math-7B-Instruct/blob/main/LICENSE",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "chat"
+   ],
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-19T15:31:00.000Z",
+  "likes": 16,
+  "trendingScore": 0,
+  "sha": "22e2c9c42470193b2b643636564765c84bcb06cb",
+  "downloads": 21827,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 4096,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237853632
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "chat",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-Math-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2.5-Math-7B-Instruct",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-17T19:33:25.000Z"
+ },
+ {
+  "_id": "6661ee6887ef60c3445ffe55",
+  "id": "MaziyarPanahi/Qwen2-7B-Instruct-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "llama-3",
+    "llama",
+    "text-generation"
+   ],
+   "model_name": "Qwen2-7B-Instruct-GGUF",
+   "base_model": "Qwen/Qwen2-7B-Instruct",
+   "inference": false,
+   "model_creator": "Qwen",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-06-06T17:54:17.000Z",
+  "likes": 10,
+  "trendingScore": 0,
+  "sha": "8cd289397d4eb8a1faa022adb9bbab5aae2d1739",
+  "downloads": 21565,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237850656
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "llama-3",
+   "llama",
+   "base_model:Qwen/Qwen2-7B-Instruct",
+   "base_model:quantized:Qwen/Qwen2-7B-Instruct",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-06-06T17:14:16.000Z"
+ },
+ {
+  "_id": "66d86dc20584f2feba5d6488",
+  "id": "MaziyarPanahi/Yi-Coder-9B-Chat-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "text-generation"
+   ],
+   "model_name": "Yi-Coder-9B-Chat-GGUF",
+   "base_model": "01-ai/Yi-Coder-9B-Chat",
+   "inference": false,
+   "model_creator": "01-ai",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-09-04T16:22:07.000Z",
+  "likes": 10,
+  "trendingScore": 0,
+  "sha": "a1ceaae2d11b41e263560af6f806b9aedbefffd2",
+  "downloads": 21387,
+  "gguf": {
+   "total": 8829407232,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|endoftext|>",
+   "totalFileSize": 17661112896
+  },
+  "tags": [
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "base_model:01-ai/Yi-Coder-9B-Chat",
+   "base_model:quantized:01-ai/Yi-Coder-9B-Chat",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-04T14:25:06.000Z"
+ },
+ {
+  "_id": "6838c4b74ec98f3b72f17b2d",
+  "id": "MaziyarPanahi/DeepSeek-R1-0528-Qwen3-8B-GGUF",
+  "cardData": {
+   "base_model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "inference": false,
+   "model_creator": "deepseek-ai",
+   "model_name": "DeepSeek-R1-0528-Qwen3-8B-GGUF",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi",
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-05-29T20:47:08.000Z",
+  "likes": 11,
+  "trendingScore": 0,
+  "sha": "3d7c2a7c46f7cd566b7318e49986dda9a6d7d190",
+  "downloads": 20919,
+  "gguf": {
+   "total": 8190735360,
+   "architecture": "qwen3",
+   "context_length": 131072,
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 16388042880
+  },
+  "tags": [
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "base_model:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-05-29T20:33:59.000Z"
+ },
+ {
+  "_id": "661d5b0586e7bb7bedbcc455",
+  "id": "MaziyarPanahi/WizardLM-2-7B-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "transformers",
+    "safetensors",
+    "mistral",
+    "text-generation",
+    "arxiv:2304.12244",
+    "arxiv:2306.08568",
+    "arxiv:2308.09583",
+    "license:apache-2.0",
+    "autotrain_compatible",
+    "endpoints_compatible",
+    "text-generation-inference",
+    "region:us",
+    "text-generation"
+   ],
+   "model_name": "WizardLM-2-7B-GGUF",
+   "base_model": "microsoft/WizardLM-2-7B",
+   "inference": false,
+   "model_creator": "microsoft",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-04-15T18:39:24.000Z",
+  "likes": 83,
+  "trendingScore": 0,
+  "sha": "491e4644eb4874621cb7d00153a20e0bf7358fb8",
+  "downloads": 20792,
+  "gguf": {
+   "total": 7241732096,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 14484731552
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "safetensors",
+   "text-generation",
+   "arxiv:2304.12244",
+   "arxiv:2306.08568",
+   "arxiv:2308.09583",
+   "license:apache-2.0",
+   "autotrain_compatible",
+   "endpoints_compatible",
+   "text-generation-inference",
+   "region:us",
+   "base_model:microsoft/WizardLM-2-7B",
+   "base_model:quantized:microsoft/WizardLM-2-7B"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-04-15T16:51:17.000Z"
+ },
+ {
+  "_id": "69d0895a8b740d944dd520e9",
+  "id": "TrevorJS/gemma-4-E4B-it-uncensored-GGUF",
+  "cardData": {
+   "base_model": "TrevorJS/gemma-4-E4B-it-uncensored",
+   "base_model_relation": "quantized",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en"
+   ],
+   "license": "apache-2.0",
+   "tags": [
+    "abliteration",
+    "uncensored",
+    "gemma-4",
+    "gguf"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-04-05T16:05:23.000Z",
+  "likes": 100,
+  "trendingScore": 2,
+  "sha": "771f130d4c49735ace331f68a80f7ae31387e51c",
+  "downloads": 20745,
+  "gguf": {
+   "total": 7518069290,
+   "architecture": "gemma4",
+   "context_length": 131072,
+   "bos_token": "<bos>",
+   "eos_token": "<eos>",
+   "totalFileSize": 5335285280
+  },
+  "tags": [
+   "gguf",
+   "abliteration",
+   "uncensored",
+   "gemma-4",
+   "text-generation",
+   "en",
+   "base_model:TrevorJS/gemma-4-E4B-it-uncensored",
+   "base_model:quantized:TrevorJS/gemma-4-E4B-it-uncensored",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-04-04T03:45:30.000Z"
+ },
+ {
+  "_id": "6a451b628ac904134cefc664",
+  "id": "AtomicChat/Qwen3.5-9B-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "license_link": "https://huggingface.co/Qwen/Qwen3.5-9B/blob/main/LICENSE",
+   "thumbnail": "https://huggingface.co/AtomicChat/Qwen3.5-9B-GGUF/resolve/main/hero.png",
+   "base_model": [
+    "Qwen/Qwen3.5-9B"
+   ],
+   "base_model_relation": "quantized",
+   "quantized_by": "AtomicChat",
+   "pipeline_tag": "text-generation",
+   "library_name": "gguf",
+   "tags": [
+    "atomic-chat",
+    "qwen3.5",
+    "qwen",
+    "gguf",
+    "llama.cpp",
+    "quantized"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-28T08:55:26.000Z",
+  "likes": 4,
+  "trendingScore": 0,
+  "sha": "3635572b484af90311b3e44e2d2fecb6760b46ab",
+  "downloads": 20650,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "quantize_imatrix_file": "/root/work/models/qwen35-9b/atomic.imatrix",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5629109312
+  },
+  "tags": [
+   "gguf",
+   "atomic-chat",
+   "qwen3.5",
+   "qwen",
+   "llama.cpp",
+   "quantized",
+   "text-generation",
+   "base_model:Qwen/Qwen3.5-9B",
+   "base_model:quantized:Qwen/Qwen3.5-9B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-07-01T13:51:30.000Z"
+ },
+ {
+  "_id": "6641244a5feadbc739e956f6",
+  "id": "MaziyarPanahi/Yi-1.5-6B-Chat-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "transformers",
+    "safetensors",
+    "llama",
+    "text-generation",
+    "conversational",
+    "arxiv:2403.04652",
+    "license:apache-2.0",
+    "autotrain_compatible",
+    "endpoints_compatible",
+    "text-generation-inference",
+    "region:us",
+    "text-generation"
+   ],
+   "model_name": "Yi-1.5-6B-Chat-GGUF",
+   "base_model": "01-ai/Yi-1.5-6B-Chat",
+   "inference": false,
+   "model_creator": "01-ai",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-05-12T20:34:51.000Z",
+  "likes": 9,
+  "trendingScore": 0,
+  "sha": "5eeb4c393e2a235fd5dce7f6007dd5ea96577592",
+  "downloads": 20349,
+  "gguf": {
+   "total": 6061035520,
+   "architecture": "llama",
+   "context_length": 4096,
+   "bos_token": "<|startoftext|>",
+   "eos_token": "<|endoftext|>",
+   "totalFileSize": 2337066880
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "safetensors",
+   "llama",
+   "text-generation",
+   "conversational",
+   "arxiv:2403.04652",
+   "license:apache-2.0",
+   "autotrain_compatible",
+   "endpoints_compatible",
+   "text-generation-inference",
+   "region:us",
+   "base_model:01-ai/Yi-1.5-6B-Chat",
+   "base_model:quantized:01-ai/Yi-1.5-6B-Chat"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-05-12T20:19:22.000Z"
+ },
+ {
+  "_id": "662aad7316435ebd17c73487",
+  "id": "MaziyarPanahi/Llama-3-8B-Instruct-64k-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "llama",
+    "llama-3",
+    "text-generation"
+   ],
+   "model_name": "Llama-3-8B-Instruct-64k-GGUF",
+   "base_model": "MaziyarPanahi/Llama-3-8B-Instruct-64k",
+   "inference": false,
+   "model_creator": "MaziyarPanahi",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-04-25T19:58:11.000Z",
+  "likes": 14,
+  "trendingScore": 0,
+  "sha": "3785b79d1c23332e60859b853ed9807f94844353",
+  "downloads": 20270,
+  "gguf": {
+   "total": 8030261248,
+   "architecture": "llama",
+   "context_length": 64000,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 16068890848
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "llama",
+   "llama-3",
+   "base_model:MaziyarPanahi/Llama-3-8B-Instruct-64k",
+   "base_model:quantized:MaziyarPanahi/Llama-3-8B-Instruct-64k",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-04-25T19:22:27.000Z"
+ },
+ {
+  "_id": "66968c6fa7fd582ae70b1373",
+  "id": "MaziyarPanahi/mathstral-7B-v0.1-GGUF",
+  "cardData": {
+   "tags": [
+    "quantized",
+    "2-bit",
+    "3-bit",
+    "4-bit",
+    "5-bit",
+    "6-bit",
+    "8-bit",
+    "GGUF",
+    "text-generation",
+    "text-generation"
+   ],
+   "model_name": "mathstral-7B-v0.1-GGUF",
+   "base_model": "mistralai/mathstral-7B-v0.1",
+   "inference": false,
+   "model_creator": "mistralai",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "MaziyarPanahi"
+  },
+  "gated": false,
+  "lastModified": "2024-07-16T16:54:49.000Z",
+  "likes": 8,
+  "trendingScore": 0,
+  "sha": "d3c8fafa377cf389d822360b1a289226ba904d7d",
+  "downloads": 20094,
+  "gguf": {
+   "total": 7248023552,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 14497336928
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "mistral",
+   "quantized",
+   "2-bit",
+   "3-bit",
+   "4-bit",
+   "5-bit",
+   "6-bit",
+   "8-bit",
+   "GGUF",
+   "text-generation",
+   "base_model:mistralai/Mathstral-7B-v0.1",
+   "base_model:quantized:mistralai/Mathstral-7B-v0.1",
+   "region:us"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-16T15:06:23.000Z"
+ },
+ {
+  "_id": "66327e65329025d7745dd452",
+  "id": "bartowski/dolphin-2.9-llama3-8b-GGUF",
+  "cardData": {
+   "base_model": "cognitivecomputations/dolphin-2.9-llama3-8b",
+   "datasets": [
+    "cognitivecomputations/Dolphin-2.9",
+    "teknium/OpenHermes-2.5",
+    "m-a-p/CodeFeedback-Filtered-Instruction",
+    "cognitivecomputations/dolphin-coder",
+    "cognitivecomputations/samantha-data",
+    "HuggingFaceH4/ultrachat_200k",
+    "microsoft/orca-math-word-problems-200k",
+    "abacusai/SystemChat-1.1",
+    "Locutusque/function-calling-chatml",
+    "internlm/Agent-FLAN"
+   ],
+   "license": "other",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "generated_from_trainer",
+    "axolotl"
+   ],
+   "quantized_by": "bartowski",
+   "model-index": [
+    {
+     "name": "out",
+     "results": []
+    }
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-10-31T15:29:11.000Z",
+  "likes": 19,
+  "trendingScore": 0,
+  "sha": "f41eb734d8cebb29c64279cd4ed458dce2af71fc",
+  "downloads": 19055,
+  "gguf": {
+   "total": 8030277632,
+   "architecture": "llama",
+   "context_length": 8192,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 16068924640
+  },
+  "tags": [
+   "gguf",
+   "generated_from_trainer",
+   "axolotl",
+   "text-generation",
+   "dataset:cognitivecomputations/Dolphin-2.9",
+   "dataset:teknium/OpenHermes-2.5",
+   "dataset:m-a-p/CodeFeedback-Filtered-Instruction",
+   "dataset:cognitivecomputations/dolphin-coder",
+   "dataset:cognitivecomputations/samantha-data",
+   "dataset:HuggingFaceH4/ultrachat_200k",
+   "dataset:microsoft/orca-math-word-problems-200k",
+   "dataset:abacusai/SystemChat-1.1",
+   "dataset:Locutusque/function-calling-chatml",
+   "dataset:internlm/Agent-FLAN",
+   "base_model:dphn/dolphin-2.9-llama3-8b",
+   "base_model:quantized:dphn/dolphin-2.9-llama3-8b",
+   "license:other",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-05-01T17:39:49.000Z"
+ },
+ {
+  "_id": "678e635174645937ab22733f",
+  "id": "lmstudio-community/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+  },
+  "gated": false,
+  "lastModified": "2025-01-20T15:27:40.000Z",
+  "likes": 90,
+  "trendingScore": 0,
+  "sha": "959510a4c8eff7bae27769e9232dca7d3d2b4ed3",
+  "downloads": 18404,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 131072,
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 4088458944
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-20T14:53:05.000Z"
+ },
+ {
+  "_id": "682f8bf66089f4721700d6bd",
+  "id": "bartowski/WhiteRabbitNeo_WhiteRabbitNeo-V3-7B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "WhiteRabbitNeo/WhiteRabbitNeo-V3-7B",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "code",
+    "qwen-coder",
+    "finetune"
+   ],
+   "license": "apache-2.0",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-05-22T21:04:58.000Z",
+  "likes": 32,
+  "trendingScore": 3,
+  "sha": "5cc667f09d00b213c07530c716a0f900dd59f5aa",
+  "downloads": 17808,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 32768,
+   "bos_token": "<|im_start|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 15237854112
+  },
+  "tags": [
+   "gguf",
+   "code",
+   "qwen-coder",
+   "finetune",
+   "text-generation",
+   "en",
+   "base_model:DeepHat/DeepHat-V1-7B",
+   "base_model:quantized:DeepHat/DeepHat-V1-7B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-05-22T20:41:26.000Z"
+ },
+ {
+  "_id": "6808f322d313752197f20e47",
+  "id": "unsloth/Llama-3.1-8B-Instruct-GGUF",
+  "cardData": {
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th"
+   ],
+   "license": "llama3.1",
+   "base_model": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-05-09T20:23:11.000Z",
+  "likes": 50,
+  "trendingScore": 0,
+  "sha": "600b0020115fd6b17f0752848fe7b5a1be686bcd",
+  "downloads": 17794,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 16068895872
+  },
+  "tags": [
+   "gguf",
+   "llama",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama-3",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "arxiv:2204.05149",
+   "base_model:meta-llama/Llama-3.1-8B-Instruct",
+   "base_model:quantized:meta-llama/Llama-3.1-8B-Instruct",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-23T14:03:14.000Z"
+ },
+ {
+  "_id": "66f9904660ff0bbc5db6992b",
+  "id": "bartowski/Llama-3.1-8B-Stheno-v3.4-GGUF",
+  "cardData": {
+   "base_model": "Sao10K/Llama-3.1-8B-Stheno-v3.4",
+   "datasets": [
+    "Setiaku/Stheno-v3.4-Instruct",
+    "Setiaku/Stheno-3.4-Creative-2"
+   ],
+   "language": [
+    "en"
+   ],
+   "license": "cc-by-nc-4.0",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-09-30T00:38:24.000Z",
+  "likes": 23,
+  "trendingScore": 0,
+  "sha": "c723084e4438dc763cd01ea6ac78754946dba48f",
+  "downloads": 17664,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 16068891872
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "en",
+   "dataset:Setiaku/Stheno-v3.4-Instruct",
+   "dataset:Setiaku/Stheno-3.4-Creative-2",
+   "base_model:Sao10K/Llama-3.1-8B-Stheno-v3.4",
+   "base_model:quantized:Sao10K/Llama-3.1-8B-Stheno-v3.4",
+   "license:cc-by-nc-4.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-09-29T17:37:10.000Z"
+ },
+ {
+  "_id": "6a996d2869bfed68f85f0fe9",
+  "id": "IFM/K2-Horizon-3.7B-GGUF",
+  "cardData": {
+   "pipeline_tag": "text-generation",
+   "library_name": "transformers",
+   "model_name": "K2-Horizon-3.7B",
+   "language": [
+    "en"
+   ],
+   "license": "apache-2.0",
+   "datasets": [
+    "IFM/K2-Horizon-Pretrain-Data",
+    "IFM/K2-Horizon-Midtrain-Data"
+   ],
+   "tags": [
+    "k2-horizon",
+    "3.7b",
+    "dense",
+    "open-weights",
+    "ifm"
+   ],
+   "base_model": [
+    "IFM/K2-Horizon-3.7B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-15T21:56:11.000Z",
+  "likes": 59,
+  "trendingScore": 1,
+  "sha": "78a0635e8f19b880e468a2fc82923ee6c8a469e4",
+  "downloads": 17518,
+  "gguf": {
+   "total": 5058255360,
+   "architecture": "k2-horizon",
+   "context_length": 524288,
+   "bos_token": "<|ifm|begin_of_text|>",
+   "eos_token": "<|ifm|endoftext|>",
+   "totalFileSize": 10128343424
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "k2-horizon",
+   "3.7b",
+   "dense",
+   "open-weights",
+   "ifm",
+   "text-generation",
+   "en",
+   "dataset:IFM/K2-Horizon-Pretrain-Data",
+   "dataset:IFM/K2-Horizon-Midtrain-Data",
+   "base_model:IFM/K2-Horizon-3.7B",
+   "base_model:quantized:IFM/K2-Horizon-3.7B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-03T12:50:48.000Z"
+ },
+ {
+  "_id": "6ae52227a0bd70e70bc4edee",
+  "id": "AtomicChat/SenseNova-Loop-9B-Preview-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": [
+    "sensenova/SenseNova-Loop-9B-Preview"
+   ],
+   "base_model_relation": "quantized",
+   "pipeline_tag": "text-generation",
+   "library_name": "gguf",
+   "tags": [
+    "gguf",
+    "sensenova",
+    "looped-transformer",
+    "quantized"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-30T23:10:41.000Z",
+  "likes": 20,
+  "trendingScore": 12,
+  "sha": "b1bcaca6a29ac3bd6fe5d7986732d4a350783f67",
+  "downloads": 17306,
+  "gguf": {
+   "total": 8956949376,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 17926995872
+  },
+  "tags": [
+   "gguf",
+   "sensenova",
+   "looped-transformer",
+   "quantized",
+   "text-generation",
+   "base_model:sensenova/SenseNova-Loop-9B-Preview",
+   "base_model:quantized:sensenova/SenseNova-Loop-9B-Preview",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-30T23:03:03.000Z"
+ },
+ {
+  "_id": "67fd3c5711a30c7e071e58d4",
+  "id": "bartowski/THUDM_GLM-4-9B-0414-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "zh",
+    "en"
+   ],
+   "license": "mit",
+   "base_model": "THUDM/GLM-4-9B-0414",
+   "base_model_relation": "quantized"
+  },
+  "gated": false,
+  "lastModified": "2025-04-30T15:03:52.000Z",
+  "likes": 21,
+  "trendingScore": 0,
+  "sha": "211924cd949e153b1017ed635e5b127d0b594e6f",
+  "downloads": 17112,
+  "gguf": {
+   "total": 9400279040,
+   "architecture": "glm4",
+   "context_length": 32768,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|user|>",
+   "totalFileSize": 18811581568
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "zh",
+   "en",
+   "base_model:zai-org/GLM-4-9B-0414",
+   "base_model:quantized:zai-org/GLM-4-9B-0414",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-04-14T16:48:23.000Z"
+ },
+ {
+  "_id": "67950478ba1b09be7b8c58dc",
+  "id": "lmstudio-community/Qwen2.5-7B-Instruct-1M-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "license": "apache-2.0",
+   "base_model": "Qwen/Qwen2.5-7B-Instruct-1M",
+   "license_link": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-1M/blob/main/LICENSE",
+   "tags": [
+    "chat"
+   ],
+   "language": [
+    "en"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2025-01-25T15:39:32.000Z",
+  "likes": 46,
+  "trendingScore": 0,
+  "sha": "83f8b0654c7f6518de93dfde08315a31236df273",
+  "downloads": 16648,
+  "gguf": {
+   "total": 7615616512,
+   "architecture": "qwen2",
+   "context_length": 1010000,
+   "bos_token": "<|endoftext|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 4088459616
+  },
+  "tags": [
+   "gguf",
+   "chat",
+   "text-generation",
+   "en",
+   "base_model:Qwen/Qwen2.5-7B-Instruct-1M",
+   "base_model:quantized:Qwen/Qwen2.5-7B-Instruct-1M",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-25T15:34:16.000Z"
+ },
+ {
+  "_id": "66a5ed18d1a9c74ca040183c",
+  "id": "QuantFactory/DarkIdol-Llama-3.1-8B-Instruct-1.2-Uncensored-GGUF",
+  "cardData": {
+   "language": [
+    "en",
+    "de",
+    "fr",
+    "it",
+    "pt",
+    "hi",
+    "es",
+    "th",
+    "zh",
+    "ko",
+    "ja"
+   ],
+   "license": "llama3.1",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "roleplay",
+    "llama3",
+    "sillytavern",
+    "idol",
+    "facebook",
+    "meta",
+    "pytorch",
+    "llama",
+    "llama-3"
+   ],
+   "extra_gated_fields": {
+    "First Name": "text",
+    "Last Name": "text",
+    "Date of birth": "date_picker",
+    "Country": "country",
+    "Affiliation": "text",
+    "Job title": {
+     "type": "select",
+     "options": [
+      "Student",
+      "Research Graduate",
+      "AI researcher",
+      "AI developer/engineer",
+      "Reporter",
+      "Other"
+     ]
+    }
+   }
+  },
+  "gated": false,
+  "lastModified": "2024-07-29T06:43:25.000Z",
+  "likes": 151,
+  "trendingScore": 0,
+  "sha": "c84ce9dc913d3a2d44600ab76f40ade4ed3c5f48",
+  "downloads": 16475,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 3179132288
+  },
+  "tags": [
+   "gguf",
+   "roleplay",
+   "llama3",
+   "sillytavern",
+   "idol",
+   "facebook",
+   "meta",
+   "pytorch",
+   "llama",
+   "llama-3",
+   "text-generation",
+   "en",
+   "de",
+   "fr",
+   "it",
+   "pt",
+   "hi",
+   "es",
+   "th",
+   "zh",
+   "ko",
+   "ja",
+   "arxiv:2204.05149",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-28T07:02:48.000Z"
+ },
+ {
+  "_id": "6ab92c0426ca99d03abd7ace",
+  "id": "abenzerps/Ornith-1.5-9B-GSQ-RCO-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "license": "mit",
+   "library_name": "gguf",
+   "tags": [
+    "text-generation",
+    "gsq",
+    "rco",
+    "llama.cpp",
+    "quantized",
+    "reasoning",
+    "ornith",
+    "mixed-precision",
+    "mixed-prediction",
+    "mixed-prediciton"
+   ],
+   "base_model": "ornith-ai/Ornith-1.5-9B-GGUF",
+   "base_model_relation": "quantized",
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-10-25T17:03:09.000Z",
+  "likes": 20,
+  "trendingScore": 2,
+  "sha": "e4bb7a4ae8a5e7d2edf7f028fa6e67951bd76ca6",
+  "downloads": 16433,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "quantize_imatrix_file": "/root/ornith-production/outputs/imatrix.dat",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 3077759936
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "gsq",
+   "rco",
+   "llama.cpp",
+   "quantized",
+   "reasoning",
+   "ornith",
+   "mixed-precision",
+   "mixed-prediction",
+   "mixed-prediciton",
+   "en",
+   "base_model:ornith-ai/Ornith-1.5-9B-GGUF",
+   "base_model:quantized:ornith-ai/Ornith-1.5-9B-GGUF",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-27T14:45:24.000Z"
+ },
+ {
+  "_id": "678e6343cc06f797146d6ab5",
+  "id": "bartowski/DeepSeek-R1-Distill-Llama-8B-GGUF",
+  "cardData": {
+   "quantized_by": "bartowski",
+   "pipeline_tag": "text-generation",
+   "base_model": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+  },
+  "gated": false,
+  "lastModified": "2025-01-22T15:19:31.000Z",
+  "likes": 53,
+  "trendingScore": 0,
+  "sha": "935d400c2ed1a29cc2a1045df25ec7998fb4dfe4",
+  "downloads": 16379,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "quantize_imatrix_file": "/models_out/DeepSeek-R1-Distill-Llama-8B-GGUF/DeepSeek-R1-Distill-Llama-8B.imatrix",
+   "bos_token": "<｜begin▁of▁sentence｜>",
+   "eos_token": "<｜end▁of▁sentence｜>",
+   "totalFileSize": 16068893536
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "base_model:deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+   "base_model:quantized:deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+   "endpoints_compatible",
+   "region:us",
+   "imatrix",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2025-01-20T14:52:51.000Z"
+ },
+ {
+  "_id": "6ab213677c1bcbaaacbd6580",
+  "id": "BoldingBuilds/Abliterated-MiMo-V2.6-Distill-Qwen-9B-GGUF",
+  "cardData": {
+   "language": [
+    "en"
+   ],
+   "license": "mit",
+   "library_name": "llama.cpp",
+   "base_model": "XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B",
+   "base_model_relation": "quantized",
+   "tags": [
+    "gguf",
+    "llama.cpp",
+    "qwen3_5",
+    "abliteration",
+    "abliterated",
+    "uncensored",
+    "q8_0",
+    "q6_k",
+    "q5_k_m",
+    "q4_k_m",
+    "refusal-ablation",
+    "research"
+   ],
+   "pipeline_tag": "text-generation"
+  },
+  "gated": false,
+  "lastModified": "2026-09-23T16:00:40.000Z",
+  "likes": 9,
+  "trendingScore": 1,
+  "sha": "036d46331b5ef633654ff516e73973e81c8eca79",
+  "downloads": 16036,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5629105280
+  },
+  "tags": [
+   "llama.cpp",
+   "gguf",
+   "qwen3_5",
+   "abliteration",
+   "abliterated",
+   "uncensored",
+   "q8_0",
+   "q6_k",
+   "q5_k_m",
+   "q4_k_m",
+   "refusal-ablation",
+   "research",
+   "text-generation",
+   "en",
+   "base_model:XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B",
+   "base_model:quantized:XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B",
+   "license:mit",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-09-22T05:34:31.000Z"
+ },
+ {
+  "_id": "671680e9eec876d49dce0784",
+  "id": "bartowski/Ministral-8B-Instruct-2410-GGUF",
+  "cardData": {
+   "base_model": "mistralai/Ministral-8B-Instruct-2410",
+   "language": [
+    "en",
+    "fr",
+    "de",
+    "es",
+    "it",
+    "pt",
+    "zh",
+    "ja",
+    "ru",
+    "ko"
+   ],
+   "license": "other",
+   "license_name": "mrl",
+   "license_link": "https://mistral.ai/licenses/MRL-0.1.md",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "bartowski",
+   "inference": false,
+   "extra_gated_prompt": "# Mistral AI Research License\nIf You want to use a Mistral Model, a Derivative or an Output for any purpose that is not expressly authorized under this Agreement, You must request a license from Mistral AI, which Mistral AI may grant to You in Mistral AI's sole discretion. To discuss such a license, please contact Mistral AI via the website contact form: https://mistral.ai/contact/\n## 1. Scope and acceptance\n**1.1. Scope of the Agreement.** This Agreement applies to any use, modification, or Distribution of any Mistral Model by You, regardless of the source You obtained a copy of such Mistral Model.\n**1.2. Acceptance.** By accessing, using, modifying, Distributing a Mistral Model, or by creating, using or distributing a Derivative of the Mistral Model, You agree to be bound by this Agreement.\n**1.3. Acceptance on behalf of a third-party.** If You accept this Agreement on behalf of Your employer or another person or entity, You warrant and represent that You have the authority to act and accept this Agreement on their behalf. In such a case, the word \"You\" in this Agreement will refer to Your employer or such other person or entity.\n## 2. License\n**2.1. Grant of rights**.  Subject to Section 3 below, Mistral AI hereby grants You a non-exclusive, royalty-free, worldwide, non-sublicensable, non-transferable, limited license to use, copy, modify, and Distribute under the conditions provided in Section 2.2 below, the Mistral Model and any Derivatives made by or for Mistral AI and to create Derivatives of the Mistral Model.\n**2.2. Distribution of Mistral Model and Derivatives made by or for Mistral AI.** Subject to Section 3 below, You may Distribute copies of the Mistral Model and/or Derivatives made by or for Mistral AI, under the following conditions: You must make available a copy of this Agreement to third-party recipients of the Mistral Models and/or Derivatives made by or for Mistral AI you Distribute, it being specified that any rights to use the Mistral Models and/or Derivatives made by or for Mistral AI shall be directly granted by Mistral AI to said third-party recipients pursuant to the Mistral AI Research License agreement executed between these parties; You must retain in all copies of the Mistral Models the following attribution notice within a \"Notice\" text file distributed as part of such copies: \"Licensed by Mistral AI under the Mistral AI Research License\".\n**2.3. Distribution of Derivatives made by or for You.** Subject to Section 3 below, You may Distribute any Derivatives made by or for You under additional or different terms and conditions, provided that: In any event, the use and modification of Mistral Model and/or Derivatives made by or for Mistral AI shall remain governed by the terms and conditions of this Agreement; You include in any such Derivatives made by or for You prominent notices stating that You modified the concerned Mistral Model; and Any terms and conditions You impose on any third-party recipients relating to Derivatives made by or for You shall neither limit such third-party recipients' use of the Mistral Model or any Derivatives made by or for Mistral AI in accordance with the Mistral AI Research License nor conflict with any of its terms and conditions.\n## 3. Limitations\n**3.1. Misrepresentation.** You must not misrepresent or imply, through any means, that the Derivatives made by or for You and/or any modified version of the Mistral Model You Distribute under your name and responsibility is an official product of Mistral AI or has been endorsed, approved or validated by Mistral AI, unless You are authorized by Us to do so in writing.\n**3.2. Usage Limitation.** You shall only use the Mistral Models, Derivatives (whether or not created by Mistral AI) and Outputs for Research Purposes.\n## 4. Intellectual Property\n**4.1. Trademarks.** No trademark licenses are granted under this Agreement, and in connection with the Mistral Models, You may not use any name or mark owned by or associated with Mistral AI or any of its affiliates, except (i) as required for reasonable and customary use in describing and Distributing the Mistral Models and Derivatives made by or for Mistral AI and (ii) for attribution purposes as required by this Agreement.\n**4.2. Outputs.** We claim no ownership rights in and to the Outputs. You are solely responsible for the Outputs You generate and their subsequent uses in accordance with this Agreement. Any Outputs shall be subject to the restrictions set out in Section 3 of this Agreement.\n**4.3. Derivatives.** By entering into this Agreement, You accept that any Derivatives that You may create or that may be created for You shall be subject to the restrictions set out in Section 3 of this Agreement.\n## 5. Liability\n**5.1. Limitation of liability.** In no event, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall Mistral AI be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this Agreement or out of the use or inability to use the Mistral Models and Derivatives (including but not limited to damages for loss of data, loss of goodwill, loss of expected profit or savings, work stoppage, computer failure or malfunction, or any damage caused by malware or security breaches), even if  Mistral AI has been advised of the possibility of such damages.\n**5.2. Indemnification.** You agree to indemnify and hold harmless Mistral AI from and against any claims, damages, or losses arising out of or related to Your use or Distribution of the Mistral Models and Derivatives.\n## 6. Warranty\n**6.1. Disclaimer.** Unless required by applicable law or prior agreed to by Mistral AI in writing, Mistral AI provides the Mistral Models and Derivatives on an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. Mistral AI does not represent nor warrant that the Mistral Models and Derivatives will be error-free, meet Your or any third party's requirements, be secure or will allow You or any third party to achieve any kind of result or generate any kind of content. You are solely responsible for determining the appropriateness of using or Distributing the Mistral Models and Derivatives and assume any risks associated with Your exercise of rights under this Agreement.\n## 7. Termination\n**7.1. Term.** This Agreement is effective as of the date of your acceptance of this Agreement or access to the concerned Mistral Models or Derivatives and will continue until terminated in accordance with the following terms.\n**7.2. Termination.** Mistral AI may terminate this Agreement at any time if You are in breach of this Agreement. Upon termination of this Agreement, You must cease to use all Mistral Models and Derivatives and shall permanently delete any copy thereof. The following provisions, in their relevant parts, will survive any termination or expiration of this Agreement, each for the duration necessary to achieve its own intended purpose (e.g. the liability provision will survive until the end of the applicable limitation period):Sections 5 (Liability), 6(Warranty), 7 (Termination) and 8 (General Provisions).\n**7.3. Litigation.** If You initiate any legal action or proceedings against Us or any other entity (including a cross-claim or counterclaim in a lawsuit), alleging that the Model or a Derivative, or any part thereof, infringe upon intellectual property or other rights owned or licensable by You, then any licenses granted to You under this Agreement will immediately terminate as of the date such legal action or claim is filed or initiated.\n## 8. General provisions\n**8.1. Governing laws.** This Agreement will be governed by the laws of France, without regard to choice of law principles, and the UN Convention on Contracts for the International Sale of Goods does not apply to this Agreement.\n**8.2. Competent jurisdiction.** The courts of Paris shall have exclusive jurisdiction of any dispute arising out of this Agreement.\n**8.3. Severability.** If any provision of this Agreement is held to be invalid, illegal or unenforceable, the remaining provisions shall be unaffected thereby and remain valid as if such provision had not been set forth herein.\n## 9. Definitions\n\"Agreement\": means this Mistral AI Research License agreement governing the access, use, and Distribution of the Mistral Models, Derivatives and Outputs.\n\"Derivative\": means any (i) modified version of the Mistral Model (including but not limited to any customized or fine-tuned version thereof), (ii) work based on the Mistral Model, or (iii) any other derivative work thereof.\n\"Distribution\", \"Distributing\", \"Distribute\" or \"Distributed\": means supplying, providing or making available, by any means, a copy of the Mistral Models and/or the Derivatives as the case may be, subject to Section 3 of this Agreement.\n\"Mistral AI\", \"We\" or \"Us\": means Mistral AI, a French société par actions simplifiée registered in the Paris commercial registry under the number 952 418 325, and having its registered seat at 15, rue des Halles, 75001 Paris.\n\"Mistral Model\": means the foundational large language model(s), and its elements which include algorithms, software, instructed checkpoints, parameters, source code (inference code, evaluation code and, if applicable, fine-tuning code) and any other elements associated thereto made available by Mistral AI under this Agreement, including, if any, the technical documentation, manuals and instructions for the use and operation thereof.\n\"Research Purposes\": means any use of a Mistral Model,  Derivative, or Output that is solely for (a) personal, scientific or academic research, and (b) for non-profit and non-commercial purposes, and not directly or indirectly connected to any commercial activities or business operations. For illustration purposes, Research Purposes does not include (1) any usage of the Mistral Model, Derivative or Output by individuals or contractors employed in or engaged by companies in the context of (a) their daily tasks, or (b) any activity (including but not limited to any testing or proof-of-concept) that is intended to generate revenue, nor (2) any Distribution by a commercial entity of the Mistral Model, Derivative or Output whether in return for payment or free of charge, in any medium or form, including but not limited to through a hosted or managed service (e.g. SaaS, cloud instances, etc.), or behind a software layer.\n\"Outputs\": means any content generated by the operation of the Mistral Models or the Derivatives from  a prompt (i.e., text instructions) provided by users. For the avoidance of doubt, Outputs do not include any components of a Mistral Models, such as any fine-tuned versions of the Mistral Models, the weights, or parameters.\n\"You\": means the individual or entity entering into this Agreement with Mistral AI.\n\n*Mistral AI processes your personal data below to provide the model and enforce its license. If you are affiliated with a commercial entity, we may also send you communications about our models. For more information on your rights and data handling, please see our <a href=\"https://mistral.ai/terms/\">privacy policy</a>.*",
+   "extra_gated_fields": {
+    "First Name": "text",
+    "Last Name": "text",
+    "Country": "country",
+    "Affiliation": "text",
+    "Job title": "text",
+    "I understand that I can only use the model, any derivative versions and their outputs for non-commercial research purposes": "checkbox",
+    "I understand that if I am a commercial entity, I am not permitted to use or distribute the model internally or externally, or expose it in my own offerings without a commercial license": "checkbox",
+    "I understand that if I upload the model, or any derivative version, on any platform, I must include the Mistral Research License": "checkbox",
+    "I understand that for commercial use of the model, I can contact Mistral or use the Mistral AI API on la Plateforme or any of our cloud provider partners": "checkbox",
+    "By clicking Submit below I accept the terms of the license and acknowledge that the information I provide will be collected stored processed and shared in accordance with the Mistral Privacy Policy": "checkbox",
+    "geo": "ip_location"
+   },
+   "extra_gated_description": "Mistral AI processes your personal data below to provide the model and enforce its license. If you are affiliated with a commercial entity, we may also send you communications about our models. For more information on your rights and data handling, please see our <a href=\"https://mistral.ai/terms/\">privacy policy</a>.",
+   "extra_gated_button_content": "Submit"
+  },
+  "gated": false,
+  "lastModified": "2024-10-21T17:27:47.000Z",
+  "likes": 56,
+  "trendingScore": 0,
+  "sha": "b4e2ea74eb4eecb178aa88d482c3126b34ad0157",
+  "downloads": 15721,
+  "gguf": {
+   "total": 8019808256,
+   "architecture": "llama",
+   "context_length": 32768,
+   "bos_token": "<s>",
+   "eos_token": "</s>",
+   "totalFileSize": 16048097824
+  },
+  "tags": [
+   "gguf",
+   "text-generation",
+   "en",
+   "fr",
+   "de",
+   "es",
+   "it",
+   "pt",
+   "zh",
+   "ja",
+   "ru",
+   "ko",
+   "base_model:mistralai/Ministral-8B-Instruct-2410",
+   "base_model:quantized:mistralai/Ministral-8B-Instruct-2410",
+   "license:other",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-10-21T16:27:21.000Z"
+ },
+ {
+  "_id": "6a8754423110b963dc0006d2",
+  "id": "ge525/Qwen3.8-9B-Distill-uncensored-heretic-Q4_K_M-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": "petruhonk/Qwen3.8-9B-Distill-uncensored-heretic",
+   "language": [
+    "en"
+   ],
+   "library_name": "transformers",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "empero-ai",
+    "qwen3.5",
+    "qwen3.8",
+    "distillation",
+    "reasoning",
+    "function-calling",
+    "sft",
+    "llama-cpp"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-08-23T16:03:31.000Z",
+  "likes": 36,
+  "trendingScore": 1,
+  "sha": "72aaa20870ab64522aa5429a833ff780652522ea",
+  "downloads": 15536,
+  "gguf": {
+   "total": 9197093888,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 5780090624
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "empero-ai",
+   "qwen3.5",
+   "qwen3.8",
+   "distillation",
+   "reasoning",
+   "function-calling",
+   "sft",
+   "llama-cpp",
+   "text-generation",
+   "en",
+   "base_model:petruhonk/Qwen3.8-9B-Distill-uncensored-heretic",
+   "base_model:quantized:petruhonk/Qwen3.8-9B-Distill-uncensored-heretic",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-08-20T19:23:46.000Z"
+ },
+ {
+  "_id": "671f62efa656b26280de5ae7",
+  "id": "DavidAU/L3.2-Rogue-Creative-Instruct-Uncensored-Abliterated-7B-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "creative",
+    "Uncensored",
+    "Abliterated",
+    "creative writing",
+    "fiction writing",
+    "plot generation",
+    "sub-plot generation",
+    "fiction writing",
+    "story generation",
+    "scene continue",
+    "storytelling",
+    "fiction story",
+    "science fiction",
+    "romance",
+    "all genres",
+    "story",
+    "llama-3",
+    "llama3",
+    "llama-3.2",
+    "writing",
+    "vivid prosing",
+    "vivid writing",
+    "fiction",
+    "roleplaying",
+    "bfloat16",
+    "brainstorm 40x",
+    "swearing",
+    "rp",
+    "128k context",
+    "horror",
+    "llama 3.2",
+    "mergekit"
+   ],
+   "pipeline_tag": "text-generation",
+   "base_model": [
+    "DavidAU/L3.2-Rogue-Creative-Instruct-Uncensored-Abliterated-7B"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-11-09T05:01:17.000Z",
+  "likes": 177,
+  "trendingScore": 0,
+  "sha": "5bdbd518ef4c51375db7c50c19a504f0994f2d4d",
+  "downloads": 15380,
+  "gguf": {
+   "total": 7532860480,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 4156478144
+  },
+  "tags": [
+   "gguf",
+   "creative",
+   "Uncensored",
+   "Abliterated",
+   "creative writing",
+   "fiction writing",
+   "plot generation",
+   "sub-plot generation",
+   "story generation",
+   "scene continue",
+   "storytelling",
+   "fiction story",
+   "science fiction",
+   "romance",
+   "all genres",
+   "story",
+   "llama-3",
+   "llama3",
+   "llama-3.2",
+   "writing",
+   "vivid prosing",
+   "vivid writing",
+   "fiction",
+   "roleplaying",
+   "bfloat16",
+   "brainstorm 40x",
+   "swearing",
+   "rp",
+   "128k context",
+   "horror",
+   "llama 3.2",
+   "mergekit",
+   "text-generation",
+   "en",
+   "base_model:DavidAU/L3.2-Rogue-Creative-Instruct-Uncensored-Abliterated-7B",
+   "base_model:quantized:DavidAU/L3.2-Rogue-Creative-Instruct-Uncensored-Abliterated-7B",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-10-28T10:09:51.000Z"
+ },
+ {
+  "_id": "66a27b0b899fb74b57a397ee",
+  "id": "bartowski/Meta-Llama-3.1-8B-Instruct-abliterated-GGUF",
+  "cardData": {
+   "base_model": "mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated",
+   "library_name": "transformers",
+   "license": "llama3.1",
+   "pipeline_tag": "text-generation",
+   "quantized_by": "bartowski"
+  },
+  "gated": false,
+  "lastModified": "2024-07-28T04:53:46.000Z",
+  "likes": 23,
+  "trendingScore": 0,
+  "sha": "c20a902bc96dd611ea0ea396d3ffc290f88c5864",
+  "downloads": 15275,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|eot_id|>",
+   "totalFileSize": 32128881344
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "text-generation",
+   "base_model:mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated",
+   "base_model:quantized:mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated",
+   "license:llama3.1",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-07-25T16:19:23.000Z"
+ },
+ {
+  "_id": "66be41ae3c885d04499b4f31",
+  "id": "bartowski/Hermes-3-Llama-3.1-8B-GGUF",
+  "cardData": {
+   "base_model": "NousResearch/Hermes-3-Llama-3.1-8B",
+   "language": [
+    "en"
+   ],
+   "license": "llama3",
+   "pipeline_tag": "text-generation",
+   "tags": [
+    "Llama-3",
+    "instruct",
+    "finetune",
+    "chatml",
+    "gpt4",
+    "synthetic data",
+    "distillation",
+    "function calling",
+    "json mode",
+    "axolotl",
+    "roleplaying",
+    "chat"
+   ],
+   "quantized_by": "bartowski",
+   "widget": [
+    {
+     "example_title": "Hermes 3",
+     "messages": [
+      {
+       "role": "system",
+       "content": "You are a sentient, superintelligent artificial general intelligence, here to teach and assist me."
+      },
+      {
+       "role": "user",
+       "content": "What is the meaning of life?"
+      }
+     ]
+    }
+   ],
+   "model-index": [
+    {
+     "name": "Hermes-3-Llama-3.1-70B",
+     "results": []
+    }
+   ]
+  },
+  "gated": false,
+  "lastModified": "2024-08-16T13:57:06.000Z",
+  "likes": 23,
+  "trendingScore": 0,
+  "sha": "223c8e24dec0f863b6abe4c89bf20f6941b805e2",
+  "downloads": 14983,
+  "gguf": {
+   "total": 8030261312,
+   "architecture": "llama",
+   "context_length": 131072,
+   "bos_token": "<|begin_of_text|>",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 32128881280
+  },
+  "tags": [
+   "gguf",
+   "Llama-3",
+   "instruct",
+   "finetune",
+   "chatml",
+   "gpt4",
+   "synthetic data",
+   "distillation",
+   "function calling",
+   "json mode",
+   "axolotl",
+   "roleplaying",
+   "chat",
+   "text-generation",
+   "en",
+   "base_model:NousResearch/Hermes-3-Llama-3.1-8B",
+   "base_model:quantized:NousResearch/Hermes-3-Llama-3.1-8B",
+   "license:llama3",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2024-08-15T17:58:06.000Z"
+ },
+ {
+  "_id": "69e12db5c3fc21979ad6e555",
+  "id": "ibm-granite/granite-4.1-8b-GGUF",
+  "cardData": {
+   "pipeline_tag": "text-generation",
+   "inference": false,
+   "license": "apache-2.0",
+   "library_name": "transformers",
+   "tags": [
+    "language",
+    "granite-4.1",
+    "gguf"
+   ],
+   "base_model": [
+    "ibm-granite/granite-4.1-8b"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-04-20T20:38:35.000Z",
+  "likes": 12,
+  "trendingScore": 0,
+  "sha": "865b82c2e7970d82e3731278c88c57ae7138359c",
+  "downloads": 14216,
+  "gguf": {
+   "total": 8791592960,
+   "architecture": "granite",
+   "context_length": 131072,
+   "bos_token": "<|end_of_text|>",
+   "eos_token": "<|end_of_text|>",
+   "totalFileSize": 17587417760
+  },
+  "tags": [
+   "transformers",
+   "gguf",
+   "language",
+   "granite-4.1",
+   "text-generation",
+   "base_model:ibm-granite/granite-4.1-8b",
+   "base_model:quantized:ibm-granite/granite-4.1-8b",
+   "license:apache-2.0",
+   "region:us",
+   "conversational",
+   "deploy:azure"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-04-16T18:43:01.000Z"
+ },
+ {
+  "_id": "6adcc7c61e468c2d2af39b49",
+  "id": "ManniX-ITA/JackOD-9B-Coder-MTP-DFlash-GGUF",
+  "cardData": {
+   "license": "apache-2.0",
+   "base_model": [
+    "ManniX-ITA/JackOD-9B-Coder"
+   ],
+   "base_model_relation": "quantized",
+   "library_name": "gguf",
+   "pipeline_tag": "text-generation",
+   "language": [
+    "en"
+   ],
+   "tags": [
+    "agentic",
+    "code",
+    "dflash",
+    "gguf",
+    "imatrix",
+    "merge",
+    "qwen3.5",
+    "speculative-decoding",
+    "tool-calling"
+   ],
+   "model_name": "JackOD-9B-Coder-MTP-DFlash-GGUF",
+   "author": "ManniX-ITA",
+   "architecture": "Qwen3.5",
+   "parameters": "9.65B",
+   "format": "GGUF",
+   "quantizations": [
+    "CD-Q2_K",
+    "CD-Q3_K_L",
+    "CD-Q4_K_M",
+    "CD-Q5_K_M",
+    "CD-Q6_K",
+    "IQ2_M",
+    "IQ2_S",
+    "IQ2_XS",
+    "IQ3_M",
+    "IQ3_XS",
+    "IQ3_XXS",
+    "IQ4_NL",
+    "IQ4_XS",
+    "Q2_K_L",
+    "Q3_K_L",
+    "Q3_K_M",
+    "Q3_K_S",
+    "Q3_K_XL",
+    "Q4_K_L",
+    "Q4_K_M",
+    "Q4_K_S",
+    "Q5_K_L",
+    "Q5_K_M",
+    "Q5_K_S",
+    "Q6_K",
+    "Q6_K_L",
+    "Q8_0"
+   ],
+   "features": [
+    "DFlash",
+    "code",
+    "imatrix",
+    "reasoning"
+   ]
+  },
+  "gated": false,
+  "lastModified": "2026-10-25T07:25:50.000Z",
+  "likes": 0,
+  "trendingScore": 0,
+  "sha": "932d2813fc84a7591df23485f952da9a8989800f",
+  "downloads": 13498,
+  "gguf": {
+   "total": 8953803264,
+   "architecture": "qwen35",
+   "context_length": 262144,
+   "quantize_imatrix_file": "/workspace/jackod_f15o30/quant_ac/imatrix.dat",
+   "eos_token": "<|im_end|>",
+   "totalFileSize": 3809403904
+  },
+  "tags": [
+   "gguf",
+   "agentic",
+   "code",
+   "dflash",
+   "imatrix",
+   "merge",
+   "qwen3.5",
+   "speculative-decoding",
+   "tool-calling",
+   "text-generation",
+   "en",
+   "base_model:ManniX-ITA/JackOD-9B-Coder",
+   "base_model:quantized:ManniX-ITA/JackOD-9B-Coder",
+   "license:apache-2.0",
+   "endpoints_compatible",
+   "region:us",
+   "conversational"
+  ],
+  "pipeline_tag": "text-generation",
+  "createdAt": "2026-10-24T14:59:18.000Z"
+ }
+]

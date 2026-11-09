@@ -1,0 +1,147 @@
+{
+ "_id": "6a3cb4edb9ef7094c0c80d35",
+ "id": "ornith-ai/Ornith-1.0-9B-GGUF",
+ "private": false,
+ "pipeline_tag": "text-generation",
+ "library_name": "transformers",
+ "tags": [
+  "transformers",
+  "gguf",
+  "text-generation",
+  "license:mit",
+  "endpoints_compatible",
+  "region:us",
+  "conversational"
+ ],
+ "downloads": 2385287,
+ "likes": 699,
+ "modelId": "ornith-ai/Ornith-1.0-9B-GGUF",
+ "author": "ornith-ai",
+ "sha": "3296bc7a404871a72ac3f1903f561459c09b5c17",
+ "lastModified": "2026-06-25T14:12:12.000Z",
+ "gated": false,
+ "disabled": false,
+ "widgetData": [
+  {
+   "text": "Hi, what can you help me with?"
+  },
+  {
+   "text": "What is 84 * 3 / 2?"
+  },
+  {
+   "text": "Tell me an interesting fact about the universe!"
+  },
+  {
+   "text": "Explain quantum computing in simple terms."
+  }
+ ],
+ "model-index": null,
+ "config": {},
+ "cardData": {
+  "library_name": "transformers",
+  "license": "mit",
+  "license_link": "https://huggingface.co/deepreinforce-ai/Ornith-1.0-9B-GGUF/blob/main/LICENSE",
+  "pipeline_tag": "text-generation"
+ },
+ "transformersInfo": {
+  "auto_model": "AutoModel"
+ },
+ "gguf": {
+  "total": 8953803264,
+  "architecture": "qwen35",
+  "context_length": 262144,
+  "eos_token": "<|im_end|>",
+  "totalFileSize": 17920696512
+ },
+ "siblings": [
+  {
+   "rfilename": ".gitattributes",
+   "blobId": "8cccc698db49afb9203111719b7e150c603355df",
+   "size": 2059
+  },
+  {
+   "rfilename": "README.md",
+   "blobId": "89ea7a55079fb8c0aa1544fda6368fffd809d68d",
+   "size": 21696
+  },
+  {
+   "rfilename": "assets/ornith_9b_eval.png",
+   "blobId": "8bc4c10ae84cd1464159aef0ad55225df18b4651",
+   "size": 527553,
+   "lfs": {
+    "sha256": "5a8f58ba1c8d475c5ed28bc8cf665fd92e05c7b053d34459203f2dde1b9480d5",
+    "size": 527553,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "assets/ornith_logo.png",
+   "blobId": "06459de44266843e631447a73b458e18d828467a",
+   "size": 962441,
+   "lfs": {
+    "sha256": "458ee0d85baea4d1fc0b099245f243b21006f696921f896a5b59980a6eadef6a",
+    "size": 962441,
+    "pointerSize": 131
+   }
+  },
+  {
+   "rfilename": "ornith-1.0-9b-Q4_K_M.gguf",
+   "blobId": "b9e48bcae90eaef7a63e29b056870267331fef52",
+   "size": 5629108704,
+   "lfs": {
+    "sha256": "5720d1f671b4996481274fffe01868c3c36e87c135cc8538471cc7bd6087b106",
+    "size": 5629108704,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "ornith-1.0-9b-Q5_K_M.gguf",
+   "blobId": "906ebe9a03fc546166a425dada7a332d49b620ea",
+   "size": 6467969472,
+   "lfs": {
+    "sha256": "d1b36095636c096b04ea09e798a7a378956f2fa9099340bd54add1954aaf149c",
+    "size": 6467969472,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "ornith-1.0-9b-Q6_K.gguf",
+   "blobId": "f2d6a1a3ad4b4747b5f793f5320031ca08a96677",
+   "size": 7359259072,
+   "lfs": {
+    "sha256": "33b6f6a3e3f05078438e12df8a4b55c8acf78ceadcc639d2af1cf35a026e8387",
+    "size": 7359259072,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "ornith-1.0-9b-Q8_0.gguf",
+   "blobId": "5360f63529d26520a9f2ba2b24b986b3c3ba3420",
+   "size": 9527500992,
+   "lfs": {
+    "sha256": "d0e4bebaa8b3450c62090df1408f2ee5ccb2094f9c610ffde564a654483d4f37",
+    "size": 9527500992,
+    "pointerSize": 135
+   }
+  },
+  {
+   "rfilename": "ornith-1.0-9b-bf16.gguf",
+   "blobId": "463936c57adf1e7d8af0d31533caea09b582f581",
+   "size": 17920696512,
+   "lfs": {
+    "sha256": "27bc753487eed85539c3aef63dd602b79cd060401b928c9ff7d30d5556eca260",
+    "size": 17920696512,
+    "pointerSize": 136
+   }
+  }
+ ],
+ "spaces": [
+  "emanforhelp/model-pulse",
+  "rgang12/orinith",
+  "Leon4gr45/gemma-inference",
+  "devarshia5/ornith",
+  "Leon4gr45/agent-inference"
+ ],
+ "createdAt": "2026-06-25T04:56:13.000Z",
+ "usedStorage": 46906808148
+}

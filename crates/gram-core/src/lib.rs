@@ -7,11 +7,15 @@
 //! `cargo test` régénère leurs équivalents TypeScript dans
 //! `app/ui/src/app/core/generated/` (voir `.cargo/config.toml`).
 
+pub mod catalog;
 pub mod estimate;
 pub mod hardware;
 pub mod model;
 pub mod runtime;
 
+pub use catalog::{
+    DataSource, DataSourceKind, RateLimitInfo, SyncPhase, SyncProgress, SyncSummary,
+};
 pub use estimate::{Estimate, FitLevel, RunMode};
 pub use hardware::{
     Backends, CpuInfo, DiskInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, RamKind, Source,
