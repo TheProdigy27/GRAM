@@ -137,11 +137,19 @@ export class HardwareBanner {
     return RUNTIMES.map(({ value, label }) => {
       const s: RuntimeStatus = status[value];
       const state = !s.installed ? 'non installé' : s.running ? 'en cours d’exécution' : 'installé';
+      const models = value === 'ollama' ? status.ollamaModels.length : 0;
       return {
         label,
         installed: s.installed,
         running: s.running,
-        tooltip: [state, s.version && `version ${s.version}`, s.path].filter(Boolean).join(' · '),
+        tooltip: [
+          state,
+          s.version && `version ${s.version}`,
+          models > 0 && `${models} modèle${models > 1 ? 's' : ''} installé${models > 1 ? 's' : ''}`,
+          s.path,
+        ]
+          .filter(Boolean)
+          .join(' · '),
       };
     });
   });

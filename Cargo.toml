@@ -13,6 +13,7 @@ publish = false
 gram-core = { path = "crates/gram-core" }
 gram-hw = { path = "crates/gram-hw" }
 gram-hub = { path = "crates/gram-hub" }
+gram-ollama = { path = "crates/gram-ollama" }
 
 # Commun
 serde = { version = "1.0.229", features = ["derive"] }
@@ -25,6 +26,8 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 clap = { version = "4.6.7", features = ["derive"] }
 tokio = { version = "1.54.1", features = ["rt", "time", "sync", "macros"] }
+# Sans fonctionnalité par défaut : chaque crate active ce dont il a besoin.
+reqwest = { version = "0.13.5", default-features = false }
 
 # Tauri
 tauri = { version = "2.12.5", features = [] }

@@ -19,6 +19,7 @@ tauri-build.workspace = true
 gram-core.workspace = true
 gram-hw.workspace = true
 gram-hub.workspace = true
+gram-ollama.workspace = true
 tauri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -42,3 +43,5 @@ workspace = true
 
 [dev-dependencies]
 tauri = { workspace = true, features = ["test"] }
+# Faux serveur Ollama (tests des mesures).
+gram-ollama = { workspace = true, features = ["test-support"] }

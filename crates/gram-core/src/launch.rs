@@ -75,6 +75,17 @@ pub fn hf_url(repo_id: &str) -> String {
     format!("https://huggingface.co/{repo_id}")
 }
 
+/// Nom d'une quantification dans Ollama quand on l'installe depuis Hugging Face :
+/// `hf.co/{dépôt}:{quantification}`.
+pub fn ollama_name(variant: &QuantVariant) -> String {
+    format!("hf.co/{}:{}", variant.repo_id, variant.label)
+}
+
+/// Commande qui installe une quantification dans Ollama sans la lancer (mesure réelle).
+pub fn ollama_pull_command(variant: &QuantVariant) -> String {
+    format!("ollama pull {}", ollama_name(variant))
+}
+
 /// Couches à placer sur le GPU (`-ngl` de llama.cpp) : toutes (999) en mode GPU.
 pub fn gpu_layers_arg(mode: RunMode) -> u32 {
     match mode {
@@ -94,6 +105,7 @@ pub fn launch_plan(
 ) -> LaunchPlan {
     let ctx = estimate.ctx_used;
     let tag = format!("{}:{}", variant.repo_id, variant.label);
+    let ollama = ollama_name(variant);
     let mut commands = Vec::new();
     let mut open_url = None;
     let mut notes = Vec::new();
@@ -107,7 +119,7 @@ pub fn launch_plan(
         Runtime::Ollama => {
             commands.push(CommandLine {
                 label: "Lancer le modèle".into(),
-                command: format!("ollama run hf.co/{tag}"),
+                command: format!("ollama run {ollama}"),
             });
             commands.push(CommandLine {
                 label: "Puis, dans la session".into(),
@@ -446,6 +458,14 @@ mod tests {
             KvCacheType::F16,
         );
         assert!(too_big.notes[0].contains("Ne tient pas"));
+    }
+
+    #[test]
+    fn installation_dans_ollama() {
+        assert_eq!(
+            ollama_pull_command(&variant(1)),
+            "ollama pull hf.co/bartowski/Qwen_Qwen3-8B-GGUF:Q4_K_M"
+        );
     }
 
     #[test]

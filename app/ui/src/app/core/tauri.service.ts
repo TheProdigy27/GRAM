@@ -4,10 +4,13 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { CacheInfo } from './generated/CacheInfo';
+import type { Calibration } from './generated/Calibration';
 import type { DetailRequest } from './generated/DetailRequest';
 import type { ExportFormat } from './generated/ExportFormat';
 import type { HardwareOptions } from './generated/HardwareOptions';
 import type { HardwareProfile } from './generated/HardwareProfile';
+import type { MeasureRequest } from './generated/MeasureRequest';
+import type { Measurement } from './generated/Measurement';
 import type { ModelDetail } from './generated/ModelDetail';
 import type { Overrides } from './generated/Overrides';
 import type { PingResponse } from './generated/PingResponse';
@@ -96,6 +99,30 @@ export class TauriService {
 
   clearCache(): Promise<CacheInfo> {
     return this.call('clear_cache');
+  }
+
+  // ── Mesures réelles avec Ollama ──────────────────────────────────────────────────────────
+
+  /**
+   * Mesure une quantification déjà installée dans Ollama (chargement puis génération de
+   * 128 tokens : de quelques secondes à quelques minutes). La mesure est enregistrée.
+   */
+  ollamaMeasure(request: MeasureRequest): Promise<Measurement> {
+    return this.call('ollama_measure', { request });
+  }
+
+  /** Mesures enregistrées et réglages de vitesse qu'elles suggèrent. */
+  getCalibration(): Promise<Calibration> {
+    return this.call('get_calibration');
+  }
+
+  /** Applique les réglages proposés par les mesures ; renvoie les paramètres enregistrés. */
+  applyCalibration(): Promise<Settings> {
+    return this.call('apply_calibration');
+  }
+
+  clearMeasurements(): Promise<Calibration> {
+    return this.call('clear_measurements');
   }
 
   // ── Paramètres et token ──────────────────────────────────────────────────────────────────

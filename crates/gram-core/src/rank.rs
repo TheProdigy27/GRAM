@@ -21,9 +21,9 @@ use crate::estimate::{
 };
 use crate::fmt::{ctx_k, gb, gb_value, tok_s};
 use crate::hardware::HardwareProfile;
-use crate::launch::{LaunchPlan, Runtime, hf_url, launch_plan, runtime_notes};
+use crate::launch::{LaunchPlan, Runtime, hf_url, launch_plan, ollama_pull_command, runtime_notes};
 use crate::model::{ModelEntry, Pipeline, QuantVariant, UseCase};
-use crate::runtime::RuntimesStatus;
+use crate::runtime::{OllamaModel, RuntimesStatus, installed_for, installed_variant};
 use crate::score::{self, Curation, Modifiers, Score, effective_bpw};
 use crate::settings::{Settings, UseCaseProfile};
 use chrono::{DateTime, Utc};
@@ -88,6 +88,8 @@ pub struct RankItem {
     pub slow: bool,
     /// « Tient entièrement en VRAM (6,7 / 10,8 Go) en Q5_K_M · ~38 tok/s estimés · … »
     pub explanation: String,
+    /// Quantifications de ce modèle déjà installées dans Ollama (depuis un de ses dépôts).
+    pub installed: Vec<String>,
 }
 
 /// Résultat de `rank`.
@@ -132,6 +134,11 @@ pub struct VariantDetail {
     pub within_size: bool,
     pub explanation: String,
     pub launch: LaunchPlan,
+    /// Nom du modèle dans Ollama si cette quantification y est déjà installée (bouton
+    /// « Mesurer »).
+    pub ollama_model: Option<String>,
+    /// Commande qui l'installe dans Ollama, pour la mesurer (`ollama pull hf.co/…`).
+    pub ollama_pull: String,
 }
 
 /// Résultat de `get_model_detail`.
@@ -219,6 +226,11 @@ impl<'a> Setup<'a> {
             max_size,
             cx,
         }
+    }
+
+    /// Modèles installés dans Ollama (vide tant que les runtimes n'ont pas été détectés).
+    fn installed(&self) -> &'a [OllamaModel] {
+        self.cx.runtimes.map_or(&[], |r| r.ollama_models.as_slice())
     }
 
     /// `false` pour un modèle qui ne correspond pas au cas d'usage Code ou Raisonnement.
@@ -366,7 +378,26 @@ pub fn explain(
     parts.join(" · ")
 }
 
-fn item(m: &ModelEntry, row: &Row, s: &Setup, variant_count: usize) -> RankItem {
+/// Quantifications de `m` installées dans Ollama, avec l'orthographe de GRAM quand elles
+/// correspondent à une variante évaluée.
+fn installed_labels(m: &ModelEntry, rows: &[Row], installed: &[OllamaModel]) -> Vec<String> {
+    let mut labels: Vec<String> = installed_for(installed, m)
+        .filter_map(|om| {
+            let q = om.quant.as_deref()?;
+            Some(
+                rows.iter()
+                    .find(|r| om.is_quant(&r.ve.variant.label))
+                    .map_or_else(|| q.to_string(), |r| r.ve.variant.label.clone()),
+            )
+        })
+        .collect();
+    labels.sort();
+    labels.dedup();
+    labels
+}
+
+fn item(m: &ModelEntry, ev: &Evaluation, i: usize, s: &Setup) -> RankItem {
+    let row = &ev.rows[i];
     RankItem {
         repo_id: m.repo_id.clone(),
         display_name: m.display_name.clone(),
@@ -380,11 +411,12 @@ fn item(m: &ModelEntry, row: &Row, s: &Setup, variant_count: usize) -> RankItem 
         gated: m.gated,
         created_at: m.created_at,
         detailed: !m.variants.is_empty(),
-        variant_count: variant_count as u32,
+        variant_count: ev.rows.len() as u32,
         best: row.ve.clone(),
         score: row.score,
         slow: row.slow,
         explanation: explain(&row.ve, &s.budget, s.work.ctx, m.ctx_train),
+        installed: installed_labels(m, &ev.rows, s.installed()),
     }
 }
 
@@ -438,7 +470,7 @@ pub fn rank(
         }
         let ev = evaluate(m, &s);
         if let Some(i) = ev.best {
-            let it = item(m, &ev.rows[i], &s, ev.rows.len());
+            let it = item(m, &ev, i, &s);
             if it.slow {
                 slow.push(it);
             } else {
@@ -447,7 +479,7 @@ pub fn rank(
         } else if let Some(i) = ev.smallest_within_size() {
             too_big_count += 1;
             if req.show_too_big {
-                too_big.push(item(m, &ev.rows[i], &s, ev.rows.len()));
+                too_big.push(item(m, &ev, i, &s));
             }
         }
     }
@@ -482,6 +514,14 @@ pub fn model_detail(m: &ModelEntry, req: &DetailRequest, cx: &RankContext) -> Mo
         .rows
         .into_iter()
         .map(|r| VariantDetail {
+            ollama_model: installed_variant(
+                s.installed(),
+                m,
+                &r.ve.variant.repo_id,
+                &r.ve.variant.label,
+            )
+            .map(|om| om.name.clone()),
+            ollama_pull: ollama_pull_command(&r.ve.variant),
             explanation: explain(&r.ve, &s.budget, s.work.ctx, m.ctx_train),
             launch: launch_plan(
                 runtime,

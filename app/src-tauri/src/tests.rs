@@ -5,6 +5,8 @@
 use crate::state::{AppState, Config};
 use crate::token::MemoryStore;
 use gram_core::{RuntimeStatus, RuntimesStatus};
+use gram_ollama::OllamaClient;
+use gram_ollama::testing::FakeOllama;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -51,12 +53,13 @@ fn runtimes() -> RuntimesStatus {
     }
 }
 
-fn state_in(dir: &Path) -> AppState {
+fn state_in(dir: &Path, ollama: Option<OllamaClient>) -> AppState {
     AppState::new(
         // Cache vide : le catalogue vient du catalogue embarqué.
         Config {
             dir: dir.to_path_buf(),
             network: false,
+            ollama,
         },
         Arc::new(raw_hardware),
         Arc::new(runtimes),
@@ -73,8 +76,13 @@ struct Harness {
 
 impl Harness {
     fn new(dir: &TempDir) -> Self {
+        Self::with_ollama(dir, None)
+    }
+
+    /// Avec l'API d'Ollama (un faux serveur, `gram_ollama::testing`).
+    fn with_ollama(dir: &TempDir, ollama: Option<OllamaClient>) -> Self {
         let app = mock_builder()
-            .manage(state_in(&dir.0))
+            .manage(state_in(&dir.0, ollama))
             .invoke_handler(crate::commands::handler())
             .build(mock_context(noop_assets()))
             .unwrap();
@@ -486,4 +494,212 @@ fn export_markdown_et_csv() {
         .unwrap_err();
     assert_eq!(err, "Le fichier d'export doit avoir l'extension .csv");
     assert!(!wrong.exists());
+}
+
+// ── Ollama : modèles installés, mesures et calibration (phase 7) ───────────────────────────
+
+const QWEN: &str = "Qwen/Qwen3-8B-GGUF";
+
+fn client(fake: &FakeOllama) -> Option<OllamaClient> {
+    Some(OllamaClient::new(fake.url()).unwrap())
+}
+
+fn measure_args(label: &str) -> Value {
+    json!({ "request": { "repoId": QWEN, "label": label, "useCase": "general" } })
+}
+
+#[test]
+fn modeles_installes_dans_ollama() {
+    let fake = FakeOllama::standard();
+    let dir = TempDir::new("ollama-installes");
+    let h = Harness::with_ollama(&dir, client(&fake));
+
+    // Le modèle distant (`remote_host`) de la fixture est écarté.
+    let rt = h.ok("detect_runtimes", json!({}));
+    let models = rt["ollamaModels"].as_array().unwrap();
+    assert_eq!(models.len(), 3);
+    assert_eq!(models[0]["name"], "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M");
+    assert_eq!(models[0]["repoId"], QWEN);
+    assert_eq!(models[2]["repoId"], Value::Null);
+
+    // Classement : quantifications installées depuis un des dépôts du modèle.
+    let r = h.ok("rank", json!({ "request": { "showTooBig": true } }));
+    let rows: Vec<&Value> = ["items", "slow", "tooBig"]
+        .iter()
+        .flat_map(|k| r[k].as_array().unwrap())
+        .collect();
+    let find = |repo: &str| rows.iter().find(|i| i["repoId"] == repo).unwrap();
+    assert_eq!(find(QWEN)["installed"], json!(["Q4_K_M"]));
+    // MoE installé depuis le dépôt d'unsloth, alternative du dépôt canonique.
+    assert_eq!(
+        find("Qwen/Qwen3-30B-A3B-GGUF")["installed"],
+        json!(["UD-Q4_K_XL"])
+    );
+    let installed = rows
+        .iter()
+        .filter(|i| !i["installed"].as_array().unwrap().is_empty())
+        .count();
+    assert_eq!(installed, 2);
+
+    // Fiche : la quantification installée porte son nom dans Ollama.
+    let d = h.ok("get_model_detail", json!({ "request": { "repoId": QWEN } }));
+    let names: Vec<(&str, &str)> = d["variants"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|v| Some((v["variant"]["label"].as_str()?, v["ollamaModel"].as_str()?)))
+        .collect();
+    assert_eq!(names, [("Q4_K_M", "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M")]);
+    let q8 = d["variants"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["variant"]["label"] == "Q8_0")
+        .unwrap();
+    assert_eq!(
+        q8["ollamaPull"],
+        "ollama pull hf.co/Qwen/Qwen3-8B-GGUF:Q8_0"
+    );
+}
+
+#[test]
+fn mesure_puis_calibration() {
+    let fake = FakeOllama::standard();
+    let dir = TempDir::new("ollama-mesure");
+    {
+        let h = Harness::with_ollama(&dir, client(&fake));
+        let empty = h.ok("get_calibration", json!({}));
+        assert_eq!(
+            (empty["used"].as_u64(), empty["efficiency"].as_f64()),
+            (Some(0), None)
+        );
+
+        let m = h.ok("ollama_measure", measure_args("Q4_K_M"));
+        assert_eq!(m["ollamaModel"], "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M");
+        assert_eq!(m["ctx"], 8192);
+        // 128 tokens en 1,542 s.
+        let tok_s = m["tokS"].as_f64().unwrap();
+        assert!((tok_s - 83.0).abs() < 0.1, "{tok_s}");
+        assert_eq!(m["memTotal"], 6_925_000_000u64);
+        assert_eq!(m["ctxLoaded"], 8192);
+        assert_eq!(m["reliable"], true);
+        assert_eq!(m["estimatedMode"]["kind"], "gpu");
+        // RTX 5080 (960 Go/s), efficacité 0,55 : ~91 tok/s estimés, soit ~9 % de trop.
+        let error = m["tokSError"].as_f64().unwrap();
+        assert!((0.05..0.15).contains(&error), "{error}");
+        assert!(m["notes"].as_array().unwrap().is_empty(), "{}", m["notes"]);
+        // Ollama a reçu le contexte de l'estimation, au chargement comme à la mesure.
+        let generate: Vec<_> = fake
+            .requests()
+            .into_iter()
+            .filter(|r| r.path == "/api/generate")
+            .collect();
+        assert_eq!(generate.len(), 2);
+        assert!(
+            generate
+                .iter()
+                .all(|r| r.json()["options"]["num_ctx"] == 8192)
+        );
+
+        // 5,24 ms de lecture à pleine bande passante pour 12,05 ms mesurées, dont 1,5 ms fixes.
+        let cal = h.ok("get_calibration", json!({}));
+        assert_eq!(cal["used"], 1);
+        assert_eq!(cal["measurements"][0]["label"], "Q4_K_M");
+        assert_eq!(cal["efficiency"], json!(0.5));
+        assert_eq!(cal["tokenOverheadMs"], Value::Null);
+        assert_eq!(cal["changed"], true);
+
+        let settings = h.ok("apply_calibration", json!({}));
+        assert_eq!(settings["estimate"]["efficiency"], json!(0.5));
+        assert_eq!(settings["estimate"]["tokenOverheadMs"], json!(1.5));
+        assert_eq!(h.ok("get_settings", json!({})), settings);
+        assert_eq!(h.ok("get_calibration", json!({}))["changed"], false);
+        // L'estimation suit : la nouvelle valeur est proche de la mesure.
+        let d = h.ok("get_model_detail", json!({ "request": { "repoId": QWEN } }));
+        let q4 = d["variants"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["variant"]["label"] == "Q4_K_M")
+            .unwrap();
+        let estimated = q4["estimate"]["tokS"].as_f64().unwrap();
+        assert!((estimated - tok_s).abs() / tok_s < 0.02, "{estimated}");
+    }
+    assert!(dir.0.join("measurements.json").exists());
+
+    // Relues au prochain lancement ; effacer les mesures ne touche pas aux paramètres.
+    let h = Harness::with_ollama(&dir, client(&fake));
+    assert_eq!(h.ok("get_calibration", json!({}))["used"], 1);
+    let cleared = h.ok("clear_measurements", json!({}));
+    assert_eq!(cleared["measurements"], json!([]));
+    assert_eq!(
+        h.ok("get_settings", json!({}))["estimate"]["efficiency"],
+        json!(0.5)
+    );
+}
+
+#[test]
+fn mesures_refusees() {
+    let fake = FakeOllama::start(|r| {
+        match r.path.as_str() {
+        "/api/generate" => (
+            500,
+            r#"{"error":"model requires more system memory (12.1 GiB) than is available (9.8 GiB)"}"#
+                .into(),
+        ),
+        _ => gram_ollama::testing::standard_response(r),
+    }
+    });
+    let dir = TempDir::new("ollama-refus");
+    let h = Harness::with_ollama(&dir, client(&fake));
+    let err = |label: &str| h.invoke("ollama_measure", measure_args(label)).unwrap_err();
+
+    assert_eq!(
+        err("Q8_0"),
+        "Q8_0 n'est pas installé dans Ollama. L'installer avec : \
+         ollama pull hf.co/Qwen/Qwen3-8B-GGUF:Q8_0"
+    );
+    assert_eq!(err("Q9_X"), "Quantification Q9_X inconnue pour Qwen3-8B.");
+    assert_eq!(
+        h.invoke(
+            "ollama_measure",
+            json!({ "request": { "repoId": "x/absent", "label": "Q4_K_M" } })
+        )
+        .unwrap_err(),
+        "Modèle « x/absent » absent du catalogue."
+    );
+    assert_eq!(
+        err("Q4_K_M"),
+        "Ollama a refusé la requête (HTTP 500) : model requires more system memory (12.1 GiB) \
+         than is available (9.8 GiB)"
+    );
+    assert_eq!(
+        h.invoke("apply_calibration", json!({})).unwrap_err(),
+        "Aucune mesure exploitable : rien à appliquer."
+    );
+    assert!(!dir.0.join("measurements.json").exists());
+
+    // Ollama arrêté.
+    let addr = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap();
+    let stopped = TempDir::new("ollama-arrete");
+    let h = Harness::with_ollama(&stopped, Some(OllamaClient::for_addr(addr).unwrap()));
+    assert_eq!(
+        h.invoke("ollama_measure", measure_args("Q4_K_M"))
+            .unwrap_err(),
+        format!("Ollama ne répond pas sur http://{addr} : le lancer, puis réessayer")
+    );
+
+    // Adresse inutilisable (OLLAMA_HOST en HTTPS).
+    let none = TempDir::new("ollama-aucun");
+    let h = Harness::new(&none);
+    let e = h
+        .invoke("ollama_measure", measure_args("Q4_K_M"))
+        .unwrap_err();
+    assert!(
+        e.as_str().unwrap().starts_with("API d'Ollama inaccessible"),
+        "{e}"
+    );
 }

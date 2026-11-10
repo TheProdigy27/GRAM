@@ -26,10 +26,18 @@ export class SettingsStore {
   /** Enregistre tous les paramètres (dialogue) ; renvoie les valeurs ramenées dans leurs bornes. */
   async save(settings: Settings): Promise<Settings> {
     const saved = await this.tauri.saveSettings(settings);
+    this.replace(saved);
+    return saved;
+  }
+
+  /**
+   * Paramètres déjà enregistrés par le backend (recalibrage d'après des mesures) : le
+   * classement et la fiche sont recalculés.
+   */
+  replace(saved: Settings): void {
     this.settings.set(saved);
     this.error.set(null);
     this.version.update((v) => v + 1);
-    return saved;
   }
 
   /**

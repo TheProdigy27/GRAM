@@ -4,6 +4,7 @@
 //! `window.__TAURI_INTERNALS__.invoke('rank', { request: { useCase: 'code', ctx: 16384 } })`.
 //! Les arguments sont en camelCase ; une erreur rejette la promesse avec un message en français.
 
+pub mod calibration;
 pub mod catalog;
 pub mod hardware;
 pub mod ranking;
@@ -35,5 +36,9 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         token::set_hf_token,
         token::clear_hf_token,
         token::has_hf_token,
+        calibration::ollama_measure,
+        calibration::get_calibration,
+        calibration::apply_calibration,
+        calibration::clear_measurements,
     ]
 }

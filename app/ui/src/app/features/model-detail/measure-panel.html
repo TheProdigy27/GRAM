@@ -1,0 +1,139 @@
+@if (ollama()?.installed) {
+  <section class="measure" aria-labelledby="measure-title" data-testid="measure-panel">
+    <h3 id="measure-title">
+      Mesure réelle de <span class="mono">{{ variant().variant.label }}</span> avec Ollama
+    </h3>
+
+    @if (!ollama()?.running) {
+      <p class="muted" data-testid="ollama-stopped">
+        Ollama n’est pas lancé : le démarrer pour mesurer la vitesse et la mémoire réelles.
+      </p>
+      <button mat-stroked-button type="button" data-testid="refresh-ollama" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Actualiser
+      </button>
+    } @else if (!variant().ollamaModel) {
+      <p data-testid="not-installed">
+        Pas encore installée dans Ollama. Pour la mesurer, l’installer puis actualiser :
+      </p>
+      <div class="cmd-row">
+        <code data-testid="pull-command">{{ variant().ollamaPull }}</code>
+        <button
+          mat-icon-button
+          type="button"
+          matTooltip="Copier"
+          [attr.aria-label]="'Copier : ' + variant().ollamaPull"
+          (click)="copy(variant().ollamaPull)"
+        >
+          <mat-icon>content_copy</mat-icon>
+        </button>
+      </div>
+      <button mat-stroked-button type="button" data-testid="refresh-ollama" (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Actualiser
+      </button>
+    } @else {
+      <p class="muted">
+        Charge <span class="mono">{{ variant().ollamaModel }}</span> au contexte
+        {{ variant().estimate.ctxUsed | ctx }}, puis génère {{ tokens }} tokens : de quelques
+        secondes à quelques minutes selon la taille.
+      </p>
+      <button
+        mat-flat-button
+        type="button"
+        data-testid="measure"
+        [disabled]="busy()"
+        (click)="measure()"
+      >
+        <mat-icon>speed</mat-icon>
+        @if (measuring()) {
+          Mesure en cours…
+        } @else if (latest()) {
+          Mesurer à nouveau
+        } @else {
+          Mesurer
+        }
+      </button>
+      @if (measuring()) {
+        <mat-progress-bar mode="indeterminate" aria-label="Mesure en cours" />
+      }
+    }
+
+    @if (error(); as message) {
+      <p class="error" role="alert">Mesure impossible : {{ message }}</p>
+    }
+
+    @if (latest(); as m) {
+      <table class="results" data-testid="measurement">
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col" class="num">Mesuré</th>
+            <th scope="col" class="num">Estimé</th>
+            <th
+              scope="col"
+              class="num"
+              matTooltip="(estimé − mesuré) / mesuré : positif quand GRAM surestime"
+            >
+              Écart
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.label) {
+            <tr>
+              <th scope="row">{{ r.label }}</th>
+              <td class="num">{{ r.measured }}</td>
+              <td class="num">{{ r.estimated }}</td>
+              <td class="num" data-testid="gap">{{ r.gap }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <p class="muted small">
+        Mesuré {{ when() }} au contexte {{ m.ctx | ctx }} · {{ int(m.evalCount) }} tokens générés ·
+        chargement {{ decimal(m.loadMs / 1000, 1) }} s
+        @if (m.promptTokS !== null) {
+          · prompt {{ int(m.promptTokS) }} tok/s
+        }
+      </p>
+      @if (currentEstimate(); as now) {
+        <p class="small" data-testid="current-estimate">
+          Estimation actuelle, avec les paramètres recalibrés : {{ now | tokS }} tok/s.
+        </p>
+      }
+      @for (n of m.notes; track $index) {
+        <p class="warn-line"><mat-icon aria-hidden="true">warning</mat-icon>{{ n }}</p>
+      }
+    }
+
+    @if (calibration(); as c) {
+      <div class="calibration" data-testid="calibration">
+        <p>{{ c.summary }}</p>
+        <div class="actions">
+          @if (c.changed && c.efficiency !== null) {
+            <button
+              mat-flat-button
+              type="button"
+              data-testid="apply-calibration"
+              [disabled]="store.applying()"
+              (click)="apply()"
+            >
+              <mat-icon>tune</mat-icon>
+              Recalibrer l’estimation
+            </button>
+          }
+          <button
+            mat-button
+            type="button"
+            data-testid="clear-measurements"
+            [disabled]="busy()"
+            (click)="clear()"
+          >
+            Effacer les mesures ({{ c.measurements.length }})
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+}

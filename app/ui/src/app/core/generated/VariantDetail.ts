@@ -11,4 +11,13 @@ export type VariantDetail = { variant: QuantVariant, estimate: Estimate, score: 
 /**
  * Sous la taille maximale demandée.
  */
-withinSize: boolean, explanation: string, launch: LaunchPlan, };
+withinSize: boolean, explanation: string, launch: LaunchPlan, 
+/**
+ * Nom du modèle dans Ollama si cette quantification y est déjà installée (bouton
+ * « Mesurer »).
+ */
+ollamaModel: string | null, 
+/**
+ * Commande qui l'installe dans Ollama, pour la mesurer (`ollama pull hf.co/…`).
+ */
+ollamaPull: string, };

@@ -17,7 +17,7 @@ import { RankingTable } from './ranking-table';
 })
 class Host {
   readonly items = signal<RankItem[]>([
-    makeItem('Rapide', { score: 90, tokS: 95 }),
+    makeItem('Rapide', { score: 90, tokS: 95, installed: ['Q4_K_M'] }),
     makeItem('Hybride', {
       score: 70,
       tokS: 7.4,
@@ -54,6 +54,9 @@ describe('RankingTable', () => {
     expect(rows[0].querySelector('.mode-badge')?.classList).toContain('mode-gpu');
     expect(rows[1].querySelector('.approx')).not.toBeNull();
     expect(rows[2].querySelectorAll('.flag')).toHaveLength(2); // vision + protégé
+    // Déjà installé dans Ollama : seulement la première ligne.
+    expect(rows[0].querySelector('[data-testid="installed"]')).not.toBeNull();
+    expect(el.querySelectorAll('[data-testid="installed"]')).toHaveLength(1);
     expect(rows[2].classList).toContain('selected');
   });
 

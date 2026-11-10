@@ -54,7 +54,7 @@ fn hub() -> Result<Hub<ReqwestTransport>> {
     }))
 }
 
-fn runtime() -> Result<tokio::runtime::Runtime> {
+pub(crate) fn runtime() -> Result<tokio::runtime::Runtime> {
     Ok(tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?)

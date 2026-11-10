@@ -6,17 +6,22 @@
 //!   corrections sont enregistrées d'un lancement à l'autre, pas la simulation.
 //! - Le catalogue est chargé hors ligne au démarrage (cache, sinon catalogue embarqué), puis
 //!   remplacé par `sync_catalog`. Les fiches enrichies à la demande y sont reportées.
-//! - Les dépendances au système (détection, trousseau, réseau) sont injectables pour les tests.
+//! - Les modèles installés dans Ollama sont relus avec les runtimes ; les mesures réelles
+//!   (phase 7) sont enregistrées d'un lancement à l'autre.
+//! - Les dépendances au système (détection, trousseau, réseau, Ollama) sont injectables pour
+//!   les tests.
 
 use crate::error::{CmdResult, CommandError};
 use crate::events::{self, HARDWARE_READY};
-use crate::store::{self, CORRECTIONS_FILE, SETTINGS_FILE};
+use crate::store::{self, CORRECTIONS_FILE, MEASUREMENTS_FILE, SETTINGS_FILE};
 use crate::token::{KeyringStore, TokenStore};
 use gram_core::{
-    DataSource, HardwareProfile, ModelEntry, Overrides, RankRequest, RuntimesStatus, Settings,
+    DataSource, HardwareProfile, Measurement, ModelEntry, OllamaModel, Overrides, RankRequest,
+    RuntimesStatus, Settings,
 };
 use gram_hub::{Cache, HfToken};
 use gram_hw::RawHardware;
+use gram_ollama::OllamaClient;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -53,6 +58,9 @@ pub struct Config {
     pub dir: PathBuf,
     /// `false` dans les tests : synchronisation hors ligne, fiches non enrichies.
     pub network: bool,
+    /// API locale d'Ollama (`OLLAMA_HOST`) ; `None` si l'adresse n'est pas utilisable, ou dans
+    /// les tests qui n'en ont pas besoin.
+    pub ollama: Option<OllamaClient>,
 }
 
 pub struct AppState {
@@ -73,6 +81,10 @@ pub struct AppState {
     enriched: Mutex<HashSet<String>>,
     /// Une seule synchronisation à la fois.
     pub(crate) sync_lock: tokio::sync::Mutex<()>,
+    /// Une seule mesure Ollama à la fois (elle occupe la mémoire du GPU).
+    pub(crate) measure_lock: tokio::sync::Mutex<()>,
+    /// Mesures réelles, la plus récente d'abord (`measurements.json`).
+    measurements: Mutex<Vec<Measurement>>,
     /// Création de l'état (≈ lancement de l'application) et premier classement servi.
     started: Instant,
     first_rank_served: AtomicBool,
@@ -88,6 +100,8 @@ impl AppState {
         let settings = store::load::<Settings>(&config.dir.join(SETTINGS_FILE), "paramètres");
         let corrections =
             store::load::<Overrides>(&config.dir.join(CORRECTIONS_FILE), "corrections");
+        let measurements =
+            store::load::<Vec<Measurement>>(&config.dir.join(MEASUREMENTS_FILE), "mesures");
         Self {
             cache: Cache::new(config.dir.join("cache")),
             config,
@@ -102,6 +116,8 @@ impl AppState {
             last_rank: Mutex::new(RankRequest::default()),
             enriched: Mutex::new(HashSet::new()),
             sync_lock: tokio::sync::Mutex::new(()),
+            measure_lock: tokio::sync::Mutex::new(()),
+            measurements: Mutex::new(measurements),
             started: Instant::now(),
             first_rank_served: AtomicBool::new(false),
         }
@@ -113,7 +129,11 @@ impl AppState {
         let dir = gram_hub::cache::app_dir()
             .unwrap_or_else(|| std::env::temp_dir().join(gram_hub::cache::APP_ID));
         Self::new(
-            Config { dir, network: true },
+            Config {
+                dir,
+                network: true,
+                ollama: OllamaClient::from_env(),
+            },
             Arc::new(gram_hw::collect),
             Arc::new(gram_hw::detect_runtimes),
             Box::new(KeyringStore),
@@ -126,6 +146,10 @@ impl AppState {
 
     pub fn network(&self) -> bool {
         self.config.network
+    }
+
+    pub fn ollama(&self) -> Option<&OllamaClient> {
+        self.config.ollama.as_ref()
     }
 
     // ── Matériel ────────────────────────────────────────────────────────────────────────────
@@ -206,14 +230,51 @@ impl AppState {
         Ok(gram_hw::build_profile(&h.raw, &Overrides::default()))
     }
 
+    /// La machine réelle : corrections comprises, simulation ignorée (mesures Ollama).
+    pub async fn real_profile<R: Runtime>(&self, app: &AppHandle<R>) -> CmdResult<HardwareProfile> {
+        self.hardware(app).await?;
+        let slot = self.hardware.lock().await;
+        let h = slot
+            .as_ref()
+            .ok_or_else(|| CommandError::msg("matériel non détecté"))?;
+        Ok(gram_hw::build_profile(
+            &h.raw,
+            &self.overrides().corrections(),
+        ))
+    }
+
+    /// Une simulation de matériel est en cours.
+    pub fn simulation(&self) -> bool {
+        self.overrides.lock().expect("verrou").is_simulation()
+    }
+
     // ── Runtimes ────────────────────────────────────────────────────────────────────────────
 
-    /// Nouvelle détection des runtimes installés (≈ 100 ms, jusqu'à 1 s si Ollama ne répond pas).
+    /// Nouvelle détection des runtimes installés (≈ 100 ms, jusqu'à 1 s si Ollama ne répond pas),
+    /// avec la liste des modèles installés dans Ollama s'il tourne.
     pub async fn detect_runtimes(&self) -> CmdResult<RuntimesStatus> {
         let detect = Arc::clone(&self.detect_runtimes);
-        let status = tauri::async_runtime::spawn_blocking(move || detect()).await?;
+        let mut status = tauri::async_runtime::spawn_blocking(move || detect()).await?;
+        if status.ollama.running
+            && let Some(client) = self.ollama()
+        {
+            match client.tags().await {
+                Ok(models) => status.ollama_models = models,
+                Err(e) => tracing::warn!("modèles installés dans Ollama : {e}"),
+            }
+        }
         *self.runtimes.lock().await = Some(status.clone());
         Ok(status)
+    }
+
+    /// Remplace la liste des modèles installés dans Ollama (relue avant une mesure : son API
+    /// répond, il tourne donc).
+    pub async fn set_ollama_models(&self, models: Vec<OllamaModel>) {
+        let mut slot = self.runtimes.lock().await;
+        let status = slot.get_or_insert_with(RuntimesStatus::default);
+        status.ollama.installed = true;
+        status.ollama.running = true;
+        status.ollama_models = models;
     }
 
     /// Dernière détection des runtimes, sans en relancer une.
@@ -301,6 +362,35 @@ impl AppState {
                 tracing::warn!("{e} : appels Hugging Face sans token");
                 None
             }
+        }
+    }
+
+    // ── Mesures Ollama ──────────────────────────────────────────────────────────────────────
+
+    pub fn measurements(&self) -> Vec<Measurement> {
+        self.measurements.lock().expect("verrou").clone()
+    }
+
+    /// Ajoute une mesure (elle remplace celle du même modèle au même contexte), puis enregistre
+    /// la liste. Un échec de l'enregistrement est journalisé : la mesure reste en mémoire.
+    pub fn record_measurement(&self, m: Measurement) {
+        let list = {
+            let mut list = self.measurements.lock().expect("verrou");
+            gram_core::calibration::record(&mut list, m);
+            list.clone()
+        };
+        self.save_measurements(&list);
+    }
+
+    pub fn clear_measurements(&self) {
+        self.measurements.lock().expect("verrou").clear();
+        self.save_measurements(&[]);
+    }
+
+    fn save_measurements(&self, list: &[Measurement]) {
+        let path = self.config.dir.join(MEASUREMENTS_FILE);
+        if let Err(e) = store::save(&path, &list) {
+            tracing::warn!(path = %path.display(), "mesures non enregistrées : {e}");
         }
     }
 

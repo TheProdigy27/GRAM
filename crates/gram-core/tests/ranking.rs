@@ -10,9 +10,9 @@ use gram_core::export::{to_csv, to_markdown};
 use gram_core::fmt::{ctx_k, gb_value};
 use gram_core::launch::Runtime;
 use gram_core::{
-    DataSource, DataSourceKind, DetailRequest, FitLevel, HardwareProfile, ModelEntry, RankContext,
-    RankItem, RankRequest, RankResponse, RunMode, RuntimeStatus, RuntimesStatus, Settings, UseCase,
-    model_detail, rank,
+    DataSource, DataSourceKind, DetailRequest, FitLevel, HardwareProfile, ModelEntry, OllamaModel,
+    RankContext, RankItem, RankRequest, RankResponse, RunMode, RuntimeStatus, RuntimesStatus,
+    Settings, UseCase, model_detail, rank,
 };
 use std::fmt::Write as _;
 
@@ -389,6 +389,7 @@ fn installed(ollama: bool, lm_studio: bool, llama_cpp: bool) -> RuntimesStatus {
         ollama: s(ollama),
         lm_studio: s(lm_studio),
         llama_cpp: s(llama_cpp),
+        ollama_models: Vec::new(),
     }
 }
 
@@ -520,4 +521,69 @@ fn export_csv() {
     // Chaque ligne a autant de champs que l'en-tête (aucun `;` hors guillemets dans les données).
     let fields = |l: &str| l.split(';').count();
     assert!(lines.iter().all(|l| fields(l) == fields(lines[0])), "{csv}");
+}
+
+// ── Modèles déjà installés dans Ollama (phase 7) ──────────────────────────────────────────
+
+#[test]
+fn quantifications_deja_installees_dans_ollama() {
+    let models = sample();
+    let m = models
+        .iter()
+        .find(|m| m.display_name == "Qwen3-8B")
+        .expect("Qwen3-8B dans l'échantillon");
+    let q4 = m
+        .variants
+        .iter()
+        .find(|v| v.label == "Q4_K_M")
+        .expect("Q4_K_M");
+    let alt = &m.alternatives[0].repo_id;
+    let rt = RuntimesStatus {
+        ollama_models: vec![
+            // Depuis le dépôt de la variante, en minuscules.
+            OllamaModel::new(
+                format!("hf.co/{}:q4_k_m", q4.repo_id.to_lowercase()),
+                q4.size_bytes,
+                None,
+            ),
+            // Depuis un dépôt alternatif, une quantification absente des candidates.
+            OllamaModel::new(format!("hf.co/{alt}:Q2_K_XXS"), 1, None),
+            // Bibliothèque d'Ollama : jamais rapprochée du catalogue.
+            OllamaModel::new("qwen3:8b", 1, Some("Q4_K_M")),
+        ],
+        ..installed(true, false, false)
+    };
+    let hw = p2();
+    let settings = Settings::default();
+    let cx = RankContext::new(&hw, Some(&rt), &settings, now());
+    let r = rank(&models, &request(UseCase::General, None), &cx, source());
+    let item = r
+        .items
+        .iter()
+        .chain(&r.slow)
+        .find(|i| i.repo_id == m.repo_id)
+        .unwrap();
+    assert_eq!(item.installed, ["Q2_K_XXS", "Q4_K_M"]);
+    let others = r.items.iter().filter(|i| i.repo_id != m.repo_id);
+    assert!(others.clone().all(|i| i.installed.is_empty()));
+
+    let d = model_detail(
+        m,
+        &DetailRequest {
+            repo_id: m.repo_id.clone(),
+            ..DetailRequest::default()
+        },
+        &cx,
+    );
+    let installed: Vec<(&str, &str)> = d
+        .variants
+        .iter()
+        .filter_map(|v| Some((v.variant.label.as_str(), v.ollama_model.as_deref()?)))
+        .collect();
+    let expected = format!("hf.co/{}:q4_k_m", q4.repo_id.to_lowercase());
+    assert_eq!(installed, [("Q4_K_M", expected.as_str())]);
+
+    // Sans runtimes détectés : rien d'installé.
+    let none = run(&models, &hw, &request(UseCase::General, None));
+    assert!(none.items.iter().all(|i| i.installed.is_empty()));
 }

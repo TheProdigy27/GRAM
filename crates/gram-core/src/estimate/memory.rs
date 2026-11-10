@@ -52,7 +52,8 @@ impl Default for EstimateParams {
             efficiency: 0.55,
             // Valeur prudente, tirée de vitesses publiées et non mesurée ici : Qwen3-30B-A3B en
             // Q4_K_M sur RTX 4090 tourne vers 190 tok/s, alors que la formule sans temps fixe en
-            // donne ~280. À calibrer avec la phase 7 (un modèle dense et un MoE).
+            // donne ~280. Recalibré par des mesures réelles avec Ollama (`calibration`) : un
+            // modèle dense et un MoE suffisent à ajuster le temps fixe et l'efficacité.
             token_overhead_ms: 1.5,
             kv_cache: KvCacheType::F16,
             min_bpw: 2.5,

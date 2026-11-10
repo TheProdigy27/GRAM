@@ -12,6 +12,7 @@ import { ModeBadge } from '../../shared/mode-badge';
 import { CountPipe, CtxPipe, GbPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
 import { scoreTooltip } from '../../shared/score';
 import { DetailStore } from '../../state/detail.store';
+import { MeasurePanel } from './measure-panel';
 import { MemoryBar } from './memory-bar';
 
 /** Vert : tient confortablement ; orange : limite ; rouge : trop juste ou trop gros. */
@@ -30,7 +31,8 @@ export function fitClass(v: VariantDetail): 'ok' | 'warn' | 'bad' {
 
 /**
  * Fiche détail (panneau latéral) : barre mémoire, toutes les quantifications, commandes du
- * runtime choisi à copier, dépôts alternatifs, liens vers Hugging Face.
+ * runtime choisi à copier, mesure réelle avec Ollama, dépôts alternatifs, liens vers Hugging
+ * Face.
  */
 @Component({
   selector: 'app-model-detail',
@@ -39,6 +41,7 @@ export function fitClass(v: VariantDetail): 'ok' | 'warn' | 'bad' {
     MatIconModule,
     MatProgressBarModule,
     MatTooltipModule,
+    MeasurePanel,
     MemoryBar,
     ModeBadge,
     CountPipe,

@@ -25,6 +25,14 @@
             >lock</mat-icon
           >
         }
+        @if (row.item.installed.length > 0) {
+          <mat-icon
+            class="installed"
+            data-testid="installed"
+            [matTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
+            >download_done</mat-icon
+          >
+        }
         @if (row.item.best.estimate.approximate) {
           <span
             class="approx"

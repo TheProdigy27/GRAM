@@ -1,0 +1,21 @@
+{
+  "models": [
+    {
+      "name": "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M",
+      "model": "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M",
+      "size": 6925000000,
+      "digest": "d98cc1d5cdd8d6a1f8bb4ee2b4e5c0b1c6f5f8c1c2a6a0c1d4b7e8f9a0b1c2d3",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": ["qwen3"],
+        "parameter_size": "8.2B",
+        "quantization_level": "Q4_K_M"
+      },
+      "expires_at": "2026-11-10T21:05:31.4402571+01:00",
+      "size_vram": 6925000000,
+      "context_length": 8192
+    }
+  ]
+}

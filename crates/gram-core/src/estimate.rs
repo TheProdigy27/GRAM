@@ -379,6 +379,49 @@ fn ctx_max(
     (room / kv_per_token.max(1)).min(u64::from(cap)) as u32
 }
 
+/// Octets lus pour générer un token : les poids de la variante, ou seulement la part des
+/// paramètres actifs pour un MoE.
+pub fn active_bytes(model: &ModelEntry, weights: u64) -> u64 {
+    let ratio = ModelShape::of(model, weights, Default::default()).active_ratio;
+    (weights as f64 * ratio).round() as u64
+}
+
+/// Part des poids en VRAM : 1 en GPU, la fraction des couches en hybride, 0 en CPU.
+pub fn gpu_share(mode: RunMode) -> f64 {
+    match mode {
+        RunMode::Gpu => 1.0,
+        RunMode::Hybrid { gpu_layers, layers } => f64::from(gpu_layers) / f64::from(layers.max(1)),
+        RunMode::Cpu | RunMode::TooBig => 0.0,
+    }
+}
+
+/// Temps de lecture des poids d'un token à pleine bande passante, en secondes :
+/// `octets GPU / BW GPU + octets RAM / BW RAM`. Sans GPU discret, tout passe par la RAM (un
+/// iGPU partage sa bande passante).
+pub fn transfer_seconds(active_bytes: u64, gpu_share: f64, b: &MemoryBudget) -> f64 {
+    let share = if b.gpu_offload() {
+        gpu_share.clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let bytes = active_bytes as f64;
+    let gpu_bw = f64::from(b.gpu_bandwidth_gbs.unwrap_or(DEFAULT_GPU_BANDWIDTH_GBS)) * 1e9;
+    let ram_bw = f64::from(b.ram_bandwidth_gbs) * 1e9;
+    bytes * share / gpu_bw + bytes * (1.0 - share) / ram_bw
+}
+
+/// Vitesse de génération pour un temps de transfert donné (§8.4) :
+/// `tok/s = 1 / (transfert / efficacité + temps fixe)`.
+pub fn tok_s_for(transfer_s: f64, p: &EstimateParams) -> f32 {
+    let seconds =
+        transfer_s / f64::from(p.efficiency) + f64::from(p.token_overhead_ms.max(0.0)) / 1000.0;
+    if seconds.is_finite() && seconds > 0.0 {
+        (1.0 / seconds) as f32
+    } else {
+        0.0
+    }
+}
+
 /// §8.4 : la génération est limitée par la bande passante mémoire. Chaque token lit les poids
 /// actifs une fois (seulement les paramètres actifs d'un MoE), plus un temps fixe :
 /// `temps = (octets GPU / BW GPU + octets RAM / BW RAM) / efficacité + temps fixe`, et
@@ -393,23 +436,11 @@ fn tok_s(
     b: &MemoryBudget,
     p: &EstimateParams,
 ) -> f32 {
-    let gpu_share = match mode {
-        RunMode::Gpu => 1.0,
-        RunMode::Hybrid { gpu_layers, layers } => f64::from(gpu_layers) / f64::from(layers),
-        RunMode::Cpu => 0.0,
-        RunMode::TooBig => return 0.0,
-    };
-    let bytes = weights as f64 * active_ratio;
-    let gpu_bw = f64::from(b.gpu_bandwidth_gbs.unwrap_or(DEFAULT_GPU_BANDWIDTH_GBS)) * 1e9;
-    let ram_bw = f64::from(b.ram_bandwidth_gbs) * 1e9;
-    let transfer = bytes * gpu_share / gpu_bw + bytes * (1.0 - gpu_share) / ram_bw;
-    let seconds =
-        transfer / f64::from(p.efficiency) + f64::from(p.token_overhead_ms.max(0.0)) / 1000.0;
-    if seconds.is_finite() && seconds > 0.0 {
-        (1.0 / seconds) as f32
-    } else {
-        0.0
+    if mode == RunMode::TooBig {
+        return 0.0;
     }
+    let bytes = (weights as f64 * active_ratio).round() as u64;
+    tok_s_for(transfer_seconds(bytes, gpu_share(mode), b), p)
 }
 
 /// Niveaux d'adéquation du §9.

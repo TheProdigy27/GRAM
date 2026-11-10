@@ -8,6 +8,8 @@ publish.workspace = true
 
 [dependencies]
 gram-core.workspace = true
+# Adresse de l'API d'Ollama (`OLLAMA_HOST`), partagée avec le client de l'application.
+gram-ollama.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sysinfo = { version = "0.38.4", default-features = false, features = ["system", "disk"] }

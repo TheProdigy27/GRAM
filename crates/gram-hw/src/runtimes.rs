@@ -4,14 +4,14 @@
 //! En cours d'exécution = processus présent, ou API locale d'Ollama qui répond.
 
 use gram_core::{RuntimeStatus, RuntimesStatus};
+use gram_ollama::ollama_addr;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
-const OLLAMA_DEFAULT_PORT: u16 = 11434;
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(300);
 const IO_TIMEOUT: Duration = Duration::from_millis(800);
 
@@ -102,6 +102,8 @@ fn detect_with(env: &Env, procs: &Processes, ollama_version: Option<String>) -> 
         ollama,
         lm_studio,
         llama_cpp,
+        // Rempli par l'application (API locale d'Ollama, `gram-ollama`).
+        ollama_models: Vec::new(),
     }
 }
 
@@ -164,46 +166,6 @@ fn running_processes(names: &[String]) -> Processes {
         .collect()
 }
 
-/// Adresse de l'API Ollama d'après `OLLAMA_HOST` (même syntaxe qu'Ollama : `hôte:port`,
-/// `http://hôte:port`, `:port`…). `0.0.0.0` et `localhost` deviennent `127.0.0.1`.
-fn ollama_addr(host: Option<&str>) -> Option<SocketAddr> {
-    let raw = host.map(str::trim).filter(|h| !h.is_empty()).unwrap_or("");
-    let (scheme, rest) = raw.split_once("://").unwrap_or(("http", raw));
-    if !scheme.eq_ignore_ascii_case("http") {
-        return None; // HTTPS : hors de portée d'une simple sonde locale.
-    }
-    let authority = rest.split('/').next().unwrap_or("");
-    let (h, port) = split_host_port(authority)?;
-    let port = port.unwrap_or(if raw.contains("://") && !authority.contains(':') {
-        80
-    } else {
-        OLLAMA_DEFAULT_PORT
-    });
-    let h = match h {
-        "" | "0.0.0.0" | "localhost" => "127.0.0.1",
-        "::" => "::1",
-        other => other,
-    };
-    (h, port).to_socket_addrs().ok()?.next()
-}
-
-/// `hôte:port`, `[ipv6]:port`, `hôte`, `:port`.
-fn split_host_port(authority: &str) -> Option<(&str, Option<u16>)> {
-    if let Some(rest) = authority.strip_prefix('[') {
-        let (h, after) = rest.split_once(']')?;
-        let port = match after.strip_prefix(':') {
-            Some(p) => Some(p.parse().ok()?),
-            None => None,
-        };
-        return Some((h, port));
-    }
-    match authority.rsplit_once(':') {
-        Some((h, p)) if !h.contains(':') => Some((h, Some(p.parse().ok()?))),
-        Some(_) => Some((authority, None)), // IPv6 sans crochets ni port
-        None => Some((authority, None)),
-    }
-}
-
 /// `GET /api/version` sur l'API locale d'Ollama.
 fn ollama_version(addr: SocketAddr) -> Option<String> {
     let mut stream = TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT).ok()?;
@@ -241,33 +203,7 @@ fn parse_version_response(response: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, TcpListener};
-
-    fn addr(h: Option<&str>) -> Option<SocketAddr> {
-        ollama_addr(h)
-    }
-
-    fn local(port: u16) -> Option<SocketAddr> {
-        Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port))
-    }
-
-    #[test]
-    fn adresse_ollama() {
-        assert_eq!(addr(None), local(11434));
-        assert_eq!(addr(Some("")), local(11434));
-        assert_eq!(addr(Some("0.0.0.0")), local(11434));
-        assert_eq!(addr(Some("0.0.0.0:8080")), local(8080));
-        assert_eq!(addr(Some(":11435")), local(11435));
-        assert_eq!(addr(Some("127.0.0.1:11434")), local(11434));
-        assert_eq!(addr(Some("http://localhost:11434/")), local(11434));
-        assert_eq!(addr(Some("http://127.0.0.1")), local(80));
-        assert_eq!(
-            addr(Some("[::1]:11434")),
-            Some(SocketAddr::new(IpAddr::V6(Ipv6Addr::LOCALHOST), 11434))
-        );
-        assert_eq!(addr(Some("https://ollama.example")), None);
-        assert_eq!(addr(Some("127.0.0.1:pasunport")), None);
-    }
+    use std::net::TcpListener;
 
     #[test]
     fn reponse_version() {

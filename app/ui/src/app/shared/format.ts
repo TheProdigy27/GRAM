@@ -83,6 +83,17 @@ export function decimal(x: number, digits = 2): string {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: digits }).format(x);
 }
 
+/**
+ * Écart relatif → « +9 % », « −12 % », « 0 % » ; « — » s'il est inconnu. Le signe moins est
+ * le vrai signe typographique (U+2212).
+ */
+export function signedPercent(x: number | null): string {
+  if (x === null || !Number.isFinite(x)) return '—';
+  const pct = Math.round(x * 100);
+  if (pct === 0) return '0 %';
+  return `${pct > 0 ? '+' : '−'}${integer.format(Math.abs(pct))} %`;
+}
+
 /** Date ISO → « il y a 2 heures », « hier », « il y a 3 mois ». */
 export function relativeTime(iso: string, now: number = Date.now()): string {
   const seconds = (new Date(iso).getTime() - now) / 1000;

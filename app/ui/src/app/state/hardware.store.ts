@@ -73,6 +73,15 @@ export class HardwareStore {
     await this.setOverrides({ ...o, simulatedGpu: null, simulatedRamTotal: null });
   }
 
+  /**
+   * Nouvelle détection des runtimes et des modèles installés dans Ollama (après un
+   * `ollama pull`, ou au lancement d'Ollama) ; le classement et la fiche sont recalculés.
+   */
+  async refreshRuntimes(): Promise<void> {
+    await this.loadRuntimes();
+    this.version.update((v) => v + 1);
+  }
+
   private async loadRuntimes(): Promise<void> {
     try {
       this.runtimes.set(await this.tauri.detectRuntimes());

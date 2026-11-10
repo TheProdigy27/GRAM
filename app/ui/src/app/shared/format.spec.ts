@@ -7,6 +7,7 @@ import {
   params,
   relativeTime,
   roundSize,
+  signedPercent,
   stepToCtx,
   tokS,
 } from './format';
@@ -14,6 +15,16 @@ import {
 /** Intl met une espace fine insécable entre les milliers : on la normalise pour comparer. */
 const plain = (s: string) => s.replace(/[  ]/g, ' ');
 const GIB = 2 ** 30;
+
+describe('signedPercent', () => {
+  it('écart signé, arrondi au pour cent', () => {
+    expect(signedPercent(0.093)).toBe('+9 %');
+    expect(signedPercent(-0.124)).toBe('−12 %');
+    expect(signedPercent(0.004)).toBe('0 %');
+    expect(signedPercent(null)).toBe('—');
+    expect(signedPercent(Number.NaN)).toBe('—');
+  });
+});
 
 describe('fileSize', () => {
   it('Go au-delà de 1 Go, Mo en dessous', () => {

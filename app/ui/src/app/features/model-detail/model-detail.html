@@ -111,6 +111,14 @@
                         >star</mat-icon
                       >
                     }
+                    @if (v.ollamaModel) {
+                      <mat-icon
+                        class="installed"
+                        data-testid="variant-installed"
+                        [matTooltip]="'Installée dans Ollama : ' + v.ollamaModel"
+                        >download_done</mat-icon
+                      >
+                    }
                     @if (!v.variant.exact) {
                       <span class="approx" matTooltip="Taille estimée (fichiers pas encore lus)"
                         >≈</span
@@ -180,6 +188,10 @@
             </ul>
           }
         </section>
+      }
+
+      @if (selected(); as v) {
+        <app-measure-panel [detail]="d" [variant]="v" />
       }
 
       @if (d.model.alternatives.length > 0) {

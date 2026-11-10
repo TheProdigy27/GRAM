@@ -7,6 +7,7 @@
 //! `cargo test` régénère leurs équivalents TypeScript dans
 //! `app/ui/src/app/core/generated/` (voir `.cargo/config.toml`).
 
+pub mod calibration;
 pub mod catalog;
 pub mod estimate;
 pub mod export;
@@ -19,6 +20,7 @@ pub mod runtime;
 pub mod score;
 pub mod settings;
 
+pub use calibration::{Calibration, LoadedModel, MeasureRequest, Measurement, OllamaRun};
 pub use catalog::{
     DataSource, DataSourceKind, RateLimitInfo, SyncPhase, SyncProgress, SyncSummary,
 };
@@ -37,7 +39,7 @@ pub use rank::{
     DetailRequest, ModelDetail, RankContext, RankItem, RankRequest, RankResponse, VariantDetail,
     model_detail, rank,
 };
-pub use runtime::{RuntimeStatus, RuntimesStatus};
+pub use runtime::{OllamaModel, RuntimeStatus, RuntimesStatus};
 pub use score::{Curation, Score, ScoreWeights};
 pub use settings::{Settings, UseCaseProfile, UseCaseProfiles};
 

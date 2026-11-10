@@ -103,7 +103,7 @@ pub fn run(args: EstimateArgs) -> Result<()> {
 
 /// Le modèle demandé : correspondance exacte (dépôt, nom ou modèle de base) d'abord, puis
 /// sous-chaîne ; à égalité, les modèles détaillés puis les plus téléchargés.
-fn find<'a>(
+pub(crate) fn find<'a>(
     models: &'a [ModelEntry],
     query: &str,
 ) -> Result<(&'a ModelEntry, Vec<&'a ModelEntry>)> {

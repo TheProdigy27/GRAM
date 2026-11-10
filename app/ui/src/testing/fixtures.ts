@@ -3,10 +3,12 @@
 // Valeurs inspirées de la machine de développement (Ryzen 7 9800X3D, RTX 5080, 64 Go DDR5).
 
 import type { CacheInfo } from '../app/core/generated/CacheInfo';
+import type { Calibration } from '../app/core/generated/Calibration';
 import type { Estimate } from '../app/core/generated/Estimate';
 import type { HardwareOptions } from '../app/core/generated/HardwareOptions';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
 import type { LaunchPlan } from '../app/core/generated/LaunchPlan';
+import type { Measurement } from '../app/core/generated/Measurement';
 import type { MemoryBudget } from '../app/core/generated/MemoryBudget';
 import type { ModelDetail } from '../app/core/generated/ModelDetail';
 import type { ModelEntry } from '../app/core/generated/ModelEntry';
@@ -74,6 +76,14 @@ export const RUNTIMES: RuntimesStatus = {
   ollama: { installed: true, running: true, path: 'C:\\Ollama\\ollama.exe', version: '0.13.1' },
   lmStudio: { installed: false, running: false, path: null, version: null },
   llamaCpp: { installed: false, running: false, path: null, version: null },
+  ollamaModels: [
+    {
+      name: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+      repoId: 'Qwen/Qwen3-8B-GGUF',
+      quant: 'Q4_K_M',
+      size: 4.7 * GIB,
+    },
+  ],
 };
 
 export const SETTINGS: Settings = {
@@ -219,6 +229,8 @@ export interface ItemOptions extends EstimateOptions {
   detailed?: boolean;
   vision?: boolean;
   gated?: boolean;
+  /** Quantifications installées dans Ollama. */
+  installed?: string[];
 }
 
 export function makeItem(name: string, o: ItemOptions = {}): RankItem {
@@ -252,6 +264,7 @@ export function makeItem(name: string, o: ItemOptions = {}): RankItem {
     score: makeScore(o.score ?? 80),
     slow: false,
     explanation: `Tient entièrement en VRAM (6,3 / 14,3 Go) en ${o.quant ?? 'Q4_K_M'} · ~95 tok/s estimés · contexte 40k possible`,
+    installed: o.installed ?? [],
   };
 }
 
@@ -283,6 +296,7 @@ export const RANKING: RankResponse = makeResponse([
     tokS: 95,
     quant: 'Q8_0',
     size: 8.1 * GIB,
+    installed: ['Q4_K_M'],
   }),
   makeItem('Gemma-3-12B', { score: 84, tokS: 62, vision: true, gated: true }),
   makeItem('Mistral-Small-24B', {
@@ -331,6 +345,8 @@ function variant(
     withinSize: true,
     explanation: `Tient entièrement en VRAM en ${label}`,
     launch: ollamaPlan(repoId, label, estimate.ctxUsed),
+    ollamaModel: null,
+    ollamaPull: `ollama pull hf.co/${repoId}:${label}`,
   };
 }
 
@@ -359,8 +375,10 @@ export const MODEL: ModelEntry = {
 
 export function makeDetail(): ModelDetail {
   const repo = MODEL.repoId;
+  const q4 = variant(repo, 'Q4_K_M', 4.7, makeEstimate({ weights: 4.7 * GIB }), 82);
+  q4.ollamaModel = 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M';
   const variants = [
-    variant(repo, 'Q4_K_M', 4.7, makeEstimate({ weights: 4.7 * GIB }), 82),
+    q4,
     variant(repo, 'Q8_0', 8.1, makeEstimate({ weights: 8.1 * GIB, tokS: 62 }), 86),
     variant(
       repo,
@@ -383,6 +401,54 @@ export function makeDetail(): ModelDetail {
     notes: [],
   };
 }
+
+/** Mesure de Q4_K_M (fiche `makeDetail`) : ~95 tok/s estimés, 83 mesurés. */
+export const MEASUREMENT: Measurement = {
+  repoId: 'Qwen/Qwen3-8B-GGUF',
+  displayName: 'Qwen3-8B',
+  label: 'Q4_K_M',
+  ollamaModel: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+  ctx: 8192,
+  measuredAt: '2026-11-10T20:00:00Z',
+  tokS: 83.0,
+  evalCount: 128,
+  promptTokS: 1476,
+  loadMs: 2731,
+  memTotal: 6.45 * GIB,
+  memVram: 6.45 * GIB,
+  ctxLoaded: 8192,
+  estimatedTokS: 95,
+  estimatedMode: { kind: 'gpu' },
+  estimatedMemTotal: 6.3 * GIB,
+  estimatedMemVram: 6.3 * GIB,
+  tokSError: 0.1446,
+  memError: -0.023,
+  activeBytes: 4.7 * GIB,
+  gpuShare: 1,
+  reliable: true,
+  notes: [],
+};
+
+export const CALIBRATION_EMPTY: Calibration = {
+  measurements: [],
+  used: 0,
+  currentEfficiency: 0.55,
+  currentTokenOverheadMs: 1.5,
+  efficiency: null,
+  tokenOverheadMs: null,
+  changed: false,
+  summary:
+    'Aucune mesure exploitable : mesurer une quantification déjà installée dans Ollama, depuis la fiche du modèle.',
+};
+
+export const CALIBRATION: Calibration = {
+  ...CALIBRATION_EMPTY,
+  measurements: [MEASUREMENT],
+  used: 1,
+  efficiency: 0.48,
+  changed: true,
+  summary: 'D’après 1 mesure : efficacité 0,48 (actuelle 0,55).',
+};
 
 export const SYNC_SUMMARY: SyncSummary = {
   source: { kind: 'cache', fetchedAt: '2026-11-09T18:00:00Z' },

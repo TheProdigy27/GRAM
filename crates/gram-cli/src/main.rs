@@ -2,6 +2,7 @@
 
 mod estimate;
 mod hw;
+mod ollama;
 mod rank;
 mod sync;
 
@@ -97,6 +98,25 @@ enum Command {
         #[arg(long)]
         json: bool,
         /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+    },
+    /// Modèles installés dans Ollama, rapprochés du catalogue ; avec `--measure`, mesure réelle
+    /// d'une quantification installée face à l'estimation (Ollama doit tourner).
+    Ollama {
+        /// Modèle du catalogue à mesurer (dépôt, nom ou modèle de base).
+        #[arg(long)]
+        measure: Option<String>,
+        /// Quantification à mesurer (défaut : la première installée pour ce modèle).
+        #[arg(long, requires = "measure")]
+        quant: Option<String>,
+        /// Contexte de la mesure, en tokens.
+        #[arg(long, default_value_t = 8192, requires = "measure")]
+        ctx: u32,
+        /// Sortie JSON.
+        #[arg(long)]
+        json: bool,
+        /// Dossier du cache (défaut : %LOCALAPPDATA%r.gram.desktop\cache).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -229,6 +249,19 @@ fn main() -> Result<()> {
             json,
             cache_dir,
         }),
+        Command::Ollama {
+            measure,
+            quant,
+            ctx,
+            json,
+            cache_dir,
+        } => ollama::run(ollama::OllamaArgs {
+            measure,
+            quant,
+            ctx,
+            json,
+            cache_dir,
+        }),
         Command::Snapshot { output, cache_dir } => sync::snapshot(&output, cache_dir),
     }
 }
@@ -241,6 +274,42 @@ mod tests {
     #[test]
     fn definition_cli_valide() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn parse_ollama() {
+        let cli = Cli::try_parse_from([
+            "gram-cli",
+            "ollama",
+            "--measure",
+            "Qwen3-8B",
+            "--quant",
+            "Q4_K_M",
+            "--ctx",
+            "4096",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Ollama {
+                measure,
+                quant,
+                ctx,
+                json,
+                ..
+            } => {
+                assert_eq!(measure.as_deref(), Some("Qwen3-8B"));
+                assert_eq!(quant.as_deref(), Some("Q4_K_M"));
+                assert_eq!((ctx, json), (4096, false));
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
+        match Cli::try_parse_from(["gram-cli", "ollama"]).unwrap().command {
+            Command::Ollama { measure, ctx, .. } => assert_eq!((measure, ctx), (None, 8192)),
+            _ => panic!("sous-commande inattendue"),
+        }
+        // La quantification et le contexte n'ont de sens qu'avec `--measure`.
+        assert!(Cli::try_parse_from(["gram-cli", "ollama", "--quant", "Q4_K_M"]).is_err());
+        assert!(Cli::try_parse_from(["gram-cli", "ollama", "--ctx", "4096"]).is_err());
     }
 
     #[test]

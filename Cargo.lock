@@ -1790,6 +1790,7 @@ dependencies = [
  "gram-core",
  "gram-hub",
  "gram-hw",
+ "gram-ollama",
  "keyring",
  "serde",
  "serde_json",
@@ -1815,6 +1816,7 @@ dependencies = [
  "gram-core",
  "gram-hub",
  "gram-hw",
+ "gram-ollama",
  "serde",
  "serde_json",
  "tokio",
@@ -1856,6 +1858,7 @@ name = "gram-hw"
 version = "0.1.0"
 dependencies = [
  "gram-core",
+ "gram-ollama",
  "nvml-wrapper",
  "serde",
  "serde_json",
@@ -1863,6 +1866,19 @@ dependencies = [
  "tracing",
  "windows",
  "wmi",
+]
+
+[[package]]
+name = "gram-ollama"
+version = "0.1.0"
+dependencies = [
+ "gram-core",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

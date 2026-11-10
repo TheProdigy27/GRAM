@@ -1,7 +1,8 @@
 //! Fichiers JSON de l'application, dans `%LOCALAPPDATA%\fr.gram.desktop\` :
 //!
 //! - `settings.json` : paramètres utilisateur (§12), sans le token Hugging Face ;
-//! - `corrections.json` : corrections manuelles du matériel (§6.6), sans la simulation.
+//! - `corrections.json` : corrections manuelles du matériel (§6.6), sans la simulation ;
+//! - `measurements.json` : mesures réelles faites avec Ollama (phase 7).
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -10,6 +11,7 @@ use std::path::Path;
 
 pub const SETTINGS_FILE: &str = "settings.json";
 pub const CORRECTIONS_FILE: &str = "corrections.json";
+pub const MEASUREMENTS_FILE: &str = "measurements.json";
 
 /// Contenu enregistré ; fichier absent, illisible ou invalide : valeur par défaut. Un fichier
 /// invalide n'est pas écrasé avant le prochain enregistrement. `what` nomme le fichier dans

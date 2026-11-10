@@ -1,0 +1,26 @@
+[package]
+name = "gram-ollama"
+description = "API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# Faux serveur Ollama (`testing`), pour les tests de l'application.
+test-support = []
+
+[dependencies]
+gram-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+# HTTP simple vers localhost : ni TLS, ni compression.
+reqwest.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+
+[lints]
+workspace = true

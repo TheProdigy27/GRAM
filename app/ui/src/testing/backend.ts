@@ -6,8 +6,10 @@ import type { InvokeArgs } from '@tauri-apps/api/core';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
 import {
   CACHE_INFO,
+  CALIBRATION_EMPTY,
   HARDWARE,
   HARDWARE_OPTIONS,
+  MEASUREMENT,
   RANKING,
   RUNTIMES,
   SETTINGS,
@@ -49,6 +51,10 @@ const DEFAULTS: Record<string, Handler> = {
     `C:\\Users\\x\\Documents\\classement-gram.${a['format'] as string}`,
   sync_catalog: () => SYNC_SUMMARY,
   get_model_detail: () => makeDetail(),
+  get_calibration: () => CALIBRATION_EMPTY,
+  ollama_measure: () => MEASUREMENT,
+  apply_calibration: () => ({ ...SETTINGS, estimate: { ...SETTINGS.estimate, efficiency: 0.48 } }),
+  clear_measurements: () => CALIBRATION_EMPTY,
   'plugin:clipboard-manager|write_text': () => null,
   'plugin:opener|open_url': () => null,
 };

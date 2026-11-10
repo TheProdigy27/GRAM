@@ -11,6 +11,8 @@ pub enum CommandError {
     Message(String),
     #[error(transparent)]
     Hub(#[from] gram_hub::HubError),
+    #[error(transparent)]
+    Ollama(#[from] gram_ollama::OllamaError),
     #[error("tâche interrompue : {0}")]
     Task(#[from] tauri::Error),
 }

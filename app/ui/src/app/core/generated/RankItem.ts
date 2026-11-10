@@ -27,4 +27,8 @@ slow: boolean,
 /**
  * « Tient entièrement en VRAM (6,7 / 10,8 Go) en Q5_K_M · ~38 tok/s estimés · … »
  */
-explanation: string, };
+explanation: string, 
+/**
+ * Quantifications de ce modèle déjà installées dans Ollama (depuis un de ses dépôts).
+ */
+installed: Array<string>, };
