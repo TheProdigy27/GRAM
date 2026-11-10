@@ -1,0 +1,78 @@
+<section class="banner" aria-label="Matériel détecté">
+  @if (profile()) {
+    <dl class="grid">
+      @for (row of rows(); track row.key) {
+        <div class="item" [attr.data-testid]="'hw-' + row.key">
+          <dt>{{ row.key }}</dt>
+          <dd [attr.title]="row.title">
+            @for (part of row.parts; track $index) {
+              @if (!$first) {
+                <span class="sep" aria-hidden="true">·</span>
+              }
+              <span>{{ part.text }}</span>
+              @if (part.source) {
+                <span class="source" [matTooltip]="'Origine de la valeur : ' + part.source"
+                  >({{ part.source }})</span
+                >
+              }
+            }
+            @if (row.note) {
+              <span class="source" [matTooltip]="row.noteTooltip">{{ row.note }}</span>
+            }
+          </dd>
+        </div>
+      }
+      <div class="item" data-testid="hw-runtimes">
+        <dt>Runtimes</dt>
+        <dd>
+          @if (runtimes(); as list) {
+            @for (r of list; track r.label) {
+              <span class="runtime" [class.installed]="r.installed" [matTooltip]="r.tooltip">
+                <mat-icon aria-hidden="true">{{
+                  r.running
+                    ? 'play_circle'
+                    : r.installed
+                      ? 'check_circle'
+                      : 'radio_button_unchecked'
+                }}</mat-icon>
+                {{ r.label }}
+              </span>
+            }
+          } @else {
+            <span class="muted">détection…</span>
+          }
+        </dd>
+      </div>
+      <div class="item" data-testid="hw-usable">
+        <dt>Utilisable</dt>
+        <dd
+          matTooltip="Mémoire réellement disponible pour un modèle : VRAM moins la marge de sécurité et l’occupation actuelle, part de la RAM réglée dans les paramètres."
+        >
+          {{ usable() ?? '…' }}
+        </dd>
+      </div>
+    </dl>
+    <div class="extras">
+      @if (simulated()) {
+        <span class="tag simulation">Simulation</span>
+      }
+      @if (warnings()) {
+        <mat-icon
+          class="warning"
+          tabindex="0"
+          aria-label="Avertissements de détection"
+          matTooltipClass="gram-multiline-tooltip"
+          [matTooltip]="warnings()"
+          >warning</mat-icon
+        >
+      }
+    </div>
+  } @else if (error()) {
+    <p class="error" role="alert">Détection du matériel impossible : {{ error() }}</p>
+  } @else {
+    <div class="loading">
+      <span>Analyse du matériel…</span>
+      <mat-progress-bar mode="indeterminate" aria-label="Analyse du matériel en cours" />
+    </div>
+  }
+</section>

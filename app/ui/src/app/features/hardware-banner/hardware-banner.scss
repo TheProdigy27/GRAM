@@ -1,0 +1,90 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 4px 24px;
+  margin: 0;
+}
+
+.item {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  align-items: baseline;
+}
+
+dt {
+  flex: 0 0 76px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+dd {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sep {
+  margin: 0 6px;
+  color: var(--mat-sys-outline);
+}
+
+.source {
+  margin-left: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9em;
+}
+
+.runtime {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 12px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &.installed {
+    color: var(--mat-sys-on-surface);
+
+    mat-icon {
+      color: var(--gram-ok);
+    }
+  }
+}
+
+.extras {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.warning {
+  color: var(--gram-warn);
+}
+
+.loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

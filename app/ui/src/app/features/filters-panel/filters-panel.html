@@ -1,0 +1,93 @@
+<aside class="filters" aria-label="Filtres du classement">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Usage</mat-label>
+    <mat-select
+      data-testid="filter-use-case"
+      [value]="ranking.useCase()"
+      (selectionChange)="onUseCase($event.value)"
+    >
+      @for (u of useCases; track u.value) {
+        <mat-option [value]="u.value">{{ u.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <div class="field">
+    <div class="field-label">
+      <span id="ctx-label">Contexte</span>
+      <strong data-testid="ctx-value">{{ ctxLabel() }}</strong>
+    </div>
+    <mat-slider min="0" [max]="maxStep" step="1" discrete showTickMarks [displayWith]="stepLabel">
+      <input
+        matSliderThumb
+        aria-labelledby="ctx-label"
+        [value]="ctxStep()"
+        (valueChange)="onCtxStep($event)"
+      />
+    </mat-slider>
+    <div class="scale" aria-hidden="true"><span>2k</span><span>128k</span></div>
+    @if (ranking.ctx() !== null) {
+      <button mat-button class="reset" type="button" (click)="ranking.setCtx(null)">
+        Contexte par défaut
+      </button>
+    }
+  </div>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Runtime</mat-label>
+    <mat-select
+      data-testid="filter-runtime"
+      [value]="ranking.effectiveRuntime()"
+      (selectionChange)="onRuntime($event.value)"
+    >
+      <mat-select-trigger>{{ runtimeName() }}</mat-select-trigger>
+      @for (r of runtimes(); track r.value) {
+        <mat-option [value]="r.value">
+          {{ r.label }}
+          @if (r.hint) {
+            <span class="option-hint">· {{ r.hint }}</span>
+          }
+        </mat-option>
+      }
+    </mat-select>
+    @if (runtimeHint()) {
+      <mat-hint>{{ runtimeHint() }}</mat-hint>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Taille max</mat-label>
+    <input
+      #maxSize
+      matInput
+      type="number"
+      min="1"
+      step="1"
+      inputmode="decimal"
+      placeholder="aucune"
+      data-testid="filter-max-size"
+      (input)="onMaxSize(maxSize.value)"
+    />
+    <span matTextSuffix>Go</span>
+    @if (ranking.maxSizeGb() !== null) {
+      <button
+        matIconSuffix
+        mat-icon-button
+        type="button"
+        aria-label="Retirer la taille maximale"
+        (click)="maxSize.value = ''; onMaxSize('')"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
+    }
+    <mat-hint>Fichiers de la quantification</mat-hint>
+  </mat-form-field>
+
+  <mat-checkbox
+    data-testid="filter-too-big"
+    [checked]="ranking.showTooBig()"
+    (change)="ranking.setShowTooBig($event.checked)"
+  >
+    Afficher les modèles trop gros
+  </mat-checkbox>
+</aside>

@@ -5,7 +5,9 @@
 }
 
 .toolbar {
+  flex: none;
   gap: 12px;
+  --mat-toolbar-standard-height: 56px;
 }
 
 .brand {
@@ -18,15 +20,32 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.content {
-  padding: 24px;
-  max-width: 640px;
+.spacer {
+  flex: 1;
 }
 
-.error {
-  color: var(--mat-sys-error);
+.body {
+  flex: 1;
+  min-height: 0;
 }
 
-.versions {
-  color: var(--mat-sys-on-surface-variant);
+.workspace {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.filters {
+  flex: 0 0 260px;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.detail-drawer {
+  width: min(600px, 60vw);
+  border-left: 1px solid var(--mat-sys-outline-variant);
 }

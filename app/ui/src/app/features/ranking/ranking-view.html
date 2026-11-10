@@ -1,0 +1,124 @@
+<section class="ranking" aria-label="Classement des modèles">
+  <div class="progress-slot">
+    @if (ranking.loading()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Calcul du classement" />
+    }
+  </div>
+
+  @if (ranking.error(); as message) {
+    <div class="error-box" role="alert">
+      <mat-icon aria-hidden="true">error</mat-icon>
+      <span>Classement impossible : {{ message }}</span>
+      <button mat-button type="button" (click)="ranking.reload()">Réessayer</button>
+    </div>
+  }
+
+  @if (response(); as r) {
+    @if (r.notes.length > 0) {
+      <details class="notes">
+        <summary>
+          <mat-icon aria-hidden="true">info</mat-icon>
+          <span>{{ r.notes[0] }}</span>
+          @if (r.notes.length > 1) {
+            <span class="more">+{{ r.notes.length - 1 }}</span>
+          }
+        </summary>
+        <ul>
+          @for (note of r.notes.slice(1); track $index) {
+            <li>{{ note }}</li>
+          }
+        </ul>
+      </details>
+    }
+
+    <header class="section-head">
+      <h2>Exécutables</h2>
+      <span class="muted" data-testid="count-items"
+        >{{ r.totalItems }} modèle{{ r.totalItems > 1 ? 's' : '' }} · runtime
+        {{ runtimeName() }}</span
+      >
+    </header>
+    @if (r.items.length > 0) {
+      <app-ranking-table
+        data-testid="table-items"
+        label="Modèles exécutables"
+        [items]="r.items"
+        [selected]="detail.repoId()"
+        (openModel)="open($event)"
+      />
+      @if (moreItems() > 0) {
+        <button mat-stroked-button class="more-button" type="button" (click)="ranking.showMore()">
+          Voir plus ({{ moreItems() }} restants)
+        </button>
+      }
+    } @else {
+      <p class="empty">
+        Aucun modèle ne tient en mémoire assez vite avec ces filtres. Essayer un contexte plus
+        court, ou regarder la section « Exécutable mais lent ».
+      </p>
+    }
+
+    @if (r.totalSlow > 0) {
+      <mat-expansion-panel class="section-panel" data-testid="slow-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Exécutable mais lent ({{ r.totalSlow }})</mat-panel-title>
+          <mat-panel-description>sous {{ slowThreshold() }} tok/s estimés</mat-panel-description>
+        </mat-expansion-panel-header>
+        <ng-template matExpansionPanelContent>
+          <app-ranking-table
+            label="Modèles exécutables mais lents"
+            [items]="r.slow"
+            [selected]="detail.repoId()"
+            (openModel)="open($event)"
+          />
+          @if (moreSlow() > 0) {
+            <button
+              mat-stroked-button
+              class="more-button"
+              type="button"
+              (click)="ranking.showMore()"
+            >
+              Voir plus ({{ moreSlow() }} restants)
+            </button>
+          }
+        </ng-template>
+      </mat-expansion-panel>
+    }
+
+    @if (r.tooBigCount > 0) {
+      @if (r.tooBig.length > 0) {
+        <mat-expansion-panel class="section-panel" data-testid="too-big-panel" expanded>
+          <mat-expansion-panel-header>
+            <mat-panel-title>Trop gros ({{ r.tooBigCount }})</mat-panel-title>
+            <mat-panel-description>du plus proche de tenir au plus éloigné</mat-panel-description>
+          </mat-expansion-panel-header>
+          <ng-template matExpansionPanelContent>
+            <app-ranking-table
+              label="Modèles trop gros"
+              [items]="r.tooBig"
+              [selected]="detail.repoId()"
+              (openModel)="open($event)"
+            />
+            @if (moreTooBig() > 0) {
+              <button
+                mat-stroked-button
+                class="more-button"
+                type="button"
+                (click)="ranking.showMore()"
+              >
+                Voir plus ({{ moreTooBig() }} restants)
+              </button>
+            }
+          </ng-template>
+        </mat-expansion-panel>
+      } @else {
+        <p class="muted too-big-hint">
+          {{ r.tooBigCount }} modèle{{ r.tooBigCount > 1 ? 's' : '' }} trop gros pour cette machine.
+          <button mat-button type="button" (click)="ranking.setShowTooBig(true)">Afficher</button>
+        </p>
+      }
+    }
+  } @else if (!ranking.error()) {
+    <p class="empty">Calcul du classement…</p>
+  }
+</section>

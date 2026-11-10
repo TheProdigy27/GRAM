@@ -24,6 +24,10 @@ pub fn run() {
         .init();
 
     tauri::Builder::default()
+        // Bouton « Copier » des commandes, pages Hugging Face ouvertes dans le navigateur
+        // (permissions restreintes dans capabilities/default.json).
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(AppState::production())
         .setup(|app| {
             tauri::async_runtime::spawn(state::startup(app.handle().clone()));

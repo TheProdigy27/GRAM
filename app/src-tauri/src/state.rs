@@ -18,7 +18,9 @@ use gram_hub::{Cache, HfToken};
 use gram_hw::RawHardware;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Instant;
 use tauri::{AppHandle, Manager, Runtime};
 
 type Collect = Arc<dyn Fn() -> RawHardware + Send + Sync>;
@@ -67,6 +69,9 @@ pub struct AppState {
     enriched: Mutex<HashSet<String>>,
     /// Une seule synchronisation à la fois.
     pub(crate) sync_lock: tokio::sync::Mutex<()>,
+    /// Création de l'état (≈ lancement de l'application) et premier classement servi.
+    started: Instant,
+    first_rank_served: AtomicBool,
 }
 
 impl AppState {
@@ -89,6 +94,8 @@ impl AppState {
             last_rank: Mutex::new(RankRequest::default()),
             enriched: Mutex::new(HashSet::new()),
             sync_lock: tokio::sync::Mutex::new(()),
+            started: Instant::now(),
+            first_rank_served: AtomicBool::new(false),
         }
     }
 
@@ -270,6 +277,15 @@ impl AppState {
 
     pub fn last_rank(&self) -> RankRequest {
         self.last_rank.lock().expect("verrou").clone()
+    }
+
+    /// Journalise, une seule fois, le délai entre le lancement et le premier classement servi
+    /// (objectif : moins de 5 s avec le cache).
+    pub fn note_rank_served(&self) {
+        if !self.first_rank_served.swap(true, Ordering::Relaxed) {
+            let ms = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
+            tracing::info!(ms, "premier classement servi depuis le lancement");
+        }
     }
 }
 

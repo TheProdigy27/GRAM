@@ -1,0 +1,82 @@
+.ranking-table {
+  width: 100%;
+  --mat-table-row-item-container-height: 48px;
+  --mat-table-header-container-height: 40px;
+}
+
+.mat-mdc-row {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+
+  &.selected {
+    background: var(--mat-sys-secondary-container);
+  }
+}
+
+.mat-mdc-cell,
+.mat-mdc-header-cell {
+  padding: 0 8px;
+}
+
+.col-rank {
+  width: 36px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.col-model {
+  max-width: 0;
+  width: 40%;
+}
+
+.model-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.model-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.flag {
+  flex: none;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.approx {
+  flex: none;
+  color: var(--gram-warn);
+  font-weight: 600;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.score {
+  font-weight: 600;
+}

@@ -30,6 +30,10 @@ thiserror.workspace = true
 tokio.workspace = true
 # Token Hugging Face dans le Gestionnaire d'identifiants Windows.
 keyring = "4.2.0"
+# Pages Hugging Face ouvertes dans le navigateur (fiche détail).
+tauri-plugin-opener = "2.7.2"
+# Bouton « Copier » des commandes de lancement.
+tauri-plugin-clipboard-manager = "2.5.0"
 
 [lints]
 workspace = true

@@ -1,0 +1,47 @@
+<footer class="status" role="status">
+  <span class="item" data-testid="data-source" [matTooltip]="sourceTooltip()">
+    <mat-icon aria-hidden="true">database</mat-icon>
+    Données : {{ source() ?? '…' }}
+  </span>
+
+  @if (counts(); as c) {
+    <span class="item" data-testid="model-counts">{{ c }}</span>
+  }
+
+  @if (catalog.syncing()) {
+    <span class="item sync" data-testid="sync-progress">
+      <span>{{ progress()?.label ?? 'Synchronisation…' }}</span>
+      <mat-progress-bar
+        [mode]="progress() ? 'determinate' : 'indeterminate'"
+        [value]="progress()?.pct ?? 0"
+        aria-label="Synchronisation du catalogue"
+      />
+    </span>
+  }
+
+  @if (catalog.error(); as message) {
+    <span class="item error" role="alert">Synchronisation impossible : {{ message }}</span>
+  }
+
+  @if (syncWarnings()) {
+    <mat-icon
+      class="warning"
+      tabindex="0"
+      aria-label="Remarques de la synchronisation"
+      matTooltipClass="gram-multiline-tooltip"
+      [matTooltip]="syncWarnings()"
+      >warning</mat-icon
+    >
+  }
+
+  <span class="spacer"></span>
+
+  @if (quota(); as q) {
+    <span class="item" [matTooltip]="quotaTooltip()">{{ q }}</span>
+  }
+  <span
+    class="item muted"
+    matTooltip="La vitesse et la mémoire sont des estimations, à ±30 % près. La qualité est une heuristique (taille, quantification, récence), pas un benchmark."
+    >Estimations ±30 %</span
+  >
+</footer>

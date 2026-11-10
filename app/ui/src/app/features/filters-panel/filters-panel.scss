@@ -1,0 +1,43 @@
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: var(--mat-sys-body-medium);
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.reset {
+  align-self: flex-start;
+}
+
+.option-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9em;
+}

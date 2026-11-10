@@ -3,5 +3,12 @@
   "identifier": "default",
   "description": "Permissions de la fenêtre principale (n'ajouter que les plugins réellement utilisés).",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://huggingface.co/*" }]
+    }
+  ]
 }

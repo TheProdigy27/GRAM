@@ -22,6 +22,8 @@
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
+    "@tauri-apps/plugin-opener": "^2.7.2",
     "material-symbols": "^0.48.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

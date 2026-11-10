@@ -21,6 +21,15 @@ html {
       density: 0,
     )
   );
+
+  // Couleurs propres à GRAM, lisibles en clair comme en sombre.
+  --gram-ok: light-dark(#1e7b3a, #7fd99a);
+  --gram-ok-bg: light-dark(#d5f2dd, #123d22);
+  --gram-warn: light-dark(#9a5300, #ffb870);
+  --gram-warn-bg: light-dark(#ffe2c2, #4a2a05);
+  --gram-neutral: light-dark(#4b4f56, #c4c7ce);
+  --gram-neutral-bg: light-dark(#e3e5e9, #383b41);
+  --gram-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
 }
 
 body {
@@ -29,4 +38,86 @@ body {
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
+}
+
+code,
+.mono {
+  font-family: var(--gram-mono);
+  font-size: 0.92em;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  color: var(--mat-sys-error);
+}
+
+.error-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--mat-sys-on-error-container);
+  background: var(--mat-sys-error-container);
+}
+
+// Étiquettes (cas d'usage, « Simulation »).
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-secondary-container);
+  background: var(--mat-sys-secondary-container);
+
+  &.simulation {
+    color: var(--gram-warn);
+    background: var(--gram-warn-bg);
+  }
+}
+
+// Badge du mode d'exécution (shared/mode-badge.ts) : GPU vert, Hybride orange, CPU gris.
+.mode-badge {
+  display: inline-block;
+  min-width: 52px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  text-align: center;
+  font: var(--mat-sys-label-medium);
+  white-space: nowrap;
+
+  &.mode-gpu {
+    color: var(--gram-ok);
+    background: var(--gram-ok-bg);
+  }
+
+  &.mode-hybrid {
+    color: var(--gram-warn);
+    background: var(--gram-warn-bg);
+  }
+
+  &.mode-cpu {
+    color: var(--gram-neutral);
+    background: var(--gram-neutral-bg);
+  }
+
+  &.mode-tooBig {
+    color: var(--mat-sys-on-error-container);
+    background: var(--mat-sys-error-container);
+  }
+}
+
+// Infobulles sur plusieurs lignes (détail du score, avertissements).
+.gram-multiline-tooltip .mdc-tooltip__surface {
+  white-space: pre-line;
+  text-align: start;
+  max-width: 360px;
+}
+
+// En-têtes triables alignés à droite (colonnes numériques).
+th.num .mat-sort-header-container {
+  justify-content: flex-end;
 }

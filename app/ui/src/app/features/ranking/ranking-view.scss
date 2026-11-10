@@ -1,0 +1,80 @@
+.ranking {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 24px;
+}
+
+.progress-slot {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 4px;
+  margin: 0 -16px;
+}
+
+.notes {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  padding: 6px 10px;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  mat-icon {
+    flex: none;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  ul {
+    margin: 6px 0 0;
+    padding-left: 32px;
+  }
+}
+
+.more {
+  flex: none;
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+
+  h2 {
+    margin: 8px 0 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.more-button {
+  align-self: center;
+  margin-top: 8px;
+}
+
+.section-panel {
+  margin-top: 8px;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.too-big-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

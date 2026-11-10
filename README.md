@@ -45,7 +45,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complè
 | `crates/gram-hub` | Client Hugging Face, cache, parseur GGUF, dédoublonnage, catalogue embarqué |
 | `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `estimate`, `rank`, `snapshot` |
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements |
-| `app/ui` | Frontend Angular + Angular Material |
+| `app/ui` | Frontend Angular + Angular Material : `core/` (service Tauri typé, types générés), `state/` (stores à base de signals), `features/` (bandeau matériel, filtres, classement, fiche détail, barre d'état), `shared/` (mise en forme française, libellés, badge de mode), `src/testing/` (fixtures typées et faux backend pour les tests) |
 | `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques pour les modèles pas encore détaillés, et facteur de qualité selon les bits par poids), `quality_overrides.json` (bonus de qualité manuels par famille, vide au départ), `seed_catalog.json` (catalogue de démarrage, généré) |
 | `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`), modèles réels du catalogue (`models/`) et échantillon figé de 35 modèles pour le classement (`catalog/`) |
 
@@ -150,3 +150,24 @@ await invoke('set_hardware_overrides', { overrides: { simulatedGpu: 'NVIDIA GeFo
 ```
 
 Les tests de `app/src-tauri/src/tests.rs` appellent ces commandes de bout en bout avec le runtime simulé de Tauri (sans réseau, sans détection réelle, sans toucher au trousseau). Sous Windows, le manifeste Common Controls v6 est embarqué par l'éditeur de liens dans tous les exécutables (`build.rs`) : sans lui, un binaire de test qui construit une `App` Tauri ne démarre pas (`STATUS_ENTRYPOINT_NOT_FOUND`).
+
+## Interface
+
+L'interface Angular (`app/ui`) affiche les données et envoie des filtres ; elle ne calcule rien et ne fait aucun appel réseau. `TauriService` est le seul point d'accès à `invoke`, `listen` et aux deux plugins utilisés : presse-papiers (bouton « Copier ») et ouverture d'URL, limitée à `https://huggingface.co/*` dans `capabilities/default.json`.
+
+Disposition (fenêtre 1280×800) :
+
+- **Barre d'outils** : « Ré-analyser » (`rescan_hardware` + `detect_runtimes`) et « Actualiser les modèles » (`sync_catalog` forcé).
+- **Bandeau matériel** : CPU, RAM, GPU, disques, runtimes installés, mémoire réellement utilisable. L'origine d'une valeur est affichée quand ce n'est pas une mesure directe (« estimée », « table des GPU », « corrigée »). Les GPU non retenus sont signalés sur la ligne GPU.
+- **Filtres** : cas d'usage (il reprend aussi son contexte par défaut), curseur de contexte de 2k à 128k (une puissance de deux par cran), runtime (enregistré dans les paramètres), taille maximale en Go, affichage des modèles trop gros.
+- **Classement** : remarques du runtime, tableau `MatTable` triable (le rang « # » reste celui du score), badge de mode coloré, détail du score en infobulle, « Voir plus » (25 lignes par page, paramètre `pageSize`), sections repliables « Exécutable mais lent » et « Trop gros ».
+- **Fiche détail** (panneau à droite, sans fond bloquant : un clic sur une autre ligne change de modèle) : barre mémoire empilée [poids | KV | vision | surcoût] face à la mémoire du mode, avec un repère à la fin de la VRAM en hybride ; toutes les quantifications (vert : tient bien, orange : limite, rouge : trop juste), la meilleure marquée d'une étoile ; commandes à copier pour la quantification choisie ; dépôts alternatifs et page Hugging Face.
+- **Barre d'état** : source du catalogue et son âge, nombre de modèles, progression de la synchronisation (`sync-progress`), quota Hugging Face (`rate-limit`), rappel « Estimations ±30 % ».
+
+Au lancement, le matériel, les paramètres et le premier classement partent en parallèle (catalogue du cache, sinon embarqué), puis `sync_catalog({ force: false })` tourne en arrière-plan : rien n'est téléchargé si le cache a moins de 24 h. Le backend journalise le délai jusqu'au premier classement servi (`premier classement servi depuis le lancement ms=…`) : environ 550 ms en build debug sur la machine de développement, avec le cache.
+
+Les stores (`state/`) reposent sur `resource` d'Angular : un filtre modifié relance `rank` après un debounce de 150 ms (`FILTER_DEBOUNCE_MS`), sauf au premier calcul ; une requête remplacée est annulée, et le classement précédent reste affiché pendant le calcul et après une erreur. La fiche détail suit les mêmes filtres. À sa première ouverture, le backend charge les tailles réelles du modèle ; si sa ligne du classement était estimée, le classement est recalculé.
+
+Tests (`npm run test:ci`) : fonctions de mise en forme, barre mémoire, tri, stores (requête, debounce, erreur), composants avec `mockIPC` (tableau trié et badges, fiche détail, copie et ouverture de pages via les plugins), et l'application entière avec les harnesses Angular Material (filtres, ouverture de la fiche, progression de la synchronisation, « Réessayer »). Les fixtures de `src/testing/fixtures.ts` utilisent les types générés : si un type Rust change, elles ne compilent plus.
+
+Le budget du bundle initial est relevé à 1 Mo (avertissement) et 1,5 Mo (erreur) dans `angular.json` : l'application est servie depuis le disque local, pas par le réseau, et Angular + Angular Material pèsent à eux seuls environ 780 Ko bruts (165 Ko compressés).

@@ -34,7 +34,9 @@ pub async fn rank<R: Runtime>(
     request: RankRequest,
 ) -> CmdResult<RankResponse> {
     state.remember_rank(&request);
-    compute(&app, &state, request).await
+    let response = compute(&app, &state, request).await?;
+    state.note_rank_served();
+    Ok(response)
 }
 
 /// Chemin d'export accepté : absolu, avec l'extension du format (évite d'écraser un fichier
