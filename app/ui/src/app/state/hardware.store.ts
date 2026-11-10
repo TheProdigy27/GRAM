@@ -1,5 +1,6 @@
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import type { HardwareProfile } from '../core/generated/HardwareProfile';
+import type { Overrides } from '../core/generated/Overrides';
 import type { RuntimesStatus } from '../core/generated/RuntimesStatus';
 import { TauriService, errorMessage } from '../core/tauri.service';
 
@@ -12,8 +13,17 @@ export class HardwareStore {
   readonly runtimes = signal<RuntimesStatus | null>(null);
   readonly scanning = signal(false);
   readonly error = signal<string | null>(null);
-  /** Incrémenté quand le matériel change (nouvelle analyse) : le classement est recalculé. */
+  /**
+   * Incrémenté quand le matériel change (nouvelle analyse, corrections, simulation) : le
+   * classement et la fiche sont recalculés.
+   */
   readonly version = signal(0);
+
+  /** Une simulation (GPU ou RAM) est en cours : ce qui est classé n'est pas la machine réelle. */
+  readonly simulation = computed(() => {
+    const o = this.profile()?.overrides;
+    return !!o && (o.simulatedGpu !== null || o.simulatedRamTotal !== null);
+  });
 
   constructor() {
     // Le backend émet `hardware-ready` à la fin de chaque détection.
@@ -47,6 +57,20 @@ export class HardwareStore {
     } finally {
       this.scanning.set(false);
     }
+  }
+
+  /** Corrections et simulation (dialogue « Corriger… ») ; rejette en cas d'échec. */
+  async setOverrides(overrides: Overrides): Promise<void> {
+    const profile = await this.tauri.setHardwareOverrides(overrides);
+    this.profile.set(profile);
+    this.version.update((v) => v + 1);
+  }
+
+  /** Arrête la simulation en gardant les corrections. */
+  async stopSimulation(): Promise<void> {
+    const o = this.profile()?.overrides;
+    if (!o) return;
+    await this.setOverrides({ ...o, simulatedGpu: null, simulatedRamTotal: null });
   }
 
   private async loadRuntimes(): Promise<void> {

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Logo de GRAM : une puce mémoire (GPU & RAM) qui contient un classement.
+       Source unique des icônes : `npm run tauri icon public/logo.svg` (depuis app/ui). -->
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f74f0"/>
+      <stop offset="1" stop-color="#16388c"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#fond)"/>
+  <g fill="#a8c6ff">
+    <rect x="360" y="168" width="48" height="96" rx="16"/>
+    <rect x="488" y="168" width="48" height="96" rx="16"/>
+    <rect x="616" y="168" width="48" height="96" rx="16"/>
+    <rect x="360" y="760" width="48" height="96" rx="16"/>
+    <rect x="488" y="760" width="48" height="96" rx="16"/>
+    <rect x="616" y="760" width="48" height="96" rx="16"/>
+    <rect x="168" y="360" width="96" height="48" rx="16"/>
+    <rect x="168" y="488" width="96" height="48" rx="16"/>
+    <rect x="168" y="616" width="96" height="48" rx="16"/>
+    <rect x="760" y="360" width="96" height="48" rx="16"/>
+    <rect x="760" y="488" width="96" height="48" rx="16"/>
+    <rect x="760" y="616" width="96" height="48" rx="16"/>
+  </g>
+  <rect x="256" y="256" width="512" height="512" rx="80" fill="#1b4bb3" stroke="#ffffff" stroke-width="48"/>
+  <rect x="340" y="552" width="88" height="120" rx="22" fill="#ffffff"/>
+  <rect x="468" y="456" width="88" height="216" rx="22" fill="#ffffff"/>
+  <rect x="596" y="360" width="88" height="312" rx="22" fill="#6ff0b8"/>
+</svg>

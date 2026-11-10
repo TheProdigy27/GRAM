@@ -8,8 +8,8 @@
 mod commands;
 mod error;
 mod events;
-mod settings_store;
 mod state;
+mod store;
 mod token;
 
 #[cfg(test)]
@@ -25,9 +25,11 @@ pub fn run() {
 
     tauri::Builder::default()
         // Bouton « Copier » des commandes, pages Hugging Face ouvertes dans le navigateur
-        // (permissions restreintes dans capabilities/default.json).
+        // (permissions restreintes dans capabilities/default.json), dialogue « Enregistrer
+        // sous » de l'export (ouvert depuis Rust seulement : aucune permission côté WebView).
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState::production())
         .setup(|app| {
             tauri::async_runtime::spawn(state::startup(app.handle().clone()));

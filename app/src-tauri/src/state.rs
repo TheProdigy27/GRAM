@@ -2,14 +2,15 @@
 //! paramètres.
 //!
 //! - Le matériel est détecté une fois (au démarrage), dans `spawn_blocking` : WMI a besoin d'un
-//!   thread initialisé COM. Les corrections et la simulation repartent des données brutes.
+//!   thread initialisé COM. Les corrections et la simulation repartent des données brutes ; les
+//!   corrections sont enregistrées d'un lancement à l'autre, pas la simulation.
 //! - Le catalogue est chargé hors ligne au démarrage (cache, sinon catalogue embarqué), puis
 //!   remplacé par `sync_catalog`. Les fiches enrichies à la demande y sont reportées.
 //! - Les dépendances au système (détection, trousseau, réseau) sont injectables pour les tests.
 
 use crate::error::{CmdResult, CommandError};
 use crate::events::{self, HARDWARE_READY};
-use crate::settings_store;
+use crate::store::{self, CORRECTIONS_FILE, SETTINGS_FILE};
 use crate::token::{KeyringStore, TokenStore};
 use gram_core::{
     DataSource, HardwareProfile, ModelEntry, Overrides, RankRequest, RuntimesStatus, Settings,
@@ -48,18 +49,21 @@ pub struct Loaded {
 
 /// Où l'application range ses fichiers, et si elle a le droit d'aller sur le réseau.
 pub struct Config {
-    pub cache: Cache,
-    pub settings_path: PathBuf,
+    /// `%LOCALAPPDATA%\fr.gram.desktop` : `cache\`, `settings.json`, `corrections.json`.
+    pub dir: PathBuf,
     /// `false` dans les tests : synchronisation hors ligne, fiches non enrichies.
     pub network: bool,
 }
 
 pub struct AppState {
     config: Config,
+    cache: Cache,
     collect: Collect,
     detect_runtimes: DetectRuntimes,
     tokens: Box<dyn TokenStore>,
     hardware: tokio::sync::Mutex<Option<Hardware>>,
+    /// Corrections (relues au lancement) et simulation en cours.
+    overrides: Mutex<Overrides>,
     runtimes: tokio::sync::Mutex<Option<RuntimesStatus>>,
     catalog: tokio::sync::Mutex<Option<Arc<Loaded>>>,
     settings: RwLock<Settings>,
@@ -81,16 +85,20 @@ impl AppState {
         detect_runtimes: DetectRuntimes,
         tokens: Box<dyn TokenStore>,
     ) -> Self {
-        let settings = settings_store::load(&config.settings_path);
+        let settings = store::load::<Settings>(&config.dir.join(SETTINGS_FILE), "paramètres");
+        let corrections =
+            store::load::<Overrides>(&config.dir.join(CORRECTIONS_FILE), "corrections");
         Self {
+            cache: Cache::new(config.dir.join("cache")),
             config,
             collect,
             detect_runtimes,
             tokens,
             hardware: tokio::sync::Mutex::new(None),
+            overrides: Mutex::new(corrections.corrections()),
             runtimes: tokio::sync::Mutex::new(None),
             catalog: tokio::sync::Mutex::new(None),
-            settings: RwLock::new(settings),
+            settings: RwLock::new(settings.sanitized()),
             last_rank: Mutex::new(RankRequest::default()),
             enriched: Mutex::new(HashSet::new()),
             sync_lock: tokio::sync::Mutex::new(()),
@@ -99,15 +107,13 @@ impl AppState {
         }
     }
 
-    /// `%LOCALAPPDATA%\GRAM\` (dossier temporaire à défaut), vraie détection, trousseau Windows.
+    /// `%LOCALAPPDATA%\fr.gram.desktop\` (dossier temporaire à défaut), vraie détection,
+    /// trousseau Windows.
     pub fn production() -> Self {
-        let dir = gram_hub::cache::app_dir().unwrap_or_else(|| std::env::temp_dir().join("GRAM"));
+        let dir = gram_hub::cache::app_dir()
+            .unwrap_or_else(|| std::env::temp_dir().join(gram_hub::cache::APP_ID));
         Self::new(
-            Config {
-                cache: Cache::new(dir.join("cache")),
-                settings_path: dir.join("settings.json"),
-                network: true,
-            },
+            Config { dir, network: true },
             Arc::new(gram_hw::collect),
             Arc::new(gram_hw::detect_runtimes),
             Box::new(KeyringStore),
@@ -115,7 +121,7 @@ impl AppState {
     }
 
     pub fn cache(&self) -> &Cache {
-        &self.config.cache
+        &self.cache
     }
 
     pub fn network(&self) -> bool {
@@ -129,14 +135,18 @@ impl AppState {
         Ok(tauri::async_runtime::spawn_blocking(move || collect()).await?)
     }
 
-    /// Profil matériel (détecté au premier appel, puis gardé en mémoire). La première détection
-    /// émet `hardware-ready`.
+    fn overrides(&self) -> Overrides {
+        self.overrides.lock().expect("verrou").clone()
+    }
+
+    /// Profil matériel (détecté au premier appel, puis gardé en mémoire), avec les corrections
+    /// enregistrées. La première détection émet `hardware-ready`.
     pub async fn hardware<R: Runtime>(&self, app: &AppHandle<R>) -> CmdResult<HardwareProfile> {
         let mut slot = self.hardware.lock().await;
         if let Some(h) = slot.as_ref() {
             return Ok(h.profile.clone());
         }
-        let h = Hardware::new(self.collect().await?, &Overrides::default());
+        let h = Hardware::new(self.collect().await?, &self.overrides());
         let profile = h.profile.clone();
         *slot = Some(h);
         drop(slot);
@@ -147,11 +157,7 @@ impl AppState {
     /// Nouvelle détection, en gardant les corrections ; émet `hardware-ready`.
     pub async fn rescan<R: Runtime>(&self, app: &AppHandle<R>) -> CmdResult<HardwareProfile> {
         let mut slot = self.hardware.lock().await;
-        let overrides = slot
-            .as_ref()
-            .map(|h| h.profile.overrides.clone())
-            .unwrap_or_default();
-        let h = Hardware::new(self.collect().await?, &overrides);
+        let h = Hardware::new(self.collect().await?, &self.overrides());
         let profile = h.profile.clone();
         *slot = Some(h);
         drop(slot);
@@ -159,7 +165,9 @@ impl AppState {
         Ok(profile)
     }
 
-    /// Applique les corrections et la simulation (sans nouvelle détection).
+    /// Applique les corrections et la simulation (sans nouvelle détection), et enregistre les
+    /// corrections. Un échec de l'enregistrement est signalé dans les avertissements du profil :
+    /// les corrections restent appliquées jusqu'à la fermeture.
     pub async fn set_overrides<R: Runtime>(
         &self,
         app: &AppHandle<R>,
@@ -170,8 +178,32 @@ impl AppState {
         let h = slot
             .as_mut()
             .ok_or_else(|| CommandError::msg("matériel non détecté"))?;
+        let previous = std::mem::replace(
+            &mut *self.overrides.lock().expect("verrou"),
+            overrides.clone(),
+        );
         h.profile = gram_hw::build_profile(&h.raw, &overrides);
+        let corrections = overrides.corrections();
+        if corrections != previous.corrections() {
+            let path = self.config.dir.join(CORRECTIONS_FILE);
+            if let Err(e) = store::save(&path, &corrections) {
+                tracing::warn!(path = %path.display(), "corrections non enregistrées : {e}");
+                h.profile.warnings.push(format!(
+                    "Corrections non enregistrées ({e}) : elles seront perdues à la fermeture."
+                ));
+            }
+        }
         Ok(h.profile.clone())
+    }
+
+    /// Profil tel que détecté, sans corrections ni simulation (dialogue « Corriger… »).
+    pub async fn detected<R: Runtime>(&self, app: &AppHandle<R>) -> CmdResult<HardwareProfile> {
+        self.hardware(app).await?;
+        let slot = self.hardware.lock().await;
+        let h = slot
+            .as_ref()
+            .ok_or_else(|| CommandError::msg("matériel non détecté"))?;
+        Ok(gram_hw::build_profile(&h.raw, &Overrides::default()))
     }
 
     // ── Runtimes ────────────────────────────────────────────────────────────────────────────
@@ -197,7 +229,7 @@ impl AppState {
         if let Some(c) = slot.as_ref() {
             return Ok(Arc::clone(c));
         }
-        let cache = self.config.cache.clone();
+        let cache = self.cache.clone();
         let (catalog, source) =
             tauri::async_runtime::spawn_blocking(move || gram_hub::load_offline(&cache))
                 .await?
@@ -245,10 +277,11 @@ impl AppState {
     /// Enregistre les paramètres (assainis) et les renvoie.
     pub fn save_settings(&self, settings: Settings) -> CmdResult<Settings> {
         let settings = settings.sanitized();
-        settings_store::save(&self.config.settings_path, &settings).map_err(|e| {
+        let path = self.config.dir.join(SETTINGS_FILE);
+        store::save(&path, &settings).map_err(|e| {
             CommandError::msg(format!(
-                "paramètres non enregistrés dans {} : {e}",
-                self.config.settings_path.display()
+                "Paramètres non enregistrés dans {} : {e}",
+                path.display()
             ))
         })?;
         *self.settings.write().expect("verrou") = settings.clone();

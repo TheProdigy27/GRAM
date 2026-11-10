@@ -6,7 +6,9 @@ use crate::state::AppState;
 use chrono::Utc;
 use gram_core::{DetailRequest, ModelDetail, RankContext, SyncSummary};
 use gram_hub::{Hub, HubEvent, ReqwestTransport, SyncOptions};
+use serde::Serialize;
 use tauri::{AppHandle, Runtime, State};
+use ts_rs::TS;
 
 /// Client Hugging Face qui relaie la progression et le quota au frontend.
 fn hub<R: Runtime>(
@@ -45,6 +47,8 @@ pub async fn sync_catalog<R: Runtime>(
         offline: !state.network(),
         max_params: Some(gram_hub::max_params_for(&hw)),
         min_downloads: settings.min_downloads,
+        detail_groups: settings.detail_groups as usize,
+        ttl: chrono::Duration::hours(i64::from(settings.catalog_ttl_hours)),
         ..SyncOptions::default()
     };
     let hub = hub(&app, &state, true)?;
@@ -99,4 +103,55 @@ pub async fn get_model_detail<R: Runtime>(
     let mut detail = gram_core::model_detail(&entry, &request, &cx);
     detail.notes.splice(0..0, notes);
     Ok(detail)
+}
+
+/// Cache local du catalogue (paramètres : taille, bouton « Vider le cache »).
+#[derive(Debug, Clone, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CacheInfo {
+    /// Dossier du cache, affiché tel quel.
+    pub path: String,
+    pub files: u64,
+    /// Octets.
+    pub bytes: u64,
+}
+
+async fn cache_info(state: &AppState) -> CmdResult<CacheInfo> {
+    let cache = state.cache().clone();
+    let path = cache_path(state);
+    let usage = tauri::async_runtime::spawn_blocking(move || cache.usage())
+        .await?
+        .map_err(|e| CommandError::msg(format!("Cache illisible ({path}) : {e}")))?;
+    Ok(CacheInfo {
+        path,
+        files: usage.files,
+        bytes: usage.bytes,
+    })
+}
+
+fn cache_path(state: &AppState) -> String {
+    state.cache().root().display().to_string()
+}
+
+#[tauri::command]
+pub async fn get_cache_info(state: State<'_, AppState>) -> CmdResult<CacheInfo> {
+    cache_info(&state).await
+}
+
+/// Vide le cache (catalogue, tailles des fichiers, architectures). Le catalogue en mémoire
+/// reste utilisé jusqu'à la prochaine synchronisation, qui repartira de zéro. Refusé pendant
+/// une synchronisation.
+#[tauri::command]
+pub async fn clear_cache(state: State<'_, AppState>) -> CmdResult<CacheInfo> {
+    let _guard = state
+        .sync_lock
+        .try_lock()
+        .map_err(|_| CommandError::msg("Synchronisation en cours : réessayer à la fin."))?;
+    let cache = state.cache().clone();
+    tauri::async_runtime::spawn_blocking(move || cache.clear())
+        .await?
+        .map_err(|e| CommandError::msg(format!("Cache non vidé ({}) : {e}", cache_path(&state))))?;
+    tracing::info!("cache vidé");
+    cache_info(&state).await
 }

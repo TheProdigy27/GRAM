@@ -2,6 +2,7 @@ import {
   ctxK,
   ctxToStep,
   count,
+  fileSize,
   gb,
   params,
   relativeTime,
@@ -13,6 +14,15 @@ import {
 /** Intl met une espace fine insécable entre les milliers : on la normalise pour comparer. */
 const plain = (s: string) => s.replace(/[  ]/g, ' ');
 const GIB = 2 ** 30;
+
+describe('fileSize', () => {
+  it('Go au-delà de 1 Go, Mo en dessous', () => {
+    expect(fileSize(1.25 * 2 ** 30)).toBe('1,3 Go');
+    expect(fileSize(38.4 * 2 ** 20)).toBe('38 Mo');
+    expect(fileSize(5000)).toBe('< 1 Mo');
+    expect(fileSize(0)).toBe('0 Mo');
+  });
+});
 
 describe('format', () => {
   it('tailles en Go (Gio), comme le Gestionnaire des tâches', () => {

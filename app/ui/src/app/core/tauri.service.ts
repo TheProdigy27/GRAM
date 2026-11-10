@@ -3,8 +3,10 @@ import { invoke, type InvokeArgs } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import type { CacheInfo } from './generated/CacheInfo';
 import type { DetailRequest } from './generated/DetailRequest';
 import type { ExportFormat } from './generated/ExportFormat';
+import type { HardwareOptions } from './generated/HardwareOptions';
 import type { HardwareProfile } from './generated/HardwareProfile';
 import type { ModelDetail } from './generated/ModelDetail';
 import type { Overrides } from './generated/Overrides';
@@ -57,6 +59,11 @@ export class TauriService {
     return this.call('set_hardware_overrides', { overrides });
   }
 
+  /** Matériel tel que détecté (sans corrections) et GPU simulables : dialogue « Corriger… ». */
+  hardwareOptions(): Promise<HardwareOptions> {
+    return this.call('hardware_options');
+  }
+
   detectRuntimes(): Promise<RuntimesStatus> {
     return this.call('detect_runtimes');
   }
@@ -75,14 +82,31 @@ export class TauriService {
     return this.call('get_model_detail', { request });
   }
 
-  exportRanking(format: ExportFormat, path: string): Promise<void> {
-    return this.call('export_ranking', { format, path });
+  /**
+   * Exporte le dernier classement en entier. Sans `path`, le backend ouvre le dialogue
+   * « Enregistrer sous ». Renvoie le chemin écrit, ou `null` si l'utilisateur a annulé.
+   */
+  exportRanking(format: ExportFormat, path?: string): Promise<string | null> {
+    return this.call('export_ranking', path === undefined ? { format } : { format, path });
+  }
+
+  getCacheInfo(): Promise<CacheInfo> {
+    return this.call('get_cache_info');
+  }
+
+  clearCache(): Promise<CacheInfo> {
+    return this.call('clear_cache');
   }
 
   // ── Paramètres et token ──────────────────────────────────────────────────────────────────
 
   getSettings(): Promise<Settings> {
     return this.call('get_settings');
+  }
+
+  /** Valeurs par défaut du §12 (bouton « Réinitialiser »). */
+  getDefaultSettings(): Promise<Settings> {
+    return this.call('get_default_settings');
   }
 
   saveSettings(settings: Settings): Promise<Settings> {

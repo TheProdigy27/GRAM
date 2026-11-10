@@ -78,6 +78,13 @@ dd {
   gap: 4px;
 }
 
+.actions,
+.simulation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .warning {
   color: var(--gram-warn);
 }

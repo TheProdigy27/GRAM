@@ -2,7 +2,9 @@
 // fixtures ne compilent plus, ce qui oblige à mettre les tests à jour.
 // Valeurs inspirées de la machine de développement (Ryzen 7 9800X3D, RTX 5080, 64 Go DDR5).
 
+import type { CacheInfo } from '../app/core/generated/CacheInfo';
 import type { Estimate } from '../app/core/generated/Estimate';
+import type { HardwareOptions } from '../app/core/generated/HardwareOptions';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
 import type { LaunchPlan } from '../app/core/generated/LaunchPlan';
 import type { MemoryBudget } from '../app/core/generated/MemoryBudget';
@@ -115,7 +117,42 @@ export const SETTINGS: Settings = {
     },
   },
   minDownloads: 500,
+  catalogTtlHours: 24,
+  detailGroups: 150,
   pageSize: 25,
+};
+
+/** Dialogue « Corriger… » : matériel détecté (avec un iGPU en plus) et GPU simulables. */
+export const HARDWARE_OPTIONS: HardwareOptions = {
+  detected: {
+    ...HARDWARE,
+    otherGpus: [
+      {
+        index: 1,
+        name: 'AMD Radeon(TM) Graphics',
+        vendor: 'amd',
+        vramTotal: 0.5 * GIB,
+        vramFree: null,
+        sharedMem: 31.5 * GIB,
+        integrated: true,
+        bandwidthGbs: 96,
+        bandwidthSource: 'estimated',
+        cudaCc: null,
+      },
+    ],
+  },
+  gpus: [
+    { label: 'NVIDIA GeForce RTX 3060 12 Go', vram: 12 * GIB, bandwidthGbs: 360 },
+    { label: 'NVIDIA GeForce RTX 4090 24 Go', vram: 24 * GIB, bandwidthGbs: 1008 },
+    { label: 'AMD Radeon RX 7800 XT 16 Go', vram: 16 * GIB, bandwidthGbs: 624 },
+    { label: 'Intel Arc A770 16 Go', vram: 16 * GIB, bandwidthGbs: 560 },
+  ],
+};
+
+export const CACHE_INFO: CacheInfo = {
+  path: 'C:\\Users\\x\\AppData\\Local\\fr.gram.desktop\\cache',
+  files: 312,
+  bytes: 0.25 * GIB,
 };
 
 export const BUDGET: MemoryBudget = {

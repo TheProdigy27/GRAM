@@ -6,7 +6,8 @@ use chrono::{Local, Utc};
 use gram_core::export::{to_csv, to_markdown};
 use gram_core::{ExportFormat, RankContext, RankRequest, RankResponse};
 use std::path::PathBuf;
-use tauri::{AppHandle, Runtime, State};
+use tauri::{AppHandle, Manager, Runtime, State, Window};
+use tauri_plugin_dialog::DialogExt;
 
 /// Calcule le classement en Rust (§9) : quelques centaines de modèles, quelques dizaines de
 /// millisecondes. Le frontend applique un debounce sur le curseur de contexte.
@@ -61,15 +62,62 @@ fn export_path(path: &str, format: ExportFormat) -> CmdResult<PathBuf> {
     Ok(p)
 }
 
+/// Dialogue « Enregistrer sous » (modal sur la fenêtre), dans Documents par défaut ;
+/// `None` si l'utilisateur annule.
+async fn ask_export_path<R: Runtime>(
+    app: &AppHandle<R>,
+    window: &Window<R>,
+    format: ExportFormat,
+) -> CmdResult<Option<String>> {
+    let ext = format.extension();
+    let name = format!("classement-gram-{}.{ext}", Local::now().format("%Y-%m-%d"));
+    let mut dialog = app
+        .dialog()
+        .file()
+        .set_title("Exporter le classement")
+        .set_file_name(name)
+        .add_filter(format.label(), &[ext])
+        .set_parent(window);
+    if let Ok(dir) = app.path().document_dir() {
+        dialog = dialog.set_directory(dir);
+    }
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    dialog.save_file(move |picked| {
+        let _ = tx.send(picked);
+    });
+    let Some(picked) = rx
+        .await
+        .map_err(|_| CommandError::msg("Dialogue d'enregistrement interrompu."))?
+    else {
+        return Ok(None);
+    };
+    let mut path = picked
+        .into_path()
+        .map_err(|e| CommandError::msg(format!("Chemin d'export invalide : {e}")))?;
+    if path.extension().is_none() {
+        path.set_extension(ext);
+    }
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
 /// Exporte le dernier classement demandé, en entier (sans limite de lignes), en Markdown ou en
-/// CSV.
+/// CSV. Sans `path`, demande le fichier avec le dialogue « Enregistrer sous ». Renvoie le chemin
+/// écrit, ou `null` si l'utilisateur a annulé.
 #[tauri::command]
 pub async fn export_ranking<R: Runtime>(
     app: AppHandle<R>,
+    window: Window<R>,
     state: State<'_, AppState>,
     format: ExportFormat,
-    path: String,
-) -> CmdResult<()> {
+    path: Option<String>,
+) -> CmdResult<Option<String>> {
+    let path = match path {
+        Some(p) => p,
+        None => match ask_export_path(&app, &window, format).await? {
+            Some(p) => p,
+            None => return Ok(None),
+        },
+    };
     let target = export_path(&path, format)?;
     let request = RankRequest {
         limit: None,
@@ -85,7 +133,8 @@ pub async fn export_ranking<R: Runtime>(
     };
     tauri::async_runtime::spawn_blocking(move || std::fs::write(&target, text))
         .await?
-        .map_err(|e| CommandError::msg(format!("Export impossible vers {path} : {e}")))
+        .map_err(|e| CommandError::msg(format!("Export impossible vers {path} : {e}")))?;
+    Ok(Some(path))
 }
 
 #[cfg(test)]

@@ -43,7 +43,7 @@ enum Command {
         /// Sortie JSON (`SyncSummary`).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -67,7 +67,7 @@ enum Command {
         /// Sortie JSON (budget mémoire et estimation de chaque quantification).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -96,7 +96,7 @@ enum Command {
         /// Sortie JSON (`RankResponse`).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -104,7 +104,7 @@ enum Command {
     Snapshot {
         #[arg(long, default_value = "data/seed_catalog.json")]
         output: PathBuf,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\GRAM\cache).
+        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },

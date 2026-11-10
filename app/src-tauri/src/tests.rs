@@ -5,7 +5,6 @@
 use crate::state::{AppState, Config};
 use crate::token::MemoryStore;
 use gram_core::{RuntimeStatus, RuntimesStatus};
-use gram_hub::Cache;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -54,10 +53,9 @@ fn runtimes() -> RuntimesStatus {
 
 fn state_in(dir: &Path) -> AppState {
     AppState::new(
+        // Cache vide : le catalogue vient du catalogue embarqué.
         Config {
-            // Cache vide : le catalogue vient du catalogue embarqué.
-            cache: Cache::new(dir.join("cache")),
-            settings_path: dir.join("settings.json"),
+            dir: dir.to_path_buf(),
             network: false,
         },
         Arc::new(raw_hardware),
@@ -132,6 +130,14 @@ impl Harness {
 
 const GIB: f64 = (1u64 << 30) as f64;
 
+/// Le dossier de données (`%LOCALAPPDATA%\fr.gram.desktop`) est celui de WebView2, et celui que
+/// la désinstallation propose de supprimer : il suit l'identifiant de l'application.
+#[test]
+fn dossier_de_donnees_suit_l_identifiant() {
+    let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    assert_eq!(conf["identifier"], gram_hub::cache::APP_ID);
+}
+
 #[test]
 fn ping() {
     let dir = TempDir::new("ping");
@@ -193,6 +199,66 @@ fn materiel_corrections_et_simulation() {
     let rt = h.ok("detect_runtimes", json!({}));
     assert_eq!(rt["ollama"]["installed"], true);
     assert_eq!(rt["lmStudio"]["installed"], false);
+}
+
+#[test]
+fn corrections_enregistrees_simulation_non() {
+    let dir = TempDir::new("corrections");
+    {
+        let h = Harness::new(&dir);
+        let hw = h.ok(
+            "set_hardware_overrides",
+            json!({ "overrides": {
+                "ramChannels": 4,
+                "gpuBandwidthGbs": 900.0,
+                "simulatedRamTotal": 128u64 << 30
+            } }),
+        );
+        assert_eq!(hw["ram"]["channels"], 4);
+        assert_eq!(hw["gpu"]["bandwidthSource"], "manual");
+        assert_eq!(hw["ram"]["installed"], 128u64 << 30);
+
+        // Le dialogue reçoit le matériel tel que détecté, et les GPU simulables.
+        let options = h.ok("hardware_options", json!({}));
+        let detected = &options["detected"];
+        assert_eq!(detected["ram"]["channels"], 2);
+        assert_eq!(detected["ram"]["channelsSource"], "estimated");
+        assert_eq!(detected["gpu"]["bandwidthSource"], "table");
+        assert_eq!(
+            detected["overrides"],
+            json!(gram_core::Overrides::default())
+        );
+        let gpus = options["gpus"].as_array().unwrap();
+        assert!(
+            gpus.iter()
+                .any(|g| g["label"] == "NVIDIA GeForce RTX 4090 24 Go"
+                    && g["vram"] == 24u64 << 30
+                    && g["bandwidthGbs"] == 1008.0)
+        );
+    }
+    let saved: Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.0.join("corrections.json")).unwrap())
+            .unwrap();
+    assert_eq!(saved["ramChannels"], 4);
+    assert_eq!(saved["simulatedRamTotal"], Value::Null);
+
+    // Prochain lancement : corrections reprises, sans la simulation.
+    let h = Harness::new(&dir);
+    let hw = h.ok("get_hardware", json!({}));
+    assert_eq!(hw["ram"]["channels"], 4);
+    assert_eq!(hw["ram"]["channelsSource"], "manual");
+    assert_eq!(hw["gpu"]["bandwidthGbs"], 900.0);
+    assert_eq!(hw["overrides"]["simulatedRamTotal"], Value::Null);
+    assert_eq!(hw["ram"]["installed"], 64u64 << 30);
+
+    // Retour aux valeurs détectées : enregistré aussi.
+    h.ok("set_hardware_overrides", json!({ "overrides": {} }));
+    drop(h);
+    let h = Harness::new(&dir);
+    assert_eq!(
+        h.ok("get_hardware", json!({}))["ram"]["channelsSource"],
+        "estimated"
+    );
 }
 
 #[test]
@@ -285,6 +351,57 @@ fn parametres_persistants() {
     // Relu au prochain lancement.
     let h = Harness::new(&dir);
     assert_eq!(h.ok("get_settings", json!({}))["runtime"], "lmStudio");
+
+    // « Réinitialiser » : valeurs du §12, sans toucher au fichier.
+    let defaults = h.ok("get_default_settings", json!({}));
+    assert_eq!(
+        serde_json::from_value::<gram_core::Settings>(defaults.clone()).unwrap(),
+        gram_core::Settings::default()
+    );
+    assert_eq!(defaults["runtime"], "ollama");
+    assert_eq!(defaults["catalogTtlHours"], 24);
+    assert_eq!(defaults["detailGroups"], 150);
+    assert_eq!(h.ok("get_settings", json!({}))["runtime"], "lmStudio");
+}
+
+#[test]
+fn cache_taille_et_vidage() {
+    let dir = TempDir::new("cache");
+    let h = Harness::new(&dir);
+    let empty = h.ok("get_cache_info", json!({}));
+    assert_eq!(
+        (empty["files"].as_u64(), empty["bytes"].as_u64()),
+        (Some(0), Some(0))
+    );
+    assert!(empty["path"].as_str().unwrap().ends_with("cache"));
+
+    let details = dir.0.join("cache").join("details");
+    std::fs::create_dir_all(&details).unwrap();
+    std::fs::write(details.join("a--b@0123456789abcdef.json"), [b'x'; 1000]).unwrap();
+    std::fs::write(dir.0.join("cache").join("catalog.json"), b"{}").unwrap();
+    let info = h.ok("get_cache_info", json!({}));
+    assert_eq!(
+        (info["files"].as_u64(), info["bytes"].as_u64()),
+        (Some(2), Some(1002))
+    );
+
+    let cleared = h.ok("clear_cache", json!({}));
+    assert_eq!(cleared["files"], 0);
+    assert!(!dir.0.join("cache").exists());
+    // Les paramètres ne font pas partie du cache.
+    h.ok(
+        "save_settings",
+        json!({ "settings": gram_core::Settings::default() }),
+    );
+    h.ok("clear_cache", json!({}));
+    assert!(dir.0.join("settings.json").exists());
+    // Le catalogue en mémoire reste utilisable.
+    assert!(
+        !h.ok("rank", json!({ "request": { "limit": 1 } }))["items"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]
@@ -338,10 +455,11 @@ fn export_markdown_et_csv() {
     );
     let md = h.dir.join("classement.md");
     let csv = h.dir.join("classement.csv");
-    h.ok(
+    let written = h.ok(
         "export_ranking",
         json!({ "format": "md", "path": md.to_string_lossy() }),
     );
+    assert_eq!(written, json!(md.to_string_lossy()));
     h.ok(
         "export_ranking",
         json!({ "format": "csv", "path": csv.to_string_lossy() }),

@@ -3,7 +3,17 @@
 
 import { mockIPC } from '@tauri-apps/api/mocks';
 import type { InvokeArgs } from '@tauri-apps/api/core';
-import { HARDWARE, RANKING, RUNTIMES, SETTINGS, SYNC_SUMMARY, makeDetail } from './fixtures';
+import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
+import {
+  CACHE_INFO,
+  HARDWARE,
+  HARDWARE_OPTIONS,
+  RANKING,
+  RUNTIMES,
+  SETTINGS,
+  SYNC_SUMMARY,
+  makeDetail,
+} from './fixtures';
 
 export interface IpcCall {
   cmd: string;
@@ -16,10 +26,27 @@ const DEFAULTS: Record<string, Handler> = {
   ping: () => ({ message: 'pong', appVersion: '0.1.0', coreVersion: '0.1.0' }),
   get_hardware: () => HARDWARE,
   rescan_hardware: () => HARDWARE,
+  // Le profil renvoyé porte les corrections demandées (sans les appliquer aux valeurs).
+  set_hardware_overrides: (a) =>
+    ({
+      ...HARDWARE,
+      overrides: { ...HARDWARE.overrides, ...(a['overrides'] as object) },
+    }) satisfies HardwareProfile,
+  hardware_options: () => HARDWARE_OPTIONS,
   detect_runtimes: () => RUNTIMES,
   get_settings: () => SETTINGS,
+  get_default_settings: () => SETTINGS,
   save_settings: (a) => a['settings'],
+  has_hf_token: () => false,
+  set_hf_token: () => null,
+  clear_hf_token: () => null,
+  get_cache_info: () => CACHE_INFO,
+  clear_cache: () => ({ ...CACHE_INFO, files: 0, bytes: 0 }),
   rank: () => RANKING,
+  // Sans chemin, le vrai backend ouvre « Enregistrer sous » : ici, un chemin choisi d'office.
+  export_ranking: (a) =>
+    (a['path'] as string | undefined) ??
+    `C:\\Users\\x\\Documents\\classement-gram.${a['format'] as string}`,
   sync_catalog: () => SYNC_SUMMARY,
   get_model_detail: () => makeDetail(),
   'plugin:clipboard-manager|write_text': () => null,

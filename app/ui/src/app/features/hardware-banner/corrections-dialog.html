@@ -1,0 +1,159 @@
+<h2 mat-dialog-title>Corriger le matériel</h2>
+
+<mat-dialog-content class="content">
+  @if (!options() && !error()) {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement du matériel détecté" />
+  }
+
+  <section aria-labelledby="corrections-title">
+    <h3 id="corrections-title">
+      Corrections <span class="muted">· gardées au prochain lancement</span>
+    </h3>
+    <p class="muted intro">
+      Pour corriger une valeur mal détectée (canaux d’une mémoire LPDDR soudée, GPU absent de la
+      table…). Le Gestionnaire des tâches (Performances → Mémoire) indique la vitesse et les
+      emplacements utilisés.
+    </p>
+    <div class="grid">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Canaux mémoire</mat-label>
+        <mat-select
+          data-testid="fix-channels"
+          [value]="draft().ramChannels ?? 0"
+          (selectionChange)="patch({ ramChannels: $event.value || null })"
+        >
+          <mat-option [value]="0"
+            >Détecté{{ detected() ? ' (' + detected()!.ram.channels + ')' : '' }}</mat-option
+          >
+          @for (c of ramChannels; track c) {
+            <mat-option [value]="c">{{ c }} {{ c > 1 ? 'canaux' : 'canal' }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>{{ channelsHint() }}</mat-hint>
+      </mat-form-field>
+
+      @if (gpus().length > 1) {
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>GPU retenu</mat-label>
+          <mat-select
+            data-testid="fix-gpu-index"
+            [value]="draft().gpuIndex ?? -1"
+            (selectionChange)="patch({ gpuIndex: $event.value < 0 ? null : $event.value })"
+          >
+            <mat-option [value]="-1">Automatique (le plus de VRAM)</mat-option>
+            @for (g of gpus(); track g.index) {
+              <mat-option [value]="g.index">{{ g.name }} · {{ roundSize(g.vramTotal) }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Un seul GPU est utilisé pour le calcul</mat-hint>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>GPU intégré</mat-label>
+        <mat-select
+          data-testid="fix-integrated"
+          [disabled]="!chosenGpu()"
+          [value]="draft().gpuIntegrated === null ? 'auto' : draft().gpuIntegrated ? 'yes' : 'no'"
+          (selectionChange)="
+            patch({ gpuIntegrated: $event.value === 'auto' ? null : $event.value === 'yes' })
+          "
+        >
+          <mat-option value="auto"
+            >Détecté ({{ chosenGpu()?.integrated ? 'oui' : 'non' }})</mat-option
+          >
+          <mat-option value="yes">Oui : compté comme du CPU</mat-option>
+          <mat-option value="no">Non : GPU dédié</mat-option>
+        </mat-select>
+        <mat-hint>Un GPU intégré partage la RAM</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Bande passante du GPU</mat-label>
+        <input
+          #bw
+          matInput
+          type="number"
+          min="1"
+          step="1"
+          inputmode="decimal"
+          data-testid="fix-bandwidth"
+          [disabled]="!chosenGpu()"
+          [placeholder]="chosenGpu()?.bandwidthGbs?.toString() ?? ''"
+          [value]="draft().gpuBandwidthGbs ?? ''"
+          (input)="onBandwidth(bw.value)"
+        />
+        <span matTextSuffix>Go/s</span>
+        <mat-hint>{{ bandwidthHint() || 'Fiche constructeur du GPU' }}</mat-hint>
+      </mat-form-field>
+    </div>
+  </section>
+
+  <section aria-labelledby="simulation-title">
+    <h3 id="simulation-title">Simulation <span class="muted">· jusqu’à la fermeture</span></h3>
+    <p class="muted intro">
+      « Et si je passais à… ? » : le classement est recalculé pour ce matériel.
+    </p>
+    <div class="grid">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>GPU simulé</mat-label>
+        <mat-select
+          data-testid="sim-gpu"
+          [value]="draft().simulatedGpu ?? ''"
+          (selectionChange)="patch({ simulatedGpu: $event.value || null })"
+        >
+          <mat-option value="">Aucun (GPU réel)</mat-option>
+          @for (group of gpuGroups(); track group.vendor) {
+            <mat-optgroup [label]="group.vendor">
+              @for (g of group.gpus; track g.label) {
+                <mat-option [value]="g.label">
+                  {{ g.label }} <span class="muted">· {{ bandwidth(g.bandwidthGbs) }}</span>
+                </mat-option>
+              }
+            </mat-optgroup>
+          }
+        </mat-select>
+        @if (simulatingGpu()) {
+          <mat-hint>Les corrections du GPU réel ne s’appliquent pas au GPU simulé</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>RAM simulée</mat-label>
+        <mat-select
+          data-testid="sim-ram"
+          [value]="draft().simulatedRamTotal ?? 0"
+          (selectionChange)="patch({ simulatedRamTotal: $event.value || null })"
+        >
+          <mat-option [value]="0">Aucune (RAM réelle)</mat-option>
+          @for (r of simulatedRam; track r.gb) {
+            <mat-option [value]="r.bytes">{{ r.gb }} Go</mat-option>
+          }
+        </mat-select>
+        <mat-hint>Même consommation actuelle, sur une RAM plus grande ou plus petite</mat-hint>
+      </mat-form-field>
+    </div>
+  </section>
+
+  @if (error(); as message) {
+    <p class="error-box" role="alert">{{ message }}</p>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="actions">
+  <button mat-button type="button" data-testid="fix-reset" (click)="resetAll()">
+    <mat-icon>restart_alt</mat-icon>
+    Valeurs détectées
+  </button>
+  <span class="spacer"></span>
+  <button mat-button type="button" mat-dialog-close>Annuler</button>
+  <button
+    mat-flat-button
+    type="button"
+    data-testid="fix-apply"
+    [disabled]="busy() || !changed()"
+    (click)="apply()"
+  >
+    Appliquer
+  </button>
+</mat-dialog-actions>

@@ -2,10 +2,11 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { argsOf, mockBackend } from '../../testing/backend';
-import { GIB, RANKING, makeItem, makeResponse } from '../../testing/fixtures';
+import { GIB, RANKING, SETTINGS, makeItem, makeResponse } from '../../testing/fixtures';
 import type { RankRequest } from '../core/generated/RankRequest';
 import { CatalogStore } from './catalog.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from './ranking.store';
+import { SettingsStore } from './settings.store';
 
 /** Laisse les effets et les loaders de `resource` aller au bout. */
 async function settle(): Promise<void> {
@@ -21,6 +22,19 @@ function setup(debounceMs = 0) {
 
 describe('RankingStore', () => {
   afterEach(() => clearMocks());
+
+  it('recalcule après un enregistrement des paramètres, pas au chargement', async () => {
+    const calls = mockBackend();
+    setup();
+    const settings = TestBed.inject(SettingsStore);
+    await settings.load();
+    await settle();
+    expect(argsOf(calls, 'rank')).toHaveLength(1);
+
+    await settings.save({ ...SETTINGS, estimate: { ...SETTINGS.estimate, vramMargin: 0.2 } });
+    await settle();
+    expect(argsOf(calls, 'rank')).toHaveLength(2);
+  });
 
   it('premier classement immédiat, avec les valeurs par défaut du backend', async () => {
     const calls = mockBackend();

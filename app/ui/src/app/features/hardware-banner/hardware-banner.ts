@@ -1,11 +1,15 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, PendingTasks, computed, inject } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
 import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import type { RuntimeStatus } from '../../core/generated/RuntimeStatus';
 import type { Source } from '../../core/generated/Source';
+import { errorMessage } from '../../core/tauri.service';
 import { bandwidth, gb, roundSize } from '../../shared/format';
 import { RAM_KIND_LABELS, RUNTIMES, SOURCE_LABELS } from '../../shared/labels';
 import { HardwareStore } from '../../state/hardware.store';
@@ -69,16 +73,22 @@ export function diskParts(p: HardwareProfile): BannerPart[] {
   }));
 }
 
-/** Bandeau du haut : matériel détecté, origine des valeurs, runtimes, mémoire utilisable. */
+/**
+ * Bandeau du haut : matériel détecté, origine des valeurs, runtimes, mémoire utilisable, et
+ * accès aux corrections et à la simulation (« Corriger… »).
+ */
 @Component({
   selector: 'app-hardware-banner',
-  imports: [MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
   templateUrl: './hardware-banner.html',
   styleUrl: './hardware-banner.scss',
 })
 export class HardwareBanner {
   private readonly hardware = inject(HardwareStore);
   private readonly ranking = inject(RankingStore);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly pendingTasks = inject(PendingTasks);
 
   protected readonly profile = this.hardware.profile;
   protected readonly error = this.hardware.error;
@@ -108,9 +118,17 @@ export class HardwareBanner {
     }));
   });
 
-  protected readonly simulated = computed(() => {
+  protected readonly simulated = this.hardware.simulation;
+
+  /** Ce qui est simulé, en infobulle de l'étiquette « Simulation ». */
+  protected readonly simulationTooltip = computed(() => {
     const o = this.profile()?.overrides;
-    return !!o && (o.simulatedGpu !== null || o.simulatedRamTotal !== null);
+    if (!o) return '';
+    const parts = [
+      o.simulatedGpu && `GPU ${o.simulatedGpu}`,
+      o.simulatedRamTotal !== null && `RAM ${roundSize(o.simulatedRamTotal)}`,
+    ].filter(Boolean);
+    return `Classement calculé pour un matériel simulé : ${parts.join(', ')}.`;
   });
 
   protected readonly runtimes = computed(() => {
@@ -136,4 +154,18 @@ export class HardwareBanner {
   });
 
   protected readonly warnings = computed(() => (this.profile()?.warnings ?? []).join('\n'));
+
+  /** Le dialogue est chargé à la première ouverture. */
+  protected openCorrections(): void {
+    this.pendingTasks.run(async () => {
+      const { CorrectionsDialog } = await import('./corrections-dialog');
+      this.dialog.open(CorrectionsDialog, { width: '720px', maxWidth: '92vw', autoFocus: false });
+    });
+  }
+
+  protected stopSimulation(): void {
+    this.hardware.stopSimulation().catch((e: unknown) => {
+      this.snackBar.open(`Simulation non arrêtée : ${errorMessage(e)}`, 'OK');
+    });
+  }
 }

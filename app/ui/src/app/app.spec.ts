@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
+import { MatDialogHarness } from '@angular/material/dialog/testing';
+import { MatMenuHarness } from '@angular/material/menu/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
+import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { App } from './app';
 import { argsOf, mockBackend } from '../testing/backend';
-import { RANKING, SYNC_SUMMARY } from '../testing/fixtures';
+import { HARDWARE, RANKING, SYNC_SUMMARY } from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
 
@@ -115,6 +118,85 @@ describe('App', () => {
     await fixture.whenStable();
     expect(el.querySelector('[data-testid="sync-progress"]')).toBeNull();
     expect(argsOf(calls, 'rank')).toHaveLength(2);
+  });
+
+  it('exporte le classement affiché depuis le menu', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const loader = TestbedHarnessEnvironment.loader(fixture);
+    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
+
+    const menu = await loader.getHarness(
+      MatMenuHarness.with({ selector: '[data-testid="export"]' }),
+    );
+    await menu.clickItem({ text: /CSV/ });
+    await fixture.whenStable();
+
+    // Sans chemin : le backend ouvre le dialogue « Enregistrer sous ».
+    expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'csv' }]);
+    const snack = await root.getHarness(MatSnackBarHarness);
+    expect(await snack.getMessage()).toBe(
+      'Classement exporté : C:\\Users\\x\\Documents\\classement-gram.csv',
+    );
+  });
+
+  it('un export annulé ne montre rien', async () => {
+    const calls = mockBackend({ export_ranking: () => null });
+    const fixture = await start();
+    const loader = TestbedHarnessEnvironment.loader(fixture);
+    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
+    const menu = await loader.getHarness(
+      MatMenuHarness.with({ selector: '[data-testid="export"]' }),
+    );
+    await menu.clickItem({ text: /Markdown/ });
+    await fixture.whenStable();
+    expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'md' }]);
+    expect(await root.getAllHarnesses(MatSnackBarHarness)).toHaveLength(0);
+  });
+
+  it('simulation en cours : signalée dans le bandeau, arrêtée en gardant les corrections', async () => {
+    const simulated = {
+      ...HARDWARE,
+      overrides: {
+        ...HARDWARE.overrides,
+        ramChannels: 4,
+        simulatedGpu: 'NVIDIA GeForce RTX 4090 24 Go',
+      },
+    };
+    const calls = mockBackend({ get_hardware: () => simulated });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(text(el.querySelector('[data-testid="simulation"]'))).toContain('Simulation');
+    const ranks = argsOf(calls, 'rank').length;
+
+    (el.querySelector('[data-testid="stop-simulation"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(argsOf(calls, 'set_hardware_overrides')).toEqual([
+      { overrides: { ...simulated.overrides, simulatedGpu: null, simulatedRamTotal: null } },
+    ]);
+    expect(el.querySelector('[data-testid="simulation"]')).toBeNull();
+    expect(argsOf(calls, 'rank').length).toBe(ranks + 1);
+  });
+
+  it('ouvre les paramètres et le dialogue « Corriger… »', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
+
+    (el.querySelector('[data-testid="open-settings"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    let dialog = await root.getHarness(MatDialogHarness);
+    expect(await dialog.getTitleText()).toBe('Paramètres');
+    await dialog.close();
+    expect(argsOf(calls, 'has_hf_token')).toHaveLength(1);
+
+    (el.querySelector('[data-testid="open-corrections"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    // Le dialogue des paramètres peut être encore en train de se fermer.
+    dialog = (await root.getAllHarnesses(MatDialogHarness)).at(-1)!;
+    expect(await dialog.getTitleText()).toBe('Corriger le matériel');
+    expect(argsOf(calls, 'hardware_options')).toHaveLength(1);
   });
 
   it('signale une erreur de classement et permet de réessayer', async () => {

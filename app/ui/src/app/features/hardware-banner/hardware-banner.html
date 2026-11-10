@@ -53,18 +53,34 @@
       </div>
     </dl>
     <div class="extras">
-      @if (simulated()) {
-        <span class="tag simulation">Simulation</span>
-      }
-      @if (warnings()) {
-        <mat-icon
-          class="warning"
-          tabindex="0"
-          aria-label="Avertissements de détection"
-          matTooltipClass="gram-multiline-tooltip"
-          [matTooltip]="warnings()"
-          >warning</mat-icon
+      <div class="actions">
+        @if (warnings()) {
+          <mat-icon
+            class="warning"
+            tabindex="0"
+            aria-label="Avertissements de détection"
+            matTooltipClass="gram-multiline-tooltip"
+            [matTooltip]="warnings()"
+            >warning</mat-icon
+          >
+        }
+        <button
+          mat-stroked-button
+          type="button"
+          data-testid="open-corrections"
+          matTooltip="Corriger une valeur détectée, ou simuler un autre GPU ou une autre quantité de RAM"
+          (click)="openCorrections()"
         >
+          Corriger…
+        </button>
+      </div>
+      @if (simulated()) {
+        <span class="simulation-row" data-testid="simulation">
+          <span class="tag simulation" [matTooltip]="simulationTooltip()">Simulation</span>
+          <button mat-button type="button" data-testid="stop-simulation" (click)="stopSimulation()">
+            Arrêter
+          </button>
+        </span>
       }
     </div>
   } @else if (error()) {

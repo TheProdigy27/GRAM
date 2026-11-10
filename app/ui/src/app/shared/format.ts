@@ -22,6 +22,14 @@ export function gb(bytes: number): string {
   return `${gbValue(bytes)} Go`;
 }
 
+/** Taille de fichiers → « 1,2 Go », « 38 Mo », « < 1 Mo ». */
+export function fileSize(bytes: number): string {
+  if (bytes >= GIB) return gb(bytes);
+  if (bytes <= 0) return '0 Mo';
+  const mib = bytes / 2 ** 20;
+  return mib < 1 ? '< 1 Mo' : `${integer.format(Math.round(mib))} Mo`;
+}
+
 /** Taille arrondie (RAM, VRAM, disques) → « 16 Go », « 1,8 To ». */
 export function roundSize(bytes: number): string {
   const gib = bytes / GIB;

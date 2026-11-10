@@ -39,6 +39,19 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
+    "publisher": "GRAM",
+    "category": "Utility",
+    "shortDescription": "Quels modèles IA tournent en local sur cette machine ?",
+    "longDescription": "GRAM (GPU & RAM Aware Matcher) analyse le matériel de la machine et classe les modèles IA exécutables en local, à partir des données Hugging Face, avec la commande prête à copier pour Ollama, LM Studio ou llama.cpp.",
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["French"],
+        "displayLanguageSelector": false
+      },
+      "wix": { "language": "fr-FR" }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

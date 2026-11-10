@@ -1,0 +1,438 @@
+<h2 mat-dialog-title>Paramètres</h2>
+
+<mat-dialog-content class="content">
+  @if (draft(); as d) {
+    <mat-tab-group animationDuration="0ms" mat-stretch-tabs="false">
+      <!-- ── Estimation ─────────────────────────────────────────────────────────────── -->
+      <mat-tab label="Estimation">
+        <div class="tab">
+          <p class="muted intro">
+            Mémoire réellement utilisable et vitesse estimée. Les estimations restent à ±30 % près.
+          </p>
+          <div class="grid">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Marge de sécurité VRAM</mat-label>
+              <input
+                #vram
+                matInput
+                type="number"
+                min="0"
+                max="90"
+                step="1"
+                data-testid="set-vram-margin"
+                [value]="pct(d.estimate.vramMargin)"
+                (input)="setEstimateNumber('vramMargin', vram.value, 0.01)"
+              />
+              <span matTextSuffix>%</span>
+              <mat-hint
+                >Affichage Windows, applications ouvertes
+                @if (defaults(); as def) {
+                  · défaut {{ pct(def.estimate.vramMargin) }} %
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Part de RAM utilisable</mat-label>
+              <input
+                #ram
+                matInput
+                type="number"
+                min="10"
+                max="100"
+                step="5"
+                data-testid="set-ram-share"
+                [value]="pct(d.estimate.ramShare)"
+                (input)="setEstimateNumber('ramShare', ram.value, 0.01)"
+              />
+              <span matTextSuffix>%</span>
+              <mat-hint
+                >De la RAM totale, au plus la RAM libre
+                @if (defaults(); as def) {
+                  · défaut {{ pct(def.estimate.ramShare) }} %
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-checkbox
+              class="span"
+              data-testid="set-close-apps"
+              [checked]="d.estimate.closeApps"
+              (change)="setEstimate('closeApps', $event.checked)"
+            >
+              Je ferme tout avant de lancer le modèle (RAM totale moins 4 Go, VRAM entière)
+            </mat-checkbox>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Surcoût du runtime</mat-label>
+              <input
+                #overhead
+                matInput
+                type="number"
+                min="0"
+                max="16"
+                step="0.1"
+                [value]="toGb(d.estimate.overheadBytes)"
+                (input)="setEstimateNumber('overheadBytes', overhead.value, gib)"
+              />
+              <span matTextSuffix>Go</span>
+              <mat-hint
+                >Contexte CUDA/Vulkan et buffers
+                @if (defaults(); as def) {
+                  · défaut {{ decimal(toGb(def.estimate.overheadBytes)) }} Go
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Type de cache KV</mat-label>
+              <mat-select
+                data-testid="set-kv-cache"
+                [value]="d.estimate.kvCache"
+                (selectionChange)="setEstimate('kvCache', $event.value)"
+              >
+                @for (k of kvTypes; track k.value) {
+                  <mat-option [value]="k.value">{{ k.label }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>À régler aussi dans le runtime</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Efficacité (vitesse)</mat-label>
+              <input
+                #eff
+                matInput
+                type="number"
+                min="0.05"
+                max="2"
+                step="0.05"
+                data-testid="set-efficiency"
+                [value]="d.estimate.efficiency"
+                (input)="setEstimateNumber('efficiency', eff.value)"
+              />
+              <mat-hint
+                >Part de la bande passante exploitée
+                @if (defaults(); as def) {
+                  · défaut {{ decimal(def.estimate.efficiency) }}
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Temps fixe par token</mat-label>
+              <input
+                #fixed
+                matInput
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                [value]="d.estimate.tokenOverheadMs"
+                (input)="setEstimateNumber('tokenOverheadMs', fixed.value)"
+              />
+              <span matTextSuffix>ms</span>
+              <mat-hint
+                >Compte surtout pour les MoE et petits modèles
+                @if (defaults(); as def) {
+                  · défaut {{ decimal(def.estimate.tokenOverheadMs) }} ms
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Bits par poids minimum</mat-label>
+              <input
+                #bpw
+                matInput
+                type="number"
+                min="0"
+                max="16"
+                step="0.5"
+                [value]="d.estimate.minBpw"
+                (input)="setEstimateNumber('minBpw', bpw.value)"
+              />
+              <mat-hint
+                >En dessous, quantification non proposée
+                @if (defaults(); as def) {
+                  · défaut {{ decimal(def.estimate.minBpw) }}
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Contexte minimal</mat-label>
+              <input
+                #minCtx
+                matInput
+                type="number"
+                min="256"
+                max="131072"
+                step="1024"
+                [value]="d.estimate.minCtx"
+                (input)="setEstimateNumber('minCtx', minCtx.value)"
+              />
+              <span matTextSuffix>tokens</span>
+              <mat-hint
+                >Repli quand le contexte demandé ne tient pas
+                @if (defaults(); as def) {
+                  · défaut {{ int(def.estimate.minCtx) }}
+                }
+              </mat-hint>
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- ── Cas d'usage ────────────────────────────────────────────────────────────── -->
+      <mat-tab label="Cas d’usage">
+        <div class="tab">
+          <p class="muted intro">
+            Contexte proposé par défaut, vitesse sous laquelle un modèle passe dans « Exécutable
+            mais lent », et poids des quatre axes du score (moyenne pondérée : leur somme est
+            libre).
+          </p>
+          <table class="use-cases">
+            <thead>
+              <tr>
+                <th scope="col">Cas d’usage</th>
+                <th scope="col">Contexte</th>
+                <th scope="col">Lent sous (tok/s)</th>
+                @for (w of weights; track w.key) {
+                  <th scope="col">{{ w.label }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (u of useCases; track u.value) {
+                @let p = d.useCases[u.value];
+                <tr [attr.data-testid]="'use-case-' + u.value">
+                  <th scope="row">{{ u.label }}</th>
+                  <td>
+                    <select
+                      class="cell"
+                      [attr.aria-label]="'Contexte par défaut : ' + u.label"
+                      [value]="p.ctx"
+                      (change)="setUseCase(u.value, { ctx: +$any($event.target).value })"
+                    >
+                      @for (c of ctxOptions(); track c) {
+                        <option [value]="c" [selected]="c === p.ctx">{{ ctxK(c) }}</option>
+                      }
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      #slow
+                      class="cell"
+                      type="number"
+                      min="0"
+                      step="1"
+                      data-testid="slow"
+                      [attr.aria-label]="'Seuil de lenteur : ' + u.label"
+                      [value]="p.slowTokS"
+                      (input)="setSlow(u.value, slow.value)"
+                    />
+                  </td>
+                  @for (w of weights; track w.key) {
+                    <td>
+                      <input
+                        #weight
+                        class="cell"
+                        type="number"
+                        min="0"
+                        step="0.05"
+                        [attr.aria-label]="'Poids ' + w.label + ' : ' + u.label"
+                        [value]="p.weights[w.key]"
+                        (input)="setWeight(u.value, w.key, weight.value)"
+                      />
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-tab>
+
+      <!-- ── Catalogue ──────────────────────────────────────────────────────────────── -->
+      <mat-tab label="Catalogue">
+        <div class="tab">
+          <div class="grid">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Téléchargements minimum</mat-label>
+              <input
+                #downloads
+                matInput
+                type="number"
+                min="0"
+                step="100"
+                [value]="d.minDownloads"
+                (input)="setNumber('minDownloads', downloads.value)"
+              />
+              <mat-hint>Sauf dépôt en tendance · prochaine synchronisation</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Durée de vie du catalogue</mat-label>
+              <input
+                #ttl
+                matInput
+                type="number"
+                min="1"
+                max="720"
+                step="1"
+                data-testid="set-ttl"
+                [value]="d.catalogTtlHours"
+                (input)="setNumber('catalogTtlHours', ttl.value)"
+              />
+              <span matTextSuffix>h</span>
+              <mat-hint>Au-delà, le lancement resynchronise</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Modèles détaillés à la synchronisation</mat-label>
+              <input
+                #groups
+                matInput
+                type="number"
+                min="0"
+                max="400"
+                step="10"
+                [value]="d.detailGroups"
+                (input)="setNumber('detailGroups', groups.value)"
+              />
+              <mat-hint>Tailles réelles · au-delà de 150, token conseillé</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Lignes affichées</mat-label>
+              <input
+                #rows
+                matInput
+                type="number"
+                min="5"
+                max="500"
+                step="5"
+                [value]="d.pageSize"
+                (input)="setNumber('pageSize', rows.value)"
+              />
+              <mat-hint>Avant « Voir plus »</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <h3>Cache local</h3>
+          <div class="row">
+            <div class="cache">
+              <span data-testid="cache-summary">{{ cacheSummary() }}</span>
+              <code class="muted path">{{ cache()?.path }}</code>
+            </div>
+            <button
+              mat-stroked-button
+              type="button"
+              data-testid="clear-cache"
+              [disabled]="cacheBusy() || !cache()?.files"
+              (click)="clearCache()"
+            >
+              <mat-icon>delete_sweep</mat-icon>
+              Vider le cache
+            </button>
+          </div>
+          <p class="muted note">
+            Le catalogue affiché reste utilisable ; la prochaine synchronisation repartira de zéro.
+          </p>
+        </div>
+      </mat-tab>
+
+      <!-- ── Hugging Face ───────────────────────────────────────────────────────────── -->
+      <mat-tab label="Hugging Face">
+        <div class="tab">
+          <p class="muted intro">
+            Un token (lecture seule suffit) élargit les quotas de l’API Hugging Face. Il est rangé
+            dans le Gestionnaire d’identifiants Windows et n’est jamais affiché.
+          </p>
+          <p data-testid="token-status">
+            Token :
+            @switch (hasToken()) {
+              @case (true) {
+                <span class="tag ok">configuré</span>
+              }
+              @case (false) {
+                <span class="tag">non configuré</span>
+              }
+              @default {
+                <span class="muted">…</span>
+              }
+            }
+          </p>
+          <div class="row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="token">
+              <mat-label>{{ hasToken() ? 'Remplacer le token' : 'Token' }}</mat-label>
+              <input
+                #tokenInput
+                matInput
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="hf_…"
+                data-testid="token-input"
+                [value]="token()"
+                (input)="token.set(tokenInput.value)"
+                (keydown.enter)="saveToken()"
+              />
+            </mat-form-field>
+            <button
+              mat-flat-button
+              type="button"
+              data-testid="token-save"
+              [disabled]="tokenBusy() || !token().trim()"
+              (click)="saveToken()"
+            >
+              Enregistrer
+            </button>
+            @if (hasToken()) {
+              <button
+                mat-button
+                type="button"
+                data-testid="token-clear"
+                [disabled]="tokenBusy()"
+                (click)="clearToken()"
+              >
+                Supprimer
+              </button>
+            }
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+
+    @if (error(); as message) {
+      <p class="error-box" role="alert">{{ message }}</p>
+    }
+  } @else {
+    <mat-progress-bar mode="indeterminate" aria-label="Chargement des paramètres" />
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="actions">
+  <button
+    mat-button
+    type="button"
+    data-testid="settings-reset"
+    [disabled]="!defaults() || !draft()"
+    (click)="resetDefaults()"
+  >
+    <mat-icon>restart_alt</mat-icon>
+    Valeurs par défaut
+  </button>
+  <span class="spacer"></span>
+  <button mat-button type="button" mat-dialog-close>Annuler</button>
+  <button
+    mat-flat-button
+    type="button"
+    data-testid="settings-save"
+    [disabled]="saving() || !changed()"
+    (click)="save()"
+  >
+    Enregistrer
+  </button>
+</mat-dialog-actions>

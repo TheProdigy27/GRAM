@@ -72,9 +72,10 @@ export class RankingStore {
   private readonly query = resource({
     params: () => ({
       request: this.request(),
-      // Recalcul quand le matériel ou le catalogue change, à requête égale.
+      // Recalcul quand le matériel, le catalogue ou les paramètres changent, à requête égale.
       hardware: this.hardware.version(),
       catalog: this.catalog.version(),
+      settings: this.settings.version(),
     }),
     loader: async ({ params, abortSignal, previous }) => {
       // Pas d'attente au premier calcul : le classement s'affiche dès le lancement.

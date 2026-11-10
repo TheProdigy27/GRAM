@@ -13,7 +13,9 @@ import type { ModelDetail } from '../core/generated/ModelDetail';
 import type { VariantDetail } from '../core/generated/VariantDetail';
 import { TauriService } from '../core/tauri.service';
 import { delay, sameJson } from './async';
+import { HardwareStore } from './hardware.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from './ranking.store';
+import { SettingsStore } from './settings.store';
 
 /**
  * Fiche détail du modèle sélectionné, avec les filtres du classement (cas d'usage, contexte,
@@ -23,6 +25,8 @@ import { FILTER_DEBOUNCE_MS, RankingStore } from './ranking.store';
 export class DetailStore {
   private readonly tauri = inject(TauriService);
   private readonly ranking = inject(RankingStore);
+  private readonly hardware = inject(HardwareStore);
+  private readonly settings = inject(SettingsStore);
   private readonly debounceMs = inject(FILTER_DEBOUNCE_MS);
 
   /** Modèle ouvert ; `null` : panneau fermé. */
@@ -47,12 +51,18 @@ export class DetailStore {
   private readonly last = signal<ModelDetail | undefined>(undefined);
 
   private readonly query = resource({
-    params: () => this.request(),
-    loader: async ({ params, abortSignal, previous }) => {
-      const sameModel = params.repoId === this.lastRepoId;
-      this.lastRepoId = params.repoId;
+    params: () => {
+      const request = this.request();
+      // Recalcul aussi quand le matériel (corrections, simulation) ou les paramètres changent.
+      return request
+        ? { request, hardware: this.hardware.version(), settings: this.settings.version() }
+        : undefined;
+    },
+    loader: async ({ params: { request }, abortSignal, previous }) => {
+      const sameModel = request.repoId === this.lastRepoId;
+      this.lastRepoId = request.repoId;
       if (sameModel && previous.status !== 'idle') await delay(this.debounceMs, abortSignal);
-      const detail = await this.tauri.getModelDetail(params);
+      const detail = await this.tauri.getModelDetail(request);
       if (!abortSignal.aborted) this.last.set(detail);
       return detail;
     },

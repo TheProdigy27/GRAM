@@ -1,0 +1,111 @@
+.content {
+  min-height: 440px;
+}
+
+.tab {
+  padding: 12px 2px 4px;
+}
+
+.intro {
+  margin: 0 0 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.span {
+  grid-column: 1 / -1;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+h3 {
+  margin: 24px 0 8px;
+  font: var(--mat-sys-title-small);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cache {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  margin: 8px 0 0;
+}
+
+.token {
+  flex: 1;
+}
+
+.tag.ok {
+  color: var(--gram-ok);
+  background: var(--gram-ok-bg);
+}
+
+// Tableau des cas d'usage : champs natifs compacts.
+.use-cases {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 4px 6px;
+    text-align: left;
+  }
+
+  thead th {
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  tbody th {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+.cell {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 56px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  background: var(--mat-sys-surface);
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+  }
+}
+
+.actions {
+  display: flex;
+}
+
+.spacer {
+  flex: 1;
+}

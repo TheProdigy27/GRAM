@@ -1,5 +1,5 @@
 //! Paramètres utilisateur (§12 du plan), tous modifiables dans l'interface et enregistrés dans
-//! `%LOCALAPPDATA%\GRAM\settings.json` (sans le token Hugging Face).
+//! `%LOCALAPPDATA%\fr.gram.desktop\settings.json` (sans le token Hugging Face).
 
 use crate::estimate::EstimateParams;
 use crate::launch::Runtime;
@@ -13,6 +13,13 @@ const GIB: u64 = 1 << 30;
 /// Contexte le plus long proposé (curseur de l'interface : 2k → 128k, saisie libre au-delà).
 pub const MAX_CTX: u32 = 1 << 20;
 
+/// Durée de vie maximale du catalogue en cache : 30 jours.
+pub const MAX_CATALOG_TTL_HOURS: u32 = 720;
+
+/// Groupes détaillés au plus par synchronisation : environ 600 appels à l'API, au-dessus du
+/// quota anonyme de Hugging Face (500 par 5 minutes) ; un token est alors nécessaire.
+pub const MAX_DETAIL_GROUPS: u32 = 400;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", default)]
 #[ts(export)]
@@ -25,6 +32,10 @@ pub struct Settings {
     pub use_cases: UseCaseProfiles,
     /// Téléchargements minimum d'un dépôt à la synchronisation (sauf s'il est en tendance).
     pub min_downloads: u64,
+    /// Durée de vie du catalogue en cache, en heures : au-delà, le lancement le resynchronise.
+    pub catalog_ttl_hours: u32,
+    /// Groupes de modèles dont la synchronisation charge les tailles réelles (quota de l'API).
+    pub detail_groups: u32,
     /// Lignes affichées avant « Voir plus ».
     pub page_size: u32,
 }
@@ -36,6 +47,8 @@ impl Default for Settings {
             estimate: EstimateParams::default(),
             use_cases: UseCaseProfiles::default(),
             min_downloads: 500,
+            catalog_ttl_hours: 24,
+            detail_groups: 150,
             page_size: 25,
         }
     }
@@ -136,6 +149,8 @@ impl Settings {
                 p.weights = def.weights;
             }
         }
+        self.catalog_ttl_hours = self.catalog_ttl_hours.clamp(1, MAX_CATALOG_TTL_HOURS);
+        self.detail_groups = self.detail_groups.min(MAX_DETAIL_GROUPS);
         self.page_size = self.page_size.clamp(5, 500);
         self
     }
@@ -174,6 +189,7 @@ mod tests {
             assert!((w.sum() - 1.0).abs() < 1e-6, "{uc:?}");
         }
         assert_eq!((s.min_downloads, s.page_size), (500, 25));
+        assert_eq!((s.catalog_ttl_hours, s.detail_groups), (24, 150));
         assert_eq!(s.clone().sanitized(), s, "les défauts sont déjà valides");
     }
 
@@ -204,6 +220,8 @@ mod tests {
         s.use_cases.fast_chat.weights = ScoreWeights::new(0.0, 0.0, 0.0, 0.0);
         s.use_cases.vision.slow_tok_s = -1.0;
         s.page_size = 0;
+        s.catalog_ttl_hours = 0;
+        s.detail_groups = 10_000;
         let s = s.sanitized();
         assert_eq!(s.estimate.vram_margin, 0.9);
         assert_eq!(s.estimate.efficiency, 0.55);
@@ -216,6 +234,8 @@ mod tests {
         );
         assert_eq!(s.use_cases.vision.slow_tok_s, 0.0);
         assert_eq!(s.page_size, 5);
+        assert_eq!(s.catalog_ttl_hours, 1);
+        assert_eq!(s.detail_groups, MAX_DETAIL_GROUPS);
     }
 
     #[test]

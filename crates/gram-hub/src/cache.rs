@@ -1,4 +1,4 @@
-//! Cache local (§7.7 du plan) : `%LOCALAPPDATA%\GRAM\cache\`
+//! Cache local (§7.7 du plan) : `%LOCALAPPDATA%\fr.gram.desktop\cache\`
 //!
 //! - `catalog.json` : dernier catalogue synchronisé (durée de vie : 24 h par défaut) ;
 //! - `details/{org}--{nom}@{sha}.json` : fichiers d'un dépôt ([`RepoDetail`]) ;
@@ -19,9 +19,24 @@ pub struct Cache {
     root: PathBuf,
 }
 
-/// Dossier de l'application : `%LOCALAPPDATA%\GRAM` (cache, `settings.json`).
+/// Identifiant de l'application : `identifier` de `app/src-tauri/tauri.conf.json`.
+pub const APP_ID: &str = "fr.gram.desktop";
+
+/// Dossier de l'application : `%LOCALAPPDATA%\fr.gram.desktop` (cache, paramètres,
+/// corrections du matériel), partagé par l'application et `gram-cli`.
+///
+/// C'est le dossier où Tauri range déjà les données de WebView2, et celui que la
+/// désinstallation propose de supprimer. `%LOCALAPPDATA%\GRAM` ne convient pas : c'est le
+/// dossier d'installation par défaut de l'installeur (NSIS, pour l'utilisateur courant).
 pub fn app_dir() -> Option<PathBuf> {
-    directories::BaseDirs::new().map(|d| d.data_local_dir().join("GRAM"))
+    directories::BaseDirs::new().map(|d| d.data_local_dir().join(APP_ID))
+}
+
+/// Place occupée par le cache.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CacheUsage {
+    pub files: u64,
+    pub bytes: u64,
 }
 
 /// Identifiant de dépôt Hugging Face sûr pour un nom de fichier : `org/nom`, caractères
@@ -47,7 +62,7 @@ impl Cache {
         Self { root: root.into() }
     }
 
-    /// `%LOCALAPPDATA%\GRAM\cache` (équivalent sur les autres OS).
+    /// `%LOCALAPPDATA%\fr.gram.desktop\cache` (équivalent sur les autres OS).
     pub fn default_root() -> Option<PathBuf> {
         app_dir().map(|d| d.join("cache"))
     }
@@ -93,6 +108,30 @@ impl Cache {
             Some(path) => write_json(&path, a),
             None => Ok(()),
         }
+    }
+
+    /// Nombre de fichiers et taille du cache (0 s'il n'existe pas).
+    pub fn usage(&self) -> io::Result<CacheUsage> {
+        fn walk(dir: &Path, total: &mut CacheUsage) -> io::Result<()> {
+            let entries = match fs::read_dir(dir) {
+                Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+                other => other?,
+            };
+            for entry in entries {
+                let entry = entry?;
+                let kind = entry.file_type()?;
+                if kind.is_dir() {
+                    walk(&entry.path(), total)?;
+                } else if kind.is_file() {
+                    total.files += 1;
+                    total.bytes += entry.metadata()?.len();
+                }
+            }
+            Ok(())
+        }
+        let mut total = CacheUsage::default();
+        walk(&self.root, &mut total)?;
+        Ok(total)
     }
 
     /// Vide le cache (bouton des paramètres).
@@ -174,8 +213,12 @@ mod tests {
         // Fichier corrompu : ignoré.
         fs::write(dir.path().join("catalog.json"), b"{").unwrap();
         assert!(cache.load_catalog().is_none());
+        let usage = cache.usage().unwrap();
+        assert_eq!(usage.files, 2, "details/… et catalog.json");
+        assert!(usage.bytes > 100, "{usage:?}");
         cache.clear().unwrap();
         assert!(!dir.path().exists());
+        assert_eq!(cache.usage().unwrap(), CacheUsage::default());
         cache.clear().unwrap();
     }
 }

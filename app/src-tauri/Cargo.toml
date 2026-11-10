@@ -34,6 +34,8 @@ keyring = "4.2.0"
 tauri-plugin-opener = "2.7.2"
 # Bouton « Copier » des commandes de lancement.
 tauri-plugin-clipboard-manager = "2.5.0"
+# Dialogue « Enregistrer sous » de l'export, ouvert depuis Rust (aucune permission côté WebView).
+tauri-plugin-dialog = "2.8.4"
 
 [lints]
 workspace = true

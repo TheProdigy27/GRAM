@@ -28,6 +28,14 @@ impl ExportFormat {
             Self::Csv => "csv",
         }
     }
+
+    /// Nom du format, pour le filtre du dialogue d'enregistrement.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Md => "Markdown",
+            Self::Csv => "CSV (Excel)",
+        }
+    }
 }
 
 /// Résumé du matériel sur une ligne : « GPU … · RAM … · CPU … ».

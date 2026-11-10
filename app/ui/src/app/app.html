@@ -1,5 +1,5 @@
 <mat-toolbar class="toolbar">
-  <mat-icon aria-hidden="true">memory</mat-icon>
+  <img class="logo" src="logo.svg" alt="" width="28" height="28" />
   <span class="brand">GRAM</span>
   <span class="tagline">GPU &amp; RAM Aware Matcher</span>
   <span class="spacer"></span>
@@ -24,6 +24,37 @@
   >
     <mat-icon>cloud_sync</mat-icon>
     Actualiser les modèles
+  </button>
+  <button
+    mat-button
+    type="button"
+    data-testid="export"
+    matTooltip="Enregistrer le classement affiché, en entier"
+    [matMenuTriggerFor]="exportMenu"
+    [disabled]="exporting() || !ranking.response()"
+  >
+    <mat-icon>download</mat-icon>
+    Exporter
+  </button>
+  <mat-menu #exportMenu="matMenu">
+    <button mat-menu-item type="button" data-testid="export-md" (click)="exportRanking('md')">
+      <mat-icon>article</mat-icon>
+      Markdown (.md)
+    </button>
+    <button mat-menu-item type="button" data-testid="export-csv" (click)="exportRanking('csv')">
+      <mat-icon>table</mat-icon>
+      CSV pour Excel (.csv)
+    </button>
+  </mat-menu>
+  <button
+    mat-icon-button
+    type="button"
+    data-testid="open-settings"
+    aria-label="Paramètres"
+    matTooltip="Paramètres"
+    (click)="openSettings()"
+  >
+    <mat-icon>settings</mat-icon>
   </button>
 </mat-toolbar>
 

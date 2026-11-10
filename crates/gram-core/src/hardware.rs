@@ -191,6 +191,23 @@ pub struct Overrides {
     pub simulated_ram_total: Option<u64>,
 }
 
+impl Overrides {
+    /// Une simulation est en cours (GPU ou RAM).
+    pub fn is_simulation(&self) -> bool {
+        self.simulated_gpu.is_some() || self.simulated_ram_total.is_some()
+    }
+
+    /// Les corrections seules, sans la simulation : ce qui est enregistré d'un lancement à
+    /// l'autre (une simulation est un essai, elle s'arrête à la fermeture).
+    pub fn corrections(&self) -> Self {
+        Self {
+            simulated_gpu: None,
+            simulated_ram_total: None,
+            ..self.clone()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,5 +285,24 @@ mod tests {
     fn overrides_vides_acceptes() {
         let o: Overrides = serde_json::from_str("{}").unwrap();
         assert_eq!(o, Overrides::default());
+        assert!(!o.is_simulation());
+    }
+
+    #[test]
+    fn corrections_sans_simulation() {
+        let o = Overrides {
+            ram_channels: Some(4),
+            gpu_bandwidth_gbs: Some(900.0),
+            simulated_gpu: Some("NVIDIA GeForce RTX 4090 24 Go".into()),
+            simulated_ram_total: Some(128 << 30),
+            ..Overrides::default()
+        };
+        assert!(o.is_simulation());
+        let c = o.corrections();
+        assert!(!c.is_simulation());
+        assert_eq!(
+            (c.ram_channels, c.gpu_bandwidth_gbs),
+            (Some(4), Some(900.0))
+        );
     }
 }

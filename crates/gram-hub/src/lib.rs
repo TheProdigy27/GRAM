@@ -5,7 +5,7 @@
 //! - [`http`] : [`Hub`] (limiteur, 429, compteurs) au-dessus d'un [`Transport`] ;
 //! - [`files`], [`gguf`], [`config`], [`dedup`], [`catalog`] : traitements purs, testés sur
 //!   des réponses réelles enregistrées dans `tests/fixtures/hf/` ;
-//! - [`cache`] : `%LOCALAPPDATA%\GRAM\cache\` ;
+//! - [`cache`] : `%LOCALAPPDATA%\fr.gram.desktop\cache\` ;
 //! - [`sync`] : la stratégie de collecte (§7.3), et le repli hors ligne ;
 //! - [`snapshot`] : `data/seed_catalog.json`, embarqué dans le binaire.
 //!

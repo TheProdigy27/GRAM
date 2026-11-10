@@ -21,6 +21,14 @@ useCases: UseCaseProfiles,
  */
 minDownloads: number, 
 /**
+ * Durée de vie du catalogue en cache, en heures : au-delà, le lancement le resynchronise.
+ */
+catalogTtlHours: number, 
+/**
+ * Groupes de modèles dont la synchronisation charge les tailles réelles (quota de l'API).
+ */
+detailGroups: number, 
+/**
  * Lignes affichées avant « Voir plus ».
  */
 pageSize: number, };
