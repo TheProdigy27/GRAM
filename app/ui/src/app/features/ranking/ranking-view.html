@@ -51,6 +51,17 @@
           Voir plus ({{ moreItems() }} restants)
         </button>
       }
+    } @else if (r.search !== null) {
+      <p class="empty" data-testid="search-empty">
+        @if (r.totalSlow + r.tooBigCount === 0) {
+          Aucun modèle ne correspond à « {{ r.search }} ».
+        } @else {
+          Aucun modèle exécutable assez rapide ne correspond à « {{ r.search }} » : voir plus bas.
+        }
+        <button mat-button type="button" (click)="ranking.setSearch('')">
+          Effacer la recherche
+        </button>
+      </p>
     } @else {
       <p class="empty">
         Aucun modèle ne tient en mémoire assez vite avec ces filtres. Essayer un contexte plus

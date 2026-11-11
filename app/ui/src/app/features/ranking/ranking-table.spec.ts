@@ -17,15 +17,16 @@ import { RankingTable } from './ranking-table';
 })
 class Host {
   readonly items = signal<RankItem[]>([
-    makeItem('Rapide', { score: 90, tokS: 95, installed: ['Q4_K_M'] }),
+    makeItem('Rapide', { rank: 1, score: 90, tokS: 95, installed: ['Q4_K_M'] }),
     makeItem('Hybride', {
+      rank: 2,
       score: 70,
       tokS: 7.4,
       size: 14 * GIB,
       mode: { kind: 'hybrid', gpuLayers: 30, layers: 40 },
       approximate: true,
     }),
-    makeItem('Vision', { score: 80, tokS: 40, vision: true, gated: true }),
+    makeItem('Vision', { rank: 3, score: 80, tokS: 40, vision: true, gated: true }),
   ]);
   readonly selected = signal<string | null>('org/Vision-GGUF');
   readonly opened: string[] = [];

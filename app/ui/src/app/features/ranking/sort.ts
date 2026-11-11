@@ -1,7 +1,7 @@
 import type { RankItem } from '../../core/generated/RankItem';
 import { MODE_ORDER } from '../../shared/labels';
 
-/** Une ligne affichée, avec sa position dans l'ordre du score (colonne « # »). */
+/** Une ligne affichée, avec son rang dans le classement complet (colonne « # »). */
 export interface RankedRow {
   rank: number;
   item: RankItem;
@@ -23,9 +23,12 @@ const KEYS: Record<SortKey, (r: RankedRow) => number | string> = {
   score: (r) => r.item.score.total,
 };
 
-/** Lignes numérotées dans l'ordre reçu (du meilleur score au moins bon). */
+/**
+ * Lignes dans l'ordre reçu (du meilleur score au moins bon), avec le rang calculé par le backend :
+ * pendant une recherche, il reste celui du classement complet.
+ */
 export function rankedRows(items: readonly RankItem[]): RankedRow[] {
-  return items.map((item, i) => ({ rank: i + 1, item }));
+  return items.map((item) => ({ rank: item.rank, item }));
 }
 
 /** Tri par colonne ; sans tri actif, l'ordre du score. À égalité, l'ordre du score. */

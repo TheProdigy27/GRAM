@@ -83,6 +83,28 @@ describe('RankingStore', () => {
     });
   });
 
+  it('envoie la recherche sans espaces superflues et revient à la première page', async () => {
+    const calls = mockBackend();
+    const store = setup();
+    await settle();
+    store.showMore();
+    store.setSearch('  qwen3 8b ');
+    await settle();
+    expect(argsOf(calls, 'rank').at(-1)!['request']).toEqual({
+      useCase: 'general',
+      search: 'qwen3 8b',
+      showTooBig: false,
+      limit: 25,
+    });
+
+    // Une recherche vide (ou faite d'espaces) n'est pas envoyée.
+    const count = argsOf(calls, 'rank').length;
+    store.setSearch('   ');
+    await settle();
+    expect(argsOf(calls, 'rank')).toHaveLength(count + 1);
+    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
+  });
+
   it('regroupe les changements rapprochés (debounce) et garde l’ancien classement affiché', async () => {
     let answer = RANKING;
     const calls = mockBackend({ rank: () => answer });

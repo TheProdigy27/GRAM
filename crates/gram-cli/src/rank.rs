@@ -19,6 +19,8 @@ pub struct RankArgs {
     pub ctx: Option<u32>,
     pub runtime: Option<Runtime>,
     pub max_size_gb: Option<f64>,
+    /// Recherche par nom (tous les mots doivent figurer).
+    pub search: Option<String>,
     pub show_too_big: bool,
     /// Lignes par liste ; 0 : toutes.
     pub limit: u32,
@@ -43,6 +45,7 @@ pub fn run(args: RankArgs) -> Result<()> {
             .max_size_gb
             .filter(|g| g.is_finite() && *g > 0.0)
             .map(|g| (g * GIB) as u64),
+        search: args.search,
         show_too_big: args.show_too_big,
         limit: (args.limit > 0).then_some(args.limit),
     };
@@ -71,7 +74,7 @@ fn header(out: &mut String) {
     );
 }
 
-fn row(out: &mut String, i: usize, it: &RankItem, explain: bool) {
+fn row(out: &mut String, it: &RankItem, explain: bool) {
     let (v, e) = (&it.best.variant, &it.best.estimate);
     let name: String = it.display_name.chars().take(NAME_WIDTH).collect();
     // Certains libellés reprennent tout le nom du fichier : tronqués à la largeur de la colonne.
@@ -91,7 +94,7 @@ fn row(out: &mut String, i: usize, it: &RankItem, explain: bool) {
     let _ = writeln!(
         out,
         "{:>3}  {:<NAME_WIDTH$} {:<13} {:>8}  {:<14} {:>6} {:>9} {:>5}  {}",
-        i + 1,
+        it.rank,
         name,
         label,
         gb(v.size_bytes),
@@ -135,15 +138,22 @@ pub fn render(hw: &HardwareProfile, r: &RankResponse) -> String {
             num(f64::from(r.slow_tok_s), 0)
         ),
     );
+    if let Some(search) = &r.search {
+        line(&mut out, "Recherche", &format!("« {search} »"));
+    }
     line(&mut out, "Données", &source_label(&r.data_source));
 
     out.push('\n');
     if r.items.is_empty() {
-        out.push_str("Aucun modèle exécutable assez rapide.\n");
+        out.push_str(if r.search.is_some() {
+            "Aucun modèle exécutable assez rapide ne correspond à la recherche.\n"
+        } else {
+            "Aucun modèle exécutable assez rapide.\n"
+        });
     } else {
         header(&mut out);
-        for (i, it) in r.items.iter().enumerate() {
-            row(&mut out, i, it, true);
+        for it in &r.items {
+            row(&mut out, it, true);
         }
         if r.total_items as usize > r.items.len() {
             let _ = writeln!(
@@ -158,8 +168,8 @@ pub fn render(hw: &HardwareProfile, r: &RankResponse) -> String {
     if r.total_slow > 0 {
         let _ = writeln!(out, "\nExécutable mais lent ({}) :", r.total_slow);
         header(&mut out);
-        for (i, it) in r.slow.iter().enumerate() {
-            row(&mut out, i, it, false);
+        for it in &r.slow {
+            row(&mut out, it, false);
         }
     }
     if r.too_big_count > 0 {
@@ -172,8 +182,8 @@ pub fn render(hw: &HardwareProfile, r: &RankResponse) -> String {
         } else {
             let _ = writeln!(out, "\nTrop gros ({}) :", r.too_big_count);
             header(&mut out);
-            for (i, it) in r.too_big.iter().enumerate() {
-                row(&mut out, i, it, true);
+            for it in &r.too_big {
+                row(&mut out, it, true);
             }
         }
     }

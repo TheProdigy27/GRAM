@@ -26,7 +26,7 @@ slowTokS: number,
  */
 items: Array<RankItem>, 
 /**
- * Nombre de modèles exécutables avant `limit`.
+ * Nombre de modèles exécutables avant `limit` (trouvés par la recherche, s'il y en a une).
  */
 totalItems: number, 
 /**
@@ -37,7 +37,11 @@ slow: Array<RankItem>, totalSlow: number,
  * Modèles trop gros, du plus proche de tenir au plus éloigné (seulement avec
  * `show_too_big`).
  */
-tooBig: Array<RankItem>, tooBigCount: number, dataSource: DataSource, 
+tooBig: Array<RankItem>, tooBigCount: number, 
+/**
+ * Recherche appliquée (mots séparés par une espace) ; absente sans recherche.
+ */
+search: string | null, dataSource: DataSource, 
 /**
  * Avertissements généraux (runtime, GPU intégré…), en français.
  */

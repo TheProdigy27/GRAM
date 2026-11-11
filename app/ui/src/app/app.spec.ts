@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
+import { MatInputHarness } from '@angular/material/input/testing';
 import { MatMenuHarness } from '@angular/material/menu/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
@@ -9,7 +10,7 @@ import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { App } from './app';
 import { argsOf, mockBackend } from '../testing/backend';
-import { HARDWARE, RANKING, SYNC_SUMMARY } from '../testing/fixtures';
+import { HARDWARE, RANKING, SYNC_SUMMARY, makeResponse } from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
 import { UPDATE_CHECK_DELAY_MS } from './state/update.store';
@@ -83,6 +84,47 @@ describe('App', () => {
     expect(last.runtime).toBe('llamaCpp');
     const saved = argsOf(calls, 'save_settings').at(-1)!['settings'] as { runtime: string };
     expect(saved.runtime).toBe('llamaCpp');
+  });
+
+  it('recherche un modèle par son nom, avec Ctrl+F, en gardant le rang du classement', async () => {
+    const calls = mockBackend({
+      rank: (a) => {
+        const search = (a['request'] as RankRequest).search;
+        if (search === undefined) return RANKING;
+        if (search === 'mistral') return makeResponse([RANKING.items[2]], { search });
+        return makeResponse([], { search });
+      },
+    });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const loader = TestbedHarnessEnvironment.loader(fixture);
+    const input = await loader.getHarness(
+      MatInputHarness.with({ selector: '[data-testid="filter-search"]' }),
+    );
+
+    // Ctrl+F place le curseur dans la recherche.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true }));
+    expect(await input.isFocused()).toBe(true);
+
+    await input.setValue('mistral');
+    await fixture.whenStable();
+    expect((argsOf(calls, 'rank').at(-1)!['request'] as RankRequest).search).toBe('mistral');
+    const rows = el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row');
+    expect(rows).toHaveLength(1);
+    expect(text(rows[0].querySelector('[data-testid="model-name"]'))).toBe('Mistral-Small-24B');
+    expect(text(rows[0].querySelector('td.col-rank'))).toBe('3');
+
+    // Rien trouvé : message, et le bouton efface la recherche.
+    await input.setValue('introuvable');
+    await fixture.whenStable();
+    expect(text(el.querySelector('[data-testid="search-empty"]'))).toContain(
+      'Aucun modèle ne correspond à « introuvable ».',
+    );
+    (el.querySelector('[data-testid="search-empty"] button') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(await input.getValue()).toBe('');
+    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
+    expect(el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row')).toHaveLength(3);
   });
 
   it('ouvre la fiche détail au clic sur une ligne', async () => {

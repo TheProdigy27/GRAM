@@ -7,7 +7,12 @@ import type { VariantEstimate } from "./VariantEstimate";
 /**
  * Une ligne du classement : un modèle et sa meilleure quantification.
  */
-export type RankItem = { repoId: string, displayName: string, baseModel: string | null, paramsTotal: number, paramsActive: number | null, pipeline: Pipeline, useCases: Array<UseCase>, downloads: number, likes: number, gated: boolean, createdAt: string | null, 
+export type RankItem = { 
+/**
+ * Position dans sa liste (exécutables, lents ou trop gros) avant la recherche : la colonne
+ * « # » garde le rang du classement complet.
+ */
+rank: number, repoId: string, displayName: string, baseModel: string | null, paramsTotal: number, paramsActive: number | null, pipeline: Pipeline, useCases: Array<UseCase>, downloads: number, likes: number, gated: boolean, createdAt: string | null, 
 /**
  * Tailles réelles connues (sinon, échelle de repli estimée).
  */

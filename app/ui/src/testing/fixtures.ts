@@ -272,6 +272,8 @@ export function makeEstimate(o: EstimateOptions = {}): Estimate {
 }
 
 export interface ItemOptions extends EstimateOptions {
+  /** Rang dans le classement complet (colonne « # »). */
+  rank?: number;
   repoId?: string;
   score?: number;
   quant?: string;
@@ -287,6 +289,7 @@ export function makeItem(name: string, o: ItemOptions = {}): RankItem {
   const repoId = o.repoId ?? `org/${name}-GGUF`;
   const size = o.size ?? 4.7 * GIB;
   return {
+    rank: o.rank ?? 1,
     repoId,
     displayName: name,
     baseModel: `org/${name}`,
@@ -331,6 +334,7 @@ export function makeResponse(items: RankItem[], o: Partial<RankResponse> = {}): 
     totalSlow: 0,
     tooBig: [],
     tooBigCount: 0,
+    search: null,
     dataSource: { kind: 'cache', fetchedAt: '2026-11-09T18:00:00Z' },
     notes: [
       'Sans réglage, Ollama choisit le contexte selon la VRAM (4 096 tokens sur cette machine) : régler num_ctx sur le contexte indiqué, sinon la mémoire utilisée diffère de l’estimation.',
@@ -341,6 +345,7 @@ export function makeResponse(items: RankItem[], o: Partial<RankResponse> = {}): 
 
 export const RANKING: RankResponse = makeResponse([
   makeItem('Qwen3-8B', {
+    rank: 1,
     repoId: 'Qwen/Qwen3-8B-GGUF',
     score: 86,
     tokS: 95,
@@ -348,8 +353,9 @@ export const RANKING: RankResponse = makeResponse([
     size: 8.1 * GIB,
     installed: ['Q4_K_M'],
   }),
-  makeItem('Gemma-3-12B', { score: 84, tokS: 62, vision: true, gated: true }),
+  makeItem('Gemma-3-12B', { rank: 2, score: 84, tokS: 62, vision: true, gated: true }),
   makeItem('Mistral-Small-24B', {
+    rank: 3,
     score: 71,
     tokS: 7.4,
     mode: { kind: 'hybrid', gpuLayers: 30, layers: 40 },

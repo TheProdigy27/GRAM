@@ -75,7 +75,7 @@ fn md_cell(text: &str) -> String {
     text.replace('|', "\\|").replace(['\r', '\n'], " ")
 }
 
-fn md_row(out: &mut String, i: usize, it: &RankItem) {
+fn md_row(out: &mut String, it: &RankItem) {
     let (v, e) = (&it.best.variant, &it.best.estimate);
     let ctx_max = if e.ctx_max > 0 {
         thousands(u64::from(e.ctx_max))
@@ -85,7 +85,7 @@ fn md_row(out: &mut String, i: usize, it: &RankItem) {
     let _ = writeln!(
         out,
         "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
-        i + 1,
+        it.rank,
         md_cell(&it.display_name),
         md_cell(&v.label),
         gb(v.size_bytes),
@@ -103,8 +103,8 @@ fn md_table(out: &mut String, items: &[RankItem]) {
         "| # | Modèle | Quantif. | Taille | Mode | tok/s | Ctx max | Score | Adéquation | Explication |\n\
          |---:|---|---|---:|---|---:|---:|---:|---|---|\n",
     );
-    for (i, it) in items.iter().enumerate() {
-        md_row(out, i, it);
+    for it in items {
+        md_row(out, it);
     }
 }
 
@@ -129,6 +129,9 @@ pub fn to_markdown(
         thousands(u64::from(r.ctx)),
         r.runtime.label()
     );
+    if let Some(search) = &r.search {
+        let _ = writeln!(out, "- Recherche : « {} »", md_cell(search));
+    }
     let fetched = r
         .data_source
         .fetched_at
@@ -193,7 +196,7 @@ const CSV_HEADER: &str = "section;rang;modele;depot;depot_quantification;quantif
 
 fn csv_rows(out: &mut String, section: &str, items: &[RankItem]) {
     use crate::estimate::RunMode;
-    for (i, it) in items.iter().enumerate() {
+    for it in items {
         let (v, e) = (&it.best.variant, &it.best.estimate);
         let (gpu_layers, layers) = match e.mode {
             RunMode::Hybrid { gpu_layers, layers } => (gpu_layers.to_string(), layers.to_string()),
@@ -201,7 +204,7 @@ fn csv_rows(out: &mut String, section: &str, items: &[RankItem]) {
         };
         let fields = [
             section.to_owned(),
-            (i + 1).to_string(),
+            it.rank.to_string(),
             csv_field(&it.display_name),
             csv_field(&it.repo_id),
             csv_field(&v.repo_id),

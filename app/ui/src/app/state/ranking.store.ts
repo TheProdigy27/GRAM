@@ -11,7 +11,7 @@ import { CatalogStore } from './catalog.store';
 import { HardwareStore } from './hardware.store';
 import { SettingsStore } from './settings.store';
 
-/** Debounce des filtres (curseur de contexte, saisie de la taille), en millisecondes. */
+/** Debounce des filtres (curseur de contexte, saisie de la taille ou de la recherche), en ms. */
 export const FILTER_DEBOUNCE_MS = new InjectionToken<number>('FILTER_DEBOUNCE_MS', {
   factory: () => 150,
 });
@@ -41,6 +41,8 @@ export class RankingStore {
   readonly runtime = signal<Runtime | null>(null);
   /** Taille maximale d'une quantification, en Go ; `null` : pas de limite. */
   readonly maxSizeGb = signal<number | null>(null);
+  /** Recherche par nom, telle que saisie ; vide : tous les modèles. */
+  readonly search = signal('');
   readonly showTooBig = signal(false);
   /** Pages affichées (« Voir plus »). */
   readonly pages = signal(1);
@@ -53,11 +55,13 @@ export class RankingStore {
       const ctx = this.ctx();
       const runtime = this.runtime();
       const maxGb = this.maxSizeGb();
+      const search = this.search().trim();
       return {
         useCase: this.useCase(),
         ...(ctx !== null ? { ctx } : {}),
         ...(runtime !== null ? { runtime } : {}),
         ...(maxGb !== null ? { maxSize: gbToBytes(maxGb) } : {}),
+        ...(search !== '' ? { search } : {}),
         showTooBig: this.showTooBig(),
         limit: this.pageSize() * this.pages(),
       };
@@ -117,6 +121,11 @@ export class RankingStore {
 
   setMaxSizeGb(gb: number | null): void {
     this.maxSizeGb.set(gb !== null && Number.isFinite(gb) && gb > 0 ? gb : null);
+    this.pages.set(1);
+  }
+
+  setSearch(text: string): void {
+    this.search.set(text);
     this.pages.set(1);
   }
 

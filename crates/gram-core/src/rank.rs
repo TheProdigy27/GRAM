@@ -13,6 +13,9 @@
 //! les modèles, en favorisant ceux qui correspondent (les autres sont pénalisés de 8 % pour Code
 //! et Raisonnement). À score égal, le plus téléchargé passe devant. Tout est déterministe : même
 //! entrée, même classement.
+//!
+//! La recherche par nom s'applique après le tri : chaque ligne garde son rang dans le classement
+//! complet (colonne « # »), et les totaux ne comptent que les modèles trouvés.
 
 use crate::catalog::DataSource;
 use crate::estimate::{
@@ -43,6 +46,10 @@ pub struct RankRequest {
     pub runtime: Option<Runtime>,
     /// Taille maximale d'une quantification, en octets.
     pub max_size: Option<u64>,
+    /// Recherche par nom : chaque mot doit figurer dans le nom, le dépôt ou le modèle de base,
+    /// sans tenir compte de la casse (« qwen3 8b », « llama3 »). Absente ou vide : tous les
+    /// modèles.
+    pub search: Option<String>,
     /// Remplit aussi la liste des modèles trop gros.
     pub show_too_big: bool,
     /// Nombre maximal de lignes par liste ; absent : toutes.
@@ -66,6 +73,9 @@ pub struct DetailRequest {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RankItem {
+    /// Position dans sa liste (exécutables, lents ou trop gros) avant la recherche : la colonne
+    /// « # » garde le rang du classement complet.
+    pub rank: u32,
     pub repo_id: String,
     pub display_name: String,
     pub base_model: Option<String>,
@@ -107,7 +117,7 @@ pub struct RankResponse {
     pub slow_tok_s: f32,
     /// Modèles exécutables, du meilleur score au moins bon.
     pub items: Vec<RankItem>,
-    /// Nombre de modèles exécutables avant `limit`.
+    /// Nombre de modèles exécutables avant `limit` (trouvés par la recherche, s'il y en a une).
     pub total_items: u32,
     /// « Exécutable mais lent », du meilleur score au moins bon.
     pub slow: Vec<RankItem>,
@@ -116,6 +126,8 @@ pub struct RankResponse {
     /// `show_too_big`).
     pub too_big: Vec<RankItem>,
     pub too_big_count: u32,
+    /// Recherche appliquée (mots séparés par une espace) ; absente sans recherche.
+    pub search: Option<String>,
     pub data_source: DataSource,
     /// Avertissements généraux (runtime, GPU intégré…), en français.
     pub notes: Vec<String>,
@@ -406,6 +418,7 @@ fn installed_labels(m: &ModelEntry, rows: &[Row], installed: &[OllamaModel]) -> 
 fn item(m: &ModelEntry, ev: &Evaluation, i: usize, s: &Setup) -> RankItem {
     let row = &ev.rows[i];
     RankItem {
+        rank: 0, // numéroté après le tri (`finish`)
         repo_id: m.repo_id.clone(),
         display_name: m.display_name.clone(),
         base_model: m.base_model.clone(),
@@ -446,12 +459,70 @@ fn by_usage(a: &RankItem, b: &RankItem) -> Ordering {
         .then_with(|| a.repo_id.cmp(&b.repo_id))
 }
 
+/// Recherche d'un modèle par nom (`RankRequest::search`). Chaque mot doit figurer dans le nom
+/// affiché, le dépôt canonique ou le modèle de base, sans tenir compte de la casse. Un mot fait
+/// seulement de lettres et de chiffres ignore aussi les séparateurs des noms : « llama3 » trouve
+/// « Llama-3.3-70B », « 8b » trouve « Qwen3-8B ». Un mot avec un séparateur est cherché tel
+/// quel : « 3.3 » ne trouve pas « Qwen3-30B ».
+struct Search {
+    /// Texte retenu, espaces superflues retirées.
+    text: String,
+    /// Mots en minuscules.
+    words: Vec<String>,
+}
+
+impl Search {
+    fn new(query: Option<&str>) -> Option<Self> {
+        let words: Vec<&str> = query?.split_whitespace().collect();
+        if words.is_empty() {
+            return None;
+        }
+        Some(Self {
+            text: words.join(" "),
+            words: words.iter().map(|w| w.to_lowercase()).collect(),
+        })
+    }
+
+    fn matches(&self, it: &RankItem) -> bool {
+        let names: Vec<String> = [
+            Some(&it.display_name),
+            Some(&it.repo_id),
+            it.base_model.as_ref(),
+        ]
+        .into_iter()
+        .flatten()
+        .map(|n| n.to_lowercase())
+        .collect();
+        let compact: Vec<String> = names
+            .iter()
+            .map(|n| n.chars().filter(|c| c.is_alphanumeric()).collect())
+            .collect();
+        self.words.iter().all(|w| {
+            let within = if w.chars().all(char::is_alphanumeric) {
+                &compact
+            } else {
+                &names
+            };
+            within.iter().any(|n| n.contains(w.as_str()))
+        })
+    }
+}
+
+/// Trie une liste et numérote ses lignes (`rank`), puis applique la recherche et `limit`.
+/// Renvoie aussi le nombre de lignes avant `limit`.
 fn finish(
     mut list: Vec<RankItem>,
     order: fn(&RankItem, &RankItem) -> Ordering,
+    search: Option<&Search>,
     limit: Option<u32>,
 ) -> (Vec<RankItem>, u32) {
     list.sort_by(order);
+    for (i, it) in list.iter_mut().enumerate() {
+        it.rank = i as u32 + 1;
+    }
+    if let Some(search) = search {
+        list.retain(|it| search.matches(it));
+    }
     let total = list.len() as u32;
     if let Some(limit) = limit {
         list.truncate(limit as usize);
@@ -468,8 +539,8 @@ pub fn rank(
 ) -> RankResponse {
     let s = Setup::new(cx, req.use_case, req.ctx, req.max_size);
     let runtime = req.runtime.unwrap_or(cx.settings.runtime);
+    let search = Search::new(req.search.as_deref());
     let (mut items, mut slow, mut too_big) = (Vec::new(), Vec::new(), Vec::new());
-    let mut too_big_count = 0u32;
 
     for m in models {
         if req.use_case == UseCase::Vision && !m.use_cases.contains(&UseCase::Vision) {
@@ -484,16 +555,18 @@ pub fn rank(
                 items.push(it);
             }
         } else if let Some(i) = ev.smallest_within_size() {
-            too_big_count += 1;
-            if req.show_too_big {
-                too_big.push(item(m, &ev, i, &s));
-            }
+            too_big.push(item(m, &ev, i, &s));
         }
     }
 
-    let (items, total_items) = finish(items, by_score, req.limit);
-    let (slow, total_slow) = finish(slow, by_score, req.limit);
-    let (too_big, _) = finish(too_big, by_usage, req.limit);
+    let search = search.as_ref();
+    let (items, total_items) = finish(items, by_score, search, req.limit);
+    let (slow, total_slow) = finish(slow, by_score, search, req.limit);
+    // Toujours comptés (et numérotés), listés seulement sur demande.
+    let (mut too_big, too_big_count) = finish(too_big, by_usage, search, req.limit);
+    if !req.show_too_big {
+        too_big.clear();
+    }
     RankResponse {
         use_case: req.use_case,
         ctx: s.work.ctx,
@@ -507,6 +580,7 @@ pub fn rank(
         total_slow,
         too_big,
         too_big_count,
+        search: search.map(|s| s.text.clone()),
         data_source,
     }
 }

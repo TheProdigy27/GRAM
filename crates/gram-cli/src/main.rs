@@ -87,6 +87,10 @@ enum Command {
         /// Taille maximale d'une quantification, en Go.
         #[arg(long)]
         max_size_gb: Option<f64>,
+        /// Recherche par nom, dépôt ou modèle de base (ex. « qwen3 8b ») : tous les mots
+        /// doivent figurer ; le rang affiché reste celui du classement complet.
+        #[arg(long)]
+        search: Option<String>,
         /// Liste aussi les modèles trop gros.
         #[arg(long)]
         show_too_big: bool,
@@ -238,6 +242,7 @@ fn main() -> Result<()> {
             ctx,
             runtime,
             max_size_gb,
+            search,
             show_too_big,
             limit,
             profile,
@@ -248,6 +253,7 @@ fn main() -> Result<()> {
             ctx,
             runtime: runtime.map(Into::into),
             max_size_gb,
+            search,
             show_too_big,
             limit,
             profile,
@@ -410,18 +416,22 @@ mod tests {
             "--show-too-big",
             "--limit",
             "0",
+            "--search",
+            "qwen3 8b",
         ])
         .unwrap();
         match cli.command {
             Command::Rank {
                 runtime,
                 max_size_gb,
+                search,
                 show_too_big,
                 limit,
                 ..
             } => {
                 assert_eq!(runtime.map(Runtime::from), Some(Runtime::LlamaCpp));
                 assert_eq!(max_size_gb, Some(12.5));
+                assert_eq!(search.as_deref(), Some("qwen3 8b"));
                 assert!(show_too_big);
                 assert_eq!(limit, 0);
             }

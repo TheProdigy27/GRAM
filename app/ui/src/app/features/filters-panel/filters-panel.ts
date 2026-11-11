@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, type ElementRef, computed, inject, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,7 +17,10 @@ import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import { SettingsStore } from '../../state/settings.store';
 
-/** Panneau de gauche : cas d'usage, contexte, runtime, taille maximale, modèles trop gros. */
+/**
+ * Panneau de gauche : recherche par nom (Ctrl+F, ⌘F sur Mac), cas d'usage, contexte, runtime,
+ * taille maximale, modèles trop gros.
+ */
 @Component({
   selector: 'app-filters-panel',
   imports: [
@@ -30,12 +34,18 @@ import { SettingsStore } from '../../state/settings.store';
   ],
   templateUrl: './filters-panel.html',
   styleUrl: './filters-panel.scss',
+  host: {
+    '(document:keydown.control.f)': 'focusSearch($event)',
+    '(document:keydown.meta.f)': 'focusSearch($event)',
+  },
 })
 export class FiltersPanel {
   protected readonly ranking = inject(RankingStore);
   private readonly settings = inject(SettingsStore);
   private readonly hardware = inject(HardwareStore);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  private readonly searchInput = viewChild.required<ElementRef<HTMLInputElement>>('search');
 
   protected readonly useCases = USE_CASES;
   protected readonly maxStep = CTX_STEPS.length - 1;
@@ -69,6 +79,15 @@ export class FiltersPanel {
   protected readonly runtimeHint = computed(
     () => this.runtimes().find((r) => r.value === this.ranking.effectiveRuntime())?.hint ?? '',
   );
+
+  /** Ctrl+F (⌘F) place le curseur dans la recherche, sauf quand un dialogue est ouvert. */
+  protected focusSearch(event: Event): void {
+    if (this.dialog.openDialogs.length > 0) return;
+    event.preventDefault();
+    const input = this.searchInput().nativeElement;
+    input.focus();
+    input.select();
+  }
 
   protected onUseCase(useCase: UseCase): void {
     this.ranking.setUseCase(useCase);

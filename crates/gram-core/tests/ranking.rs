@@ -68,14 +68,14 @@ fn request(use_case: UseCase, ctx: Option<u32>) -> RankRequest {
 /// Une ligne par modèle, lisible dans un diff.
 fn table(out: &mut String, title: &str, items: &[RankItem]) {
     let _ = writeln!(out, "{title} ({})", items.len());
-    for (i, it) in items.iter().enumerate() {
+    for it in items {
         let (v, e) = (&it.best.variant, &it.best.estimate);
         let name: String = it.display_name.chars().take(36).collect();
         let label: String = v.label.chars().take(14).collect();
         let _ = writeln!(
             out,
             "{:>2} {:<36} {:<14}{} {:>6} Go {:<14} {:>6.1} tok/s ctx {:>5} score {:>5.1} (Q {:>5.1} V {:>5.1} F {:>5.1} C {:>5.1}) {}",
-            i + 1,
+            it.rank,
             name,
             label,
             if e.approximate { "*" } else { " " },
@@ -335,6 +335,96 @@ fn filtres_taille_limite_et_trop_gros() {
 }
 
 #[test]
+fn recherche_par_nom() {
+    let models = sample();
+    let all = run(&models, &p2(), &request(UseCase::General, None));
+    let search = |q: &str| {
+        run(
+            &models,
+            &p2(),
+            &RankRequest {
+                search: Some(q.into()),
+                ..request(UseCase::General, None)
+            },
+        )
+    };
+    let names = |r: &RankResponse| -> Vec<String> {
+        r.items
+            .iter()
+            .chain(&r.slow)
+            .chain(&r.too_big)
+            .map(|i| i.display_name.clone())
+            .collect()
+    };
+
+    // Chaque mot doit figurer, sans tenir compte de la casse ni des séparateurs.
+    let r = search("  QWEN3   8b ");
+    assert_eq!(r.search.as_deref(), Some("QWEN3 8b"));
+    let found = names(&r);
+    assert!(found.contains(&"Qwen3-8B".to_owned()), "{found:?}");
+    assert!(
+        found.contains(&"Qwen3-VL-8B-Instruct".to_owned()),
+        "{found:?}"
+    );
+    assert!(!found.contains(&"Qwen3-14B".to_owned()), "{found:?}");
+    assert_eq!(
+        r.total_items + r.total_slow + r.too_big_count,
+        found.len() as u32
+    );
+
+    // Chaque ligne garde son rang dans le classement complet.
+    for it in r.items.iter() {
+        let pos = all
+            .items
+            .iter()
+            .position(|a| a.repo_id == it.repo_id)
+            .unwrap();
+        assert_eq!(it.rank, pos as u32 + 1, "{}", it.display_name);
+    }
+    assert!(
+        all.items
+            .iter()
+            .enumerate()
+            .all(|(i, it)| it.rank == i as u32 + 1)
+    );
+
+    // Un mot sans séparateur les ignore dans les noms ; un mot avec séparateur est cherché tel
+    // quel.
+    let mut llama3 = names(&search("llama3"));
+    llama3.sort();
+    assert_eq!(
+        llama3,
+        ["Llama-3.3-70B-Instruct", "llama-3-firefunction-v2"]
+    );
+    assert_eq!(names(&search("llama-3.3")), ["Llama-3.3-70B-Instruct"]);
+    let dotted = names(&search("3.3"));
+    assert!(
+        !dotted.is_empty() && dotted.iter().all(|n| n.contains("3.3")),
+        "{dotted:?}"
+    );
+
+    // Les modèles trop gros trouvés sont comptés même s'ils ne sont pas listés.
+    let hidden = run(
+        &models,
+        &p2(),
+        &RankRequest {
+            search: Some("llama".into()),
+            show_too_big: false,
+            ..request(UseCase::General, None)
+        },
+    );
+    assert!(hidden.too_big.is_empty());
+    assert_eq!(hidden.too_big_count, search("llama").too_big.len() as u32);
+    assert!(hidden.too_big_count < all.too_big_count);
+
+    // Recherche vide : tous les modèles.
+    let blank = search("   ");
+    assert_eq!(blank.search, None);
+    assert_eq!(blank.items, all.items);
+    assert!(names(&search("aucun-modele-de-ce-nom")).is_empty());
+}
+
+#[test]
 fn usage_code_favorise_les_modeles_de_code() {
     let models = sample();
     let general = run(&models, &p3(), &request(UseCase::General, Some(16_384)));
@@ -497,6 +587,7 @@ fn export_markdown() {
     assert!(md.contains("- Cas d'usage : Code · contexte 16 384 tokens · runtime Ollama"));
     assert!(md.contains("- Données : catalogue embarqué (09/11/2026 20:57)"));
     assert!(md.contains("| # | Modèle | Quantif. |"));
+    assert!(!md.contains("- Recherche"));
     assert!(md.contains("## Exécutable mais lent : moins de 5 tok/s"));
     assert!(md.contains("## Trop gros"));
     let rows = md
@@ -521,6 +612,39 @@ fn export_csv() {
     // Chaque ligne a autant de champs que l'en-tête (aucun `;` hors guillemets dans les données).
     let fields = |l: &str| l.split(';').count();
     assert!(lines.iter().all(|l| fields(l) == fields(lines[0])), "{csv}");
+}
+
+#[test]
+fn export_d_une_recherche() {
+    let hw = p2();
+    let all = run(&sample(), &hw, &request(UseCase::General, None));
+    let r = run(
+        &sample(),
+        &hw,
+        &RankRequest {
+            search: Some("qwen3 8b".into()),
+            ..request(UseCase::General, None)
+        },
+    );
+    let md = to_markdown(&r, &hw, generated_at());
+    assert!(md.contains("- Recherche : « qwen3 8b »"), "{md}");
+    // Le rang exporté est celui du classement complet.
+    let first = &r.items[0];
+    let rank = all
+        .items
+        .iter()
+        .position(|a| a.repo_id == first.repo_id)
+        .unwrap()
+        + 1;
+    assert!(
+        md.contains(&format!("| {rank} | {} |", first.display_name)),
+        "{md}"
+    );
+    let csv = to_csv(&r);
+    assert!(
+        csv.contains(&format!("executable;{rank};{};", first.display_name)),
+        "{csv}"
+    );
 }
 
 // ── Modèles déjà installés dans Ollama (phase 7) ──────────────────────────────────────────

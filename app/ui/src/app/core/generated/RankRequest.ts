@@ -19,6 +19,12 @@ runtime?: Runtime,
  */
 maxSize?: number, 
 /**
+ * Recherche par nom : chaque mot doit figurer dans le nom, le dépôt ou le modèle de base,
+ * sans tenir compte de la casse (« qwen3 8b », « llama3 »). Absente ou vide : tous les
+ * modèles.
+ */
+search?: string, 
+/**
  * Remplit aussi la liste des modèles trop gros.
  */
 showTooBig: boolean, 

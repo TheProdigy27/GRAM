@@ -2,9 +2,10 @@ import { GIB, makeItem } from '../../../testing/fixtures';
 import { rankedRows, sortRows } from './sort';
 
 const items = [
-  makeItem('Bravo', { score: 90, tokS: 20, size: 8 * GIB }),
-  makeItem('alpha', { score: 80, tokS: 60, size: 4 * GIB, mode: { kind: 'cpu' } }),
+  makeItem('Bravo', { rank: 1, score: 90, tokS: 20, size: 8 * GIB }),
+  makeItem('alpha', { rank: 2, score: 80, tokS: 60, size: 4 * GIB, mode: { kind: 'cpu' } }),
   makeItem('Charlie', {
+    rank: 3,
     score: 70,
     tokS: 60,
     size: 12 * GIB,
@@ -19,6 +20,12 @@ describe('tri du classement', () => {
     expect(rows.map((r) => r.rank)).toEqual([1, 2, 3]);
     expect(names(sortRows(rows, '', ''))).toEqual(['Bravo', 'alpha', 'Charlie']);
     expect(names(sortRows(rows, 'tokS', ''))).toEqual(['Bravo', 'alpha', 'Charlie']);
+  });
+
+  it('garde le rang du classement complet pendant une recherche', () => {
+    const found = [items[0], { ...items[2], rank: 7 }];
+    expect(rankedRows(found).map((r) => r.rank)).toEqual([1, 7]);
+    expect(names(sortRows(rankedRows(found), 'rank', 'desc'))).toEqual(['Charlie', 'Bravo']);
   });
 
   it('trie par colonne ; à égalité, l’ordre du score', () => {
