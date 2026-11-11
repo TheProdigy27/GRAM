@@ -37,7 +37,7 @@ export class CalibrationStore {
   private loaded = false;
 
   constructor() {
-    // La proposition dépend des paramètres (efficacité actuelle) et du matériel (bandes
+    // La proposition dépend des paramètres (efficacités actuelles) et du matériel (bandes
     // passantes corrigées) : relue quand ils changent.
     effect(() => {
       this.settings.version();

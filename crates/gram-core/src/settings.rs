@@ -26,7 +26,7 @@ pub const MAX_DETAIL_GROUPS: u32 = 400;
 pub struct Settings {
     /// Runtime des commandes générées (§10).
     pub runtime: Runtime,
-    /// Marges, efficacité, surcoût, cache KV, minimums.
+    /// Marges, efficacités, surcoût, cache KV, minimums.
     pub estimate: EstimateParams,
     /// Contexte, seuil de lenteur et poids du score de chaque cas d'usage.
     pub use_cases: UseCaseProfiles,
@@ -134,7 +134,8 @@ impl Settings {
         e.vram_margin = finite_clamp(e.vram_margin, 0.0, 0.9, d.vram_margin);
         e.ram_share = finite_clamp(e.ram_share, 0.1, 1.0, d.ram_share);
         e.overhead_bytes = e.overhead_bytes.min(16 * GIB);
-        e.efficiency = finite_clamp(e.efficiency, 0.05, 2.0, d.efficiency);
+        e.gpu_efficiency = finite_clamp(e.gpu_efficiency, 0.05, 2.0, d.gpu_efficiency);
+        e.ram_efficiency = finite_clamp(e.ram_efficiency, 0.05, 2.0, d.ram_efficiency);
         e.token_overhead_ms = finite_clamp(e.token_overhead_ms, 0.0, 100.0, d.token_overhead_ms);
         e.min_bpw = finite_clamp(e.min_bpw, 0.0, 16.0, d.min_bpw);
         e.min_ctx = e.min_ctx.clamp(256, 131_072);
@@ -205,7 +206,8 @@ mod tests {
         assert_eq!(s.use_cases.code.ctx, 32_768);
         assert_eq!(s.use_cases.reasoning, UseCaseProfiles::default().reasoning);
         assert_eq!(s.estimate.kv_cache.label(), "q8_0");
-        assert_eq!(s.estimate.efficiency, 0.55);
+        assert_eq!(s.estimate.gpu_efficiency, 0.81);
+        assert_eq!(s.estimate.ram_efficiency, 0.62);
         assert_eq!(s.page_size, 25);
     }
 
@@ -213,7 +215,8 @@ mod tests {
     fn assainissement() {
         let mut s = Settings::default();
         s.estimate.vram_margin = 3.0;
-        s.estimate.efficiency = f32::NAN;
+        s.estimate.gpu_efficiency = f32::NAN;
+        s.estimate.ram_efficiency = 9.0;
         s.estimate.min_ctx = 10;
         s.use_cases.general.ctx = 100;
         s.use_cases.code.ctx = u32::MAX;
@@ -224,7 +227,8 @@ mod tests {
         s.detail_groups = 10_000;
         let s = s.sanitized();
         assert_eq!(s.estimate.vram_margin, 0.9);
-        assert_eq!(s.estimate.efficiency, 0.55);
+        assert_eq!(s.estimate.gpu_efficiency, 0.81);
+        assert_eq!(s.estimate.ram_efficiency, 2.0);
         assert_eq!(s.estimate.min_ctx, 256);
         assert_eq!(s.use_cases.general.ctx, 256);
         assert_eq!(s.use_cases.code.ctx, MAX_CTX);

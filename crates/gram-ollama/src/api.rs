@@ -145,8 +145,12 @@ pub struct GenerateResponse {
     pub total_duration: u64,
     #[serde(default)]
     pub load_duration: u64,
+    /// Tokens du prompt, y compris ceux repris du cache.
     #[serde(default)]
     pub prompt_eval_count: u32,
+    /// Dont repris du cache du modèle chargé, sans calcul (Ollama 0.40 et suivants).
+    #[serde(default)]
+    pub prompt_eval_cached_count: u32,
     #[serde(default)]
     pub prompt_eval_duration: u64,
     #[serde(default)]
@@ -226,8 +230,9 @@ mod tests {
             ],
             "le modèle distant est écarté"
         );
+        // Ollama garde la casse du nom donné à `ollama pull`.
         assert_eq!(models[0].repo_id.as_deref(), Some("Qwen/Qwen3-8B-GGUF"));
-        assert_eq!(models[0].size, 5_027_783_488);
+        assert_eq!(models[0].size, 5_027_797_508);
         // L'étiquette du nom l'emporte sur `quantization_level`.
         assert_eq!(models[1].quant.as_deref(), Some("UD-Q4_K_XL"));
         assert_eq!(models[2].repo_id, None);
@@ -250,8 +255,8 @@ mod tests {
         assert_eq!(
             e.loaded(),
             LoadedModel {
-                size: 6_925_000_000,
-                size_vram: 6_925_000_000,
+                size: 6_114_634_628,
+                size_vram: 6_114_634_628,
                 context_length: Some(8192),
             }
         );
@@ -272,10 +277,17 @@ mod tests {
     fn generation() {
         let g = parse_generate(fixture!("generate.json")).unwrap();
         assert_eq!(g.eval_count, 128);
-        assert_eq!(g.eval_duration, 1_542_168_000);
-        assert_eq!(g.prompt_eval_count, 31);
-        assert_eq!(g.load_duration, 2_731_000_000);
+        assert_eq!(g.eval_duration, 946_333_000);
+        assert_eq!(g.prompt_eval_count, 45);
+        // Début du modèle de conversation, en cache depuis l'échauffement.
+        assert_eq!(g.prompt_eval_cached_count, 3);
+        assert_eq!(g.prompt_eval_duration, 18_157_000);
+        assert_eq!(g.load_duration, 2_126_300);
         assert_eq!(g.done_reason.as_deref(), Some("length"));
+        // L'échauffement charge le modèle.
+        let w = parse_generate(fixture!("generate-warmup.json")).unwrap();
+        assert_eq!((w.eval_count, w.load_duration), (8, 1_843_339_600));
+        assert_eq!(w.prompt_eval_cached_count, 0);
         assert!(matches!(
             parse_generate(br#"{"done": false}"#),
             Err(OllamaError::Invalid(_))
@@ -305,7 +317,10 @@ mod tests {
 
     #[test]
     fn version_et_erreurs() {
-        assert_eq!(parse_version(br#"{"version":"0.13.1"}"#).unwrap(), "0.13.1");
+        assert_eq!(
+            parse_version(br#"{"version":"0.40.16"}"#).unwrap(),
+            "0.40.16"
+        );
         assert_eq!(
             error_message(fixture!("error-not-found.json")),
             "model 'hf.co/Qwen/Qwen3-8B-GGUF:Q8_0' not found"

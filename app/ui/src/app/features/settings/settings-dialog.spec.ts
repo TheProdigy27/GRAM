@@ -59,6 +59,8 @@ describe('SettingsDialog', () => {
     const version = store.version();
 
     await (await input('set-vram-margin')).setValue('15');
+    expect(await (await input('set-gpu-efficiency')).getValue()).toBe('0.81');
+    await (await input('set-ram-efficiency')).setValue('0.5');
     const kv = await loader.getHarness(
       MatSelectHarness.with({ selector: '[data-testid="set-kv-cache"]' }),
     );
@@ -71,6 +73,9 @@ describe('SettingsDialog', () => {
     expect(saved()!.estimate.vramMargin).toBeCloseTo(0.15);
     expect(saved()!.estimate.kvCache).toBe('q8_0');
     expect(saved()!.estimate.ramShare).toBe(0.75);
+    // Les deux efficacités sont indépendantes.
+    expect(saved()!.estimate.ramEfficiency).toBe(0.5);
+    expect(saved()!.estimate.gpuEfficiency).toBe(0.81);
     expect(store.settings()!.estimate.kvCache).toBe('q8_0');
     expect(store.version()).toBe(version + 1);
     expect(closed).toEqual([true]);
@@ -153,7 +158,7 @@ describe('SettingsDialog', () => {
         throw 'Paramètres non enregistrés dans C:\\x\\settings.json : accès refusé';
       },
     });
-    await (await input('set-efficiency')).setValue('0,7');
+    await (await input('set-gpu-efficiency')).setValue('0,7');
     await click('settings-save');
     expect(text(el.querySelector('[role="alert"]'))).toContain('accès refusé');
     expect(closed).toEqual([]);

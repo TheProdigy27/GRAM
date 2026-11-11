@@ -5,40 +5,40 @@ expression: snapshot_text(&r)
 Code · contexte 16384 · VRAM 10,8 Go · RAM 20,0 Go · lent sous 5 tok/s
 
 Exécutables (30)
- 1 MiMo-V2.6-Distill-Qwen-9B            IQ4_XS             4,9 Go GPU              35.8 tok/s ctx  173k score  89.5 (Q  79.5 V  96.3 F 100.0 C 100.0) parfait
- 2 Qwen3.5-9B-The-Defiant-Fable-Uncenso IQ2_M              4,6 Go GPU              37.8 tok/s ctx  182k score  89.5 (Q  78.7 V  98.1 F 100.0 C 100.0) parfait
- 3 Sage-A1.5                            IQ4_XS            18,0 Go hybride 22/41    28.8 tok/s ctx  256k score  89.5 (Q  82.2 V  89.0 F 100.0 C 100.0) limite
- 4 TwIL-8B                              Q3_K_L             4,4 Go GPU              39.6 tok/s ctx   37k score  87.7 (Q  78.1 V  99.7 F 100.0 C 100.0) parfait
- 5 Qwen3.8-27B-Ultimate-Heretic-Uncenso IQ2_M              9,5 Go hybride 62/65    15.2 tok/s ctx  152k score  84.7 (Q  84.9 V  67.7 F 100.0 C 100.0) bon
- 6 Cyber-Tiel-Coder-35B-A3B-GGUF-MTP    Q4_K_M        *   20,3 Go hybride 23/61    24.3 tok/s ctx   62k score  84.1 (Q  82.4 V  83.4 F 100.0 C 100.0) limite
- 7 Ornith-1.5-9B                        Q4_0               5,1 Go GPU              34.3 tok/s ctx  166k score  82.4 (Q  80.2 V  94.8 F 100.0 C 100.0) parfait
- 8 Ornith-1.5-35B-A3B                   IQ4_XS            18,0 Go hybride 22/41    28.9 tok/s ctx  256k score  82.3 (Q  82.2 V  89.1 F 100.0 C 100.0) limite
- 9 Qwen2.5-Coder-14B-Instruct           Q3_K_L             7,4 Go hybride 47/48    21.8 tok/s ctx   54k score  82.0 (Q  71.6 V  79.7 F 100.0 C 100.0) bon
-10 Qwen3-Coder-Next                     UD-IQ2_M          23,2 Go hybride 18/48    36.0 tok/s ctx   75k score  80.5 (Q  62.7 V  96.5 F  94.7 C 100.0) limite
-11 Mellum2.1-12B-A2.5B-Thinking         Q6_K_L            11,0 Go hybride 24/28    44.6 tok/s ctx  128k score  80.3 (Q  74.2 V 100.0 F 100.0 C 100.0) bon
-12 Qwen3-VL-8B-Instruct                 Q4_K_S             4,5 Go GPU              38.8 tok/s ctx   41k score  80.0 (Q  73.0 V  99.0 F 100.0 C 100.0) parfait
-13 Qwen3.8-27B                          IQ2_M              9,8 Go hybride 61/65    13.9 tok/s ctx  152k score  79.5 (Q  85.5 V  64.8 F 100.0 C 100.0) bon
-14 gemma-4-E2B-it                       Q6_K_L             4,3 Go GPU              40.7 tok/s ctx   88k score  77.2 (Q  66.5 V 100.0 F 100.0 C 100.0) parfait
-15 Qwen3.5-4B                           Q8_0               4,2 Go GPU              41.4 tok/s ctx  196k score  76.6 (Q  64.9 V 100.0 F 100.0 C 100.0) parfait
-16 gemma-4-26B-A4B-it                   UD-IQ4_XS         12,7 Go hybride 6/30     18.0 tok/s ctx   21k score  76.4 (Q  75.0 V  73.3 F 100.0 C 100.0) limite
-17 Qwen3-14B                            Q4_K_S             8,0 Go hybride 39/40    19.8 tok/s ctx   40k score  75.7 (Q  72.7 V  76.5 F 100.0 C 100.0) bon
-18 Qwen3-8B                             Q4_K_S             4,5 Go GPU              38.8 tok/s ctx   40k score  75.7 (Q  63.0 V  99.0 F 100.0 C 100.0) parfait
-19 Qwen2.5-14B-Instruct                 Q4_0               7,9 Go hybride 44/48    15.8 tok/s ctx   54k score  73.8 (Q  72.6 V  69.0 F 100.0 C 100.0) bon
-20 gemma-4-12B-it                       Q5_K_S             7,6 Go hybride 27/48     7.2 tok/s ctx   13k score  73.3 (Q  86.2 V  42.9 F 100.0 C  84.5) limite
-21 Qwen3-Next-80B-A3B-Instruct          Q2_K_L            27,2 Go hybride 15/48    28.9 tok/s ctx   32k score  73.3 (Q  71.8 V  89.1 F  60.2 C 100.0) limite
-22 TwIL-LM3                             Q8_0          *    3,0 Go GPU              55.6 tok/s ctx   51k score  72.0 (Q  64.4 V 100.0 F 100.0 C 100.0) parfait
-23 Qwen3-4B                             Q8_0               4,0 Go GPU              43.3 tok/s ctx   40k score  71.9 (Q  54.1 V 100.0 F 100.0 C 100.0) parfait
-24 Qwen2.5-VL-7B-Instruct               Q4_K_M        *    4,3 Go GPU              39.9 tok/s ctx   42k score  71.3 (Q  62.4 V  99.9 F 100.0 C 100.0) parfait
-25 GigaChat3.1-10B-A1.8B                Q8_0          *   10,6 Go hybride 28/38    40.8 tok/s ctx   71k score  71.3 (Q  65.6 V 100.0 F 100.0 C 100.0) limite
-26 LFM3-1.7B-Uncensored                 Q6_K               1,5 Go GPU             105.0 tok/s ctx  256k score  71.0 (Q  54.3 V 100.0 F 100.0 C 100.0) parfait
-27 Qwen3-VL-2B-Instruct                 Q8_0          *    1,7 Go GPU              93.2 tok/s ctx   61k score  65.9 (Q  49.4 V 100.0 F 100.0 C 100.0) parfait
-28 gemma-7b                             Q4_K_M        *    4,9 Go GPU              35.8 tok/s ctx    8k score  62.9 (Q  64.3 V  96.3 F 100.0 C  50.0) parfait
-29 Qwen3-0.6B                           Q8_0               0,6 Go GPU             211.4 tok/s ctx   40k score  57.3 (Q  21.0 V 100.0 F 100.0 C 100.0) parfait
-30 Qwen2.5-1.5B-Instruct                Q8_0               1,8 Go GPU              90.3 tok/s ctx    8k score  56.8 (Q  40.0 V 100.0 F 100.0 C  50.0) parfait
+ 1 Qwen3.5-9B-The-Defiant-Fable-Uncenso Q4_K_M             6,5 Go GPU              40.4 tok/s ctx  121k score  91.4 (Q  82.0 V 100.0 F 100.0 C 100.0) parfait
+ 2 MiMo-V2.6-Distill-Qwen-9B            Q5_K_M             6,4 Go GPU              41.0 tok/s ctx  124k score  91.4 (Q  81.9 V 100.0 F 100.0 C 100.0) parfait
+ 3 TwIL-8B                              Q5_K_S             5,7 Go GPU              46.0 tok/s ctx   29k score  89.1 (Q  81.1 V 100.0 F  98.9 C 100.0) bon
+ 4 Sage-A1.5                            IQ4_XS            18,0 Go hybride 22/41    24.0 tok/s ctx  256k score  88.3 (Q  82.2 V  83.0 F 100.0 C 100.0) limite
+ 5 Qwen3.8-27B-Ultimate-Heretic-Uncenso IQ2_M              9,5 Go hybride 62/65    21.0 tok/s ctx  152k score  86.8 (Q  84.9 V  78.5 F 100.0 C 100.0) bon
+ 6 Qwen2.5-Coder-14B-Instruct           Q3_K_L             7,4 Go hybride 47/48    31.2 tok/s ctx   54k score  84.3 (Q  71.6 V  91.7 F 100.0 C 100.0) bon
+ 7 Ornith-1.5-9B                        Q4_K_L             6,2 Go GPU              42.3 tok/s ctx  130k score  84.2 (Q  82.1 V 100.0 F 100.0 C 100.0) parfait
+ 8 Cyber-Tiel-Coder-35B-A3B-GGUF-MTP    Q4_K_M        *   20,3 Go hybride 23/61    20.7 tok/s ctx   62k score  83.1 (Q  82.4 V  78.0 F 100.0 C 100.0) limite
+ 9 Qwen3.8-27B                          IQ2_M              9,8 Go hybride 61/65    18.9 tok/s ctx  152k score  81.3 (Q  85.5 V  75.0 F 100.0 C 100.0) bon
+10 Ornith-1.5-35B-A3B                   IQ4_XS            18,0 Go hybride 22/41    24.1 tok/s ctx  256k score  81.2 (Q  82.2 V  83.0 F 100.0 C 100.0) limite
+11 Qwen3-VL-8B-Instruct                 UD-Q5_K_XL         5,5 Go GPU              47.7 tok/s ctx   34k score  81.1 (Q  75.1 V 100.0 F 100.0 C 100.0) parfait
+12 Mellum2.1-12B-A2.5B-Thinking         Q6_K_L            11,0 Go hybride 24/28    46.1 tok/s ctx  128k score  80.3 (Q  74.2 V 100.0 F 100.0 C 100.0) bon
+13 Qwen3-Coder-Next                     UD-IQ2_M          23,2 Go hybride 18/48    24.0 tok/s ctx   75k score  77.9 (Q  62.7 V  83.0 F  94.7 C 100.0) limite
+14 Qwen3-14B                            Q4_K_S             8,0 Go hybride 39/40    28.2 tok/s ctx   40k score  77.8 (Q  72.7 V  88.3 F 100.0 C 100.0) bon
+15 gemma-4-E2B-it                       UD-Q6_K_XL         4,4 Go GPU              59.0 tok/s ctx   86k score  77.3 (Q  66.6 V 100.0 F 100.0 C 100.0) parfait
+16 Qwen3-8B                             UD-Q5_K_XL         5,5 Go GPU              47.7 tok/s ctx   34k score  76.7 (Q  65.1 V 100.0 F 100.0 C 100.0) parfait
+17 Qwen3.5-4B                           Q8_0               4,2 Go GPU              61.8 tok/s ctx  196k score  76.6 (Q  64.9 V 100.0 F 100.0 C 100.0) parfait
+18 Qwen2.5-14B-Instruct                 Q4_0               7,9 Go hybride 44/48    21.1 tok/s ctx   54k score  75.5 (Q  72.6 V  78.6 F 100.0 C 100.0) bon
+19 gemma-4-26B-A4B-it                   UD-Q4_K_XL        15,8 Go hybride 5/30     12.1 tok/s ctx   20k score  75.3 (Q  77.7 V  60.2 F 100.0 C 100.0) limite
+20 gemma-4-12B-it                       Q5_K_S             7,6 Go hybride 27/48     8.5 tok/s ctx   13k score  74.3 (Q  86.2 V  48.4 F 100.0 C  84.5) limite
+21 Qwen2.5-VL-7B-Instruct               Q6_K          *    5,8 Go GPU              44.9 tok/s ctx   31k score  72.2 (Q  64.4 V 100.0 F 100.0 C 100.0) parfait
+22 TwIL-LM3                             Q8_0          *    3,0 Go GPU              83.3 tok/s ctx   51k score  72.0 (Q  64.4 V 100.0 F 100.0 C 100.0) parfait
+23 Qwen3-4B                             Q8_0               4,0 Go GPU              64.6 tok/s ctx   40k score  71.9 (Q  54.1 V 100.0 F 100.0 C 100.0) parfait
+24 Qwen3-Next-80B-A3B-Instruct          Q2_K_L            27,2 Go hybride 15/48    20.5 tok/s ctx   32k score  71.3 (Q  71.8 V  77.7 F  60.2 C 100.0) limite
+25 GigaChat3.1-10B-A1.8B                Q8_0          *   10,6 Go hybride 28/38    41.3 tok/s ctx   71k score  71.3 (Q  65.6 V 100.0 F 100.0 C 100.0) limite
+26 LFM3-1.7B-Uncensored                 Q6_K               1,5 Go GPU             160.1 tok/s ctx  256k score  71.0 (Q  54.3 V 100.0 F 100.0 C 100.0) parfait
+27 Qwen3-VL-2B-Instruct                 Q8_0          *    1,7 Go GPU             141.5 tok/s ctx   61k score  65.9 (Q  49.4 V 100.0 F 100.0 C 100.0) parfait
+28 gemma-7b                             Q6_K          *    6,5 Go GPU              40.2 tok/s ctx    8k score  64.4 (Q  66.4 V 100.0 F 100.0 C  50.0) parfait
+29 Qwen3-0.6B                           Q8_0               0,6 Go GPU             334.1 tok/s ctx   40k score  57.3 (Q  21.0 V 100.0 F 100.0 C 100.0) parfait
+30 Qwen2.5-1.5B-Instruct                Q8_0               1,8 Go GPU             137.0 tok/s ctx    8k score  56.8 (Q  40.0 V 100.0 F 100.0 C  50.0) parfait
 
 Exécutable mais lent (2)
- 1 Llama-3.3-70B-Instruct               UD-Q2_K_XL        25,1 Go hybride 24/80     1.6 tok/s ctx   16k score  59.0 (Q  72.5 V   0.0 F  69.9 C 100.0) limite
- 2 llama-3-firefunction-v2              Q2_K          *   26,3 Go hybride 22/79     1.5 tok/s ctx    8k score  44.8 (Q  73.8 V   0.0 F  40.0 C  50.0) limite
+ 1 Llama-3.3-70B-Instruct               UD-Q2_K_XL        25,1 Go hybride 24/80     1.8 tok/s ctx   16k score  59.0 (Q  72.5 V   0.0 F  69.9 C 100.0) limite
+ 2 llama-3-firefunction-v2              Q2_K          *   26,3 Go hybride 22/79     1.7 tok/s ctx    8k score  44.8 (Q  73.8 V   0.0 F  40.0 C  50.0) limite
 
 Trop gros (2)
  1 Ornith-1.5-122B                      UD-IQ1_M          37,6 Go trop gros         0.0 tok/s ctx     0 score  37.4 (Q  75.0 V   0.0 F   0.0 C   0.0) trop juste

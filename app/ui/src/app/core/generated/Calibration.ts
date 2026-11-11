@@ -12,11 +12,16 @@ measurements: Array<Measurement>,
 /**
  * Mesures retenues pour le calcul.
  */
-used: number, currentEfficiency: number, currentTokenOverheadMs: number, 
+used: number, currentGpuEfficiency: number, currentRamEfficiency: number, currentTokenOverheadMs: number, 
 /**
- * Efficacité proposée (arrondie au centième) ; absente sans mesure exploitable.
+ * Efficacité GPU proposée (arrondie au centième) ; absente sans mesure exploitable d'un
+ * modèle tenant en VRAM : la valeur actuelle est gardée.
  */
-efficiency: number | null, 
+gpuEfficiency: number | null, 
+/**
+ * Efficacité RAM proposée ; absente sans mesure exploitable d'un modèle hybride ou sur CPU.
+ */
+ramEfficiency: number | null, 
 /**
  * Temps fixe par token proposé (arrondi au dixième de ms) ; absent s'il ne peut pas être
  * ajusté (une seule taille de modèle mesurée) : la valeur actuelle est gardée.

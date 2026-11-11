@@ -54,9 +54,15 @@ estimatedTokS: number, estimatedMode: RunMode, estimatedMemTotal: number, estima
  */
 tokSError: number | null, memError: number | null, 
 /**
- * Octets lus par token (poids actifs), pour la calibration.
+ * Octets lus par token (poids actifs, ramenés à l'efficacité d'un modèle dense), pour la
+ * calibration.
  */
 activeBytes: number, 
+/**
+ * Temps fixe par token propre au modèle (MoE), en ms : retiré du temps mesuré avant la
+ * calibration.
+ */
+modelOverheadMs: number, 
 /**
  * Part des poids en VRAM : mesurée (`size_vram / size`), sinon celle de l'estimation.
  */

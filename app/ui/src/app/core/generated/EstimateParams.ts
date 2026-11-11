@@ -23,13 +23,19 @@ closeApps: boolean,
  */
 overheadBytes: number, 
 /**
- * Facteur d'efficacité de la vitesse (fraction de la bande passante réellement exploitée).
+ * Part de la bande passante de la VRAM réellement exploitée pour lire les poids placés sur
+ * le GPU.
  */
-efficiency: number, 
+gpuEfficiency: number, 
 /**
- * Temps fixe par token, en millisecondes : lancement des calculs, routage des experts,
- * synchronisations. Il domine quand un token lit peu d'octets (MoE, petits modèles) et
- * plafonne la vitesse à `1000 / token_overhead_ms` tok/s.
+ * Part de la bande passante de la RAM réellement exploitée pour lire les poids restés en
+ * RAM (CPU, hybride, machine sans GPU discret).
+ */
+ramEfficiency: number, 
+/**
+ * Temps fixe par token, en millisecondes : lancement des calculs, synchronisations. Il
+ * domine quand un token lit peu d'octets (petits modèles, MoE) et plafonne la vitesse à
+ * `1000 / token_overhead_ms` tok/s. Un MoE paie en plus `MOE_TOKEN_OVERHEAD_MS`.
  */
 tokenOverheadMs: number, kvCache: KvCacheType, 
 /**

@@ -3,10 +3,15 @@
 //!
 //! | Profil                                        | ~8B en Q4_K_M (~5 Go)     | ~70B en Q4_K_M (~42 Go)       |
 //! |-----------------------------------------------|---------------------------|-------------------------------|
-//! | P1 : portable iGPU, 16 Go DDR4-3200 ×2        | CPU, ~4–6 tok/s           | Trop juste                    |
-//! | P2 : RTX 3060 12 Go + 32 Go DDR4-3600         | GPU complet, ~35–45 tok/s | Trop juste ou Limite          |
+//! | P1 : portable iGPU, 16 Go DDR4-3200 ×2        | CPU, ~4–7 tok/s           | Trop juste                    |
+//! | P2 : RTX 3060 12 Go + 32 Go DDR4-3600         | GPU complet, ~45–60 tok/s | Trop juste ou Limite          |
 //! | P3 : RTX 4090 24 Go + 64 Go DDR5-6000         | GPU complet, rapide       | Hybride, ~2 tok/s             |
-//! | P4 : RX 7800 XT 16 Go (sans NVML) + 32 Go DDR5 | GPU complet (DXGI)        | Trop juste ou Limite          |
+//! | P4 : RX 7800 XT 16 Go (sans NVML) + 32 Go DDR5 | GPU complet, ~70–110 tok/s | Trop juste ou Limite         |
+//!
+//! Vitesses revues après les mesures réelles (efficacité 0,81 sur GPU, 0,62 sur CPU, termes
+//! propres aux MoE) et recoupées avec des vitesses publiées : ~50–57 tok/s pour un 8B en Q4_K_M
+//! sur RTX 3060, ~118 tok/s pour Llama 2 7B en Q4_0 (3,8 Go) sur RX 7800 XT, soit ~95 pour 5 Go,
+//! ~190 tok/s pour Qwen3-30B-A3B en Q4_K_M sur RTX 4090.
 
 use gram_core::estimate::{QuantTable, estimate};
 use gram_core::{
@@ -85,7 +90,7 @@ fn p1_portable_igpu() {
     let hw = p1();
     let small = q4(&qwen3_8b(), &hw);
     assert_eq!(small.mode, RunMode::Cpu, "un iGPU compte comme du CPU");
-    assert!((4.0..=6.0).contains(&small.tok_s), "{}", small.tok_s);
+    assert!((4.0..=7.0).contains(&small.tok_s), "{}", small.tok_s);
     assert_eq!(small.ctx_used, 8192);
     assert!(!small.approximate);
 
@@ -99,7 +104,7 @@ fn p2_rtx3060() {
     let hw = p2();
     let small = q4(&qwen3_8b(), &hw);
     assert_eq!(small.mode, RunMode::Gpu);
-    assert!((35.0..=45.0).contains(&small.tok_s), "{}", small.tok_s);
+    assert!((45.0..=60.0).contains(&small.tok_s), "{}", small.tok_s);
     assert_eq!(small.fit, FitLevel::Perfect);
     // Contexte 8k : 1,125 Gio de cache KV (144 Kio par token).
     assert_eq!(small.breakdown.kv, (1 << 30) + (1 << 27));
@@ -139,7 +144,7 @@ fn p4_rx7800xt_sans_nvml() {
     assert!(!hw.backends.cuda);
     let small = q4(&qwen3_8b(), &hw);
     assert_eq!(small.mode, RunMode::Gpu);
-    assert!((50.0..=80.0).contains(&small.tok_s), "{}", small.tok_s);
+    assert!((70.0..=110.0).contains(&small.tok_s), "{}", small.tok_s);
     assert_eq!(small.fit, FitLevel::Perfect);
 
     let big = q4(&llama_70b(), &hw);
@@ -178,7 +183,7 @@ fn moe_hybride_reste_rapide() {
     // 10 couches d'attention sur 41, 2 têtes KV × 256 : 20 Kio par token.
     assert_eq!(e.kv_per_token, 20 << 10);
     // Seuls 3,5 milliards de paramètres sont lus par token : bien plus rapide qu'un modèle dense
-    // de même taille en hybride.
+    // de même taille en hybride (~21 tok/s).
     assert!((15.0..=40.0).contains(&e.tok_s), "{}", e.tok_s);
 
     // Usage vision : le projecteur (861 Mio) s'ajoute.
@@ -218,8 +223,9 @@ fn modele_non_detaille() {
     let q4 = all.iter().find(|v| v.variant.label == "Q4_K_M").unwrap();
     // ~17,4 Gio estimés : tient sur la RTX 4090.
     assert_eq!(q4.estimate.mode, RunMode::Gpu);
-    // Vitesses publiées pour ce modèle sur RTX 4090 : de l'ordre de 190 tok/s. Sans temps fixe
-    // par token, la formule en donnait ~330.
+    // Vitesses publiées pour ce modèle sur RTX 4090 : de l'ordre de 190 tok/s. Les termes propres
+    // aux MoE, ajustés sur un autre MoE (Ornith-1.5-35B-A3B mesuré sur RTX 5080), donnent ~195 ;
+    // sans eux, ~330.
     assert!(
         (150.0..=250.0).contains(&q4.estimate.tok_s),
         "MoE : {}",

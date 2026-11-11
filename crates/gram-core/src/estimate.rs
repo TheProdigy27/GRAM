@@ -35,6 +35,29 @@ pub const UNKNOWN_CTX_TRAIN_CAP: u32 = 131_072;
 pub const PERFECT_USAGE: f32 = 0.80;
 pub const GOOD_USAGE: f32 = 0.95;
 
+/// MoE : bits lus par token et par paramètre actif, `MOE_BITS_BASE + MOE_BITS_SLOPE × bpw`
+/// (bits par poids moyens de la variante). Hors experts routés, les tenseurs lus à chaque token
+/// (attention, tête de sortie, expert partagé) restent quantifiés plus finement que les
+/// experts ; les embeddings, comptés dans les paramètres actifs, ne sont lus qu'à raison d'une
+/// ligne. Ajusté sur les en-têtes GGUF d'Ornith-1.5-35B-A3B (IQ2_XXS à Q8_0) et de
+/// Qwen3-30B-A3B (Q2_K à Q8_0), à ±6 % : en Q2_K, un MoE lit ~1,25 fois la part de ses
+/// paramètres actifs dans le fichier ; en Q8_0, ~0,9 fois.
+pub const MOE_BITS_BASE: f64 = 1.5;
+pub const MOE_BITS_SLOPE: f64 = 0.7;
+
+/// MoE : part de l'efficacité d'un modèle dense atteinte en lisant ses poids (petits blocs
+/// d'experts dispersés), sur GPU comme sur CPU.
+pub const MOE_READ_EFFICIENCY: f64 = 0.75;
+
+/// MoE : temps fixe par token en plus de celui des paramètres, en ms (routeur, noyaux des
+/// experts).
+///
+/// Ce terme et [`MOE_READ_EFFICIENCY`] sont ajustés sur des mesures réelles d'Ornith-1.5-35B-A3B
+/// en Q2_K (Ollama 0.40.16, contexte 8K, RTX 5080 et DDR5-6000 en double canal) : ~208 tok/s
+/// sur GPU, ~26,7 tok/s sur CPU seul, là où la formule des modèles denses en donnait ~405 et
+/// ~44. En hybride (20 et 30 couches sur 41 en VRAM), l'estimation est à 7 % des mesures.
+pub const MOE_TOKEN_OVERHEAD_MS: f32 = 1.3;
+
 /// En hybride, « Bon » à partir de 75 % des couches sur le GPU.
 const GOOD_HYBRID_NUM: u32 = 3;
 const GOOD_HYBRID_DEN: u32 = 4;
@@ -298,7 +321,7 @@ pub fn estimate(
         mem_usage,
         ctx_used: ctx,
         ctx_max: ctx_max(p.mode, weights, fixed, shape.kv_per_token, budget, ctx_cap).max(ctx),
-        tok_s: tok_s(p.mode, weights, shape.active_ratio, budget, params),
+        tok_s: tok_s(p.mode, cost(&shape, weights), budget, params),
         fit: fit_level(p.mode, mem_usage),
         approximate,
         warnings,
@@ -379,11 +402,42 @@ fn ctx_max(
     (room / kv_per_token.max(1)).min(u64::from(cap)) as u32
 }
 
-/// Octets lus pour générer un token : les poids de la variante, ou seulement la part des
-/// paramètres actifs pour un MoE.
-pub fn active_bytes(model: &ModelEntry, weights: u64) -> u64 {
-    let ratio = ModelShape::of(model, weights, Default::default()).active_ratio;
-    (weights as f64 * ratio).round() as u64
+/// Ce que coûte un token au modèle, avant les réglages de la machine (§8.4).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct TokenCost {
+    /// Octets à lire par token, ramenés à l'efficacité de lecture d'un modèle dense.
+    pub bytes: u64,
+    /// Temps fixe propre au modèle, en ms, en plus du temps fixe des paramètres (MoE).
+    pub extra_ms: f32,
+}
+
+impl TokenCost {
+    /// Modèle dense : tous les poids, sans temps fixe propre.
+    pub const fn dense(bytes: u64) -> Self {
+        Self {
+            bytes,
+            extra_ms: 0.0,
+        }
+    }
+}
+
+/// Coût d'un token pour la variante de `weights` octets : tous ses poids pour un modèle dense.
+/// Pour un MoE, `paramètres actifs × (MOE_BITS_BASE + MOE_BITS_SLOPE × bpw) / 8` octets, lus à
+/// [`MOE_READ_EFFICIENCY`] fois l'efficacité d'un modèle dense, et [`MOE_TOKEN_OVERHEAD_MS`].
+pub fn token_cost(model: &ModelEntry, weights: u64) -> TokenCost {
+    cost(&ModelShape::of(model, weights, Default::default()), weights)
+}
+
+fn cost(shape: &ModelShape, weights: u64) -> TokenCost {
+    let Some(active) = shape.active else {
+        return TokenCost::dense(weights);
+    };
+    let bpw = weights as f64 * 8.0 / shape.params.max(1) as f64;
+    let read = active as f64 * (MOE_BITS_BASE + MOE_BITS_SLOPE * bpw) / 8.0;
+    TokenCost {
+        bytes: ((read / MOE_READ_EFFICIENCY).round() as u64).min(weights),
+        extra_ms: MOE_TOKEN_OVERHEAD_MS,
+    }
 }
 
 /// Part des poids en VRAM : 1 en GPU, la fraction des couches en hybride, 0 en CPU.
@@ -395,10 +449,25 @@ pub fn gpu_share(mode: RunMode) -> f64 {
     }
 }
 
-/// Temps de lecture des poids d'un token à pleine bande passante, en secondes :
-/// `octets GPU / BW GPU + octets RAM / BW RAM`. Sans GPU discret, tout passe par la RAM (un
-/// iGPU partage sa bande passante).
-pub fn transfer_seconds(active_bytes: u64, gpu_share: f64, b: &MemoryBudget) -> f64 {
+/// Temps de lecture des poids d'un token à pleine bande passante, en secondes, côté VRAM et
+/// côté RAM.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Transfer {
+    /// `octets GPU / BW GPU`.
+    pub gpu: f64,
+    /// `octets RAM / BW RAM`.
+    pub ram: f64,
+}
+
+impl Transfer {
+    pub fn total(self) -> f64 {
+        self.gpu + self.ram
+    }
+}
+
+/// Temps de lecture des poids d'un token à pleine bande passante. Sans GPU discret, tout passe
+/// par la RAM (un iGPU partage sa bande passante).
+pub fn transfer_seconds(active_bytes: u64, gpu_share: f64, b: &MemoryBudget) -> Transfer {
     let share = if b.gpu_offload() {
         gpu_share.clamp(0.0, 1.0)
     } else {
@@ -407,14 +476,27 @@ pub fn transfer_seconds(active_bytes: u64, gpu_share: f64, b: &MemoryBudget) -> 
     let bytes = active_bytes as f64;
     let gpu_bw = f64::from(b.gpu_bandwidth_gbs.unwrap_or(DEFAULT_GPU_BANDWIDTH_GBS)) * 1e9;
     let ram_bw = f64::from(b.ram_bandwidth_gbs) * 1e9;
-    bytes * share / gpu_bw + bytes * (1.0 - share) / ram_bw
+    Transfer {
+        gpu: bytes * share / gpu_bw,
+        ram: bytes * (1.0 - share) / ram_bw,
+    }
 }
 
 /// Vitesse de génération pour un temps de transfert donné (§8.4) :
-/// `tok/s = 1 / (transfert / efficacité + temps fixe)`.
-pub fn tok_s_for(transfer_s: f64, p: &EstimateParams) -> f32 {
-    let seconds =
-        transfer_s / f64::from(p.efficiency) + f64::from(p.token_overhead_ms.max(0.0)) / 1000.0;
+/// `tok/s = 1 / (transfert GPU / efficacité GPU + transfert RAM / efficacité RAM + temps fixe
+/// + temps fixe propre au modèle)`.
+pub fn tok_s_for(t: Transfer, extra_ms: f32, p: &EstimateParams) -> f32 {
+    // Un côté qui ne lit rien ne compte pas, même avec une efficacité aberrante.
+    let side = |seconds: f64, efficiency: f32| {
+        if seconds > 0.0 {
+            seconds / f64::from(efficiency)
+        } else {
+            0.0
+        }
+    };
+    let seconds = side(t.gpu, p.gpu_efficiency)
+        + side(t.ram, p.ram_efficiency)
+        + f64::from(p.token_overhead_ms.max(0.0) + extra_ms.max(0.0)) / 1000.0;
     if seconds.is_finite() && seconds > 0.0 {
         (1.0 / seconds) as f32
     } else {
@@ -423,24 +505,22 @@ pub fn tok_s_for(transfer_s: f64, p: &EstimateParams) -> f32 {
 }
 
 /// §8.4 : la génération est limitée par la bande passante mémoire. Chaque token lit les poids
-/// actifs une fois (seulement les paramètres actifs d'un MoE), plus un temps fixe :
-/// `temps = (octets GPU / BW GPU + octets RAM / BW RAM) / efficacité + temps fixe`, et
-/// `tok/s = 1 / temps`. En hybride, les poids se répartissent selon les couches.
+/// une fois (un MoE, ses seuls paramètres actifs : [`token_cost`]), plus un temps fixe :
+/// `temps = octets GPU / (BW GPU × eff. GPU) + octets RAM / (BW RAM × eff. RAM) + temps fixe`,
+/// et `tok/s = 1 / temps`. En hybride, les poids se répartissent selon les couches. Le GPU et le
+/// CPU n'exploitent pas la même part de leur bande passante : d'où deux efficacités.
 ///
 /// Sans temps fixe, la vitesse d'un modèle qui lit peu d'octets par token (MoE à 3B actifs,
 /// modèle de 0,6B) serait surestimée : son coût n'est plus dominé par la bande passante.
-fn tok_s(
-    mode: RunMode,
-    weights: u64,
-    active_ratio: f64,
-    b: &MemoryBudget,
-    p: &EstimateParams,
-) -> f32 {
+fn tok_s(mode: RunMode, cost: TokenCost, b: &MemoryBudget, p: &EstimateParams) -> f32 {
     if mode == RunMode::TooBig {
         return 0.0;
     }
-    let bytes = (weights as f64 * active_ratio).round() as u64;
-    tok_s_for(transfer_seconds(bytes, gpu_share(mode), b), p)
+    tok_s_for(
+        transfer_seconds(cost.bytes, gpu_share(mode), b),
+        cost.extra_ms,
+        p,
+    )
 }
 
 /// Niveaux d'adéquation du §9.

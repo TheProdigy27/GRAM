@@ -3,17 +3,21 @@
     {
       "name": "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M",
       "model": "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M",
-      "modified_at": "2026-11-08T21:14:03.409490317+01:00",
-      "size": 5027783488,
-      "digest": "d98cc1d5cdd8d6a1f8bb4ee2b4e5c0b1c6f5f8c1c2a6a0c1d4b7e8f9a0b1c2d3",
+      "modified_at": "2026-11-11T10:33:13.4254073+01:00",
+      "size": 5027797508,
+      "digest": "b14ffb635b5bbdb62bbb1aed050de1c32b12a5b139eb5adeb529497c6622bc1b",
       "details": {
         "parent_model": "",
         "format": "gguf",
         "family": "qwen3",
         "families": ["qwen3"],
-        "parameter_size": "8.2B",
-        "quantization_level": "Q4_K_M"
-      }
+        "parameter_size": "8.19B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 4096,
+        "runner": "ggml"
+      },
+      "capabilities": ["completion", "tools", "thinking"]
     },
     {
       "name": "hf.co/unsloth/Qwen3-30B-A3B-GGUF:UD-Q4_K_XL",

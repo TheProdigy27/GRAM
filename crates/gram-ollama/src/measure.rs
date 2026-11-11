@@ -52,6 +52,7 @@ pub async fn measure(client: &OllamaClient, model: &str, ctx: u32) -> Result<Oll
         eval_count: run.eval_count,
         eval_duration_ns: run.eval_duration,
         prompt_eval_count: run.prompt_eval_count,
+        prompt_eval_cached_count: run.prompt_eval_cached_count,
         prompt_eval_duration_ns: run.prompt_eval_duration,
         load_duration_ns: warmup.load_duration.saturating_add(run.load_duration),
         loaded: entry.map(|e| e.loaded()),
@@ -81,14 +82,18 @@ mod tests {
         let client = OllamaClient::new(fake.url()).unwrap();
         let run = measure(&client, MODEL, 8192).await.unwrap();
         assert_eq!(run.eval_count, 128);
-        assert_eq!(run.eval_duration_ns, 1_542_168_000);
-        // Les deux générations renvoient la même fixture : chargement compté deux fois.
-        assert_eq!(run.load_duration_ns, 2 * 2_731_000_000);
+        assert_eq!(run.eval_duration_ns, 946_333_000);
+        assert_eq!(
+            (run.prompt_eval_count, run.prompt_eval_cached_count),
+            (45, 3)
+        );
+        // Chargement à l'échauffement, presque rien à la mesure.
+        assert_eq!(run.load_duration_ns, 1_843_339_600 + 2_126_300);
         assert_eq!(
             run.loaded,
             Some(LoadedModel {
-                size: 6_925_000_000,
-                size_vram: 6_925_000_000,
+                size: 6_114_634_628,
+                size_vram: 6_114_634_628,
                 context_length: Some(8192),
             })
         );

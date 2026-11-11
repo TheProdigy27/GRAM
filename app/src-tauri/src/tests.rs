@@ -570,23 +570,28 @@ fn mesure_puis_calibration() {
         let h = Harness::with_ollama(&dir, client(&fake));
         let empty = h.ok("get_calibration", json!({}));
         assert_eq!(
-            (empty["used"].as_u64(), empty["efficiency"].as_f64()),
+            (empty["used"].as_u64(), empty["gpuEfficiency"].as_f64()),
             (Some(0), None)
         );
 
         let m = h.ok("ollama_measure", measure_args("Q4_K_M"));
         assert_eq!(m["ollamaModel"], "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M");
         assert_eq!(m["ctx"], 8192);
-        // 128 tokens en 1,542 s.
+        // 128 tokens en 0,946 s (mesure réelle avec Ollama 0.40.16).
         let tok_s = m["tokS"].as_f64().unwrap();
-        assert!((tok_s - 83.0).abs() < 0.1, "{tok_s}");
-        assert_eq!(m["memTotal"], 6_925_000_000u64);
+        assert!((tok_s - 135.26).abs() < 0.1, "{tok_s}");
+        // 42 tokens calculés en 18,2 ms (3 repris du cache).
+        let prompt = m["promptTokS"].as_f64().unwrap();
+        assert!((prompt - 2313.2).abs() < 1.0, "{prompt}");
+        assert_eq!(m["loadMs"], 1845);
+        assert_eq!(m["memTotal"], 6_114_634_628u64);
         assert_eq!(m["ctxLoaded"], 8192);
         assert_eq!(m["reliable"], true);
         assert_eq!(m["estimatedMode"]["kind"], "gpu");
-        // RTX 5080 (960 Go/s), efficacité 0,55 : ~91 tok/s estimés, soit ~9 % de trop.
+        // RTX 5080 (960 Go/s), efficacité GPU 0,81 et 0,8 ms : ~138 tok/s estimés, moins de
+        // 5 % d'écart (les valeurs par défaut viennent de mesures sur cette machine).
         let error = m["tokSError"].as_f64().unwrap();
-        assert!((0.05..0.15).contains(&error), "{error}");
+        assert!((-0.05..0.05).contains(&error), "{error}");
         assert!(m["notes"].as_array().unwrap().is_empty(), "{}", m["notes"]);
         // Ollama a reçu le contexte de l'estimation, au chargement comme à la mesure.
         let generate: Vec<_> = fake
@@ -601,17 +606,20 @@ fn mesure_puis_calibration() {
                 .all(|r| r.json()["options"]["num_ctx"] == 8192)
         );
 
-        // 5,24 ms de lecture à pleine bande passante pour 12,05 ms mesurées, dont 1,5 ms fixes.
+        // 5,24 ms de lecture à pleine bande passante pour 7,39 ms mesurées, dont 0,8 ms fixes :
+        // efficacité GPU 5,24 / 6,59 ≈ 0,79. Rien en RAM : l'efficacité RAM n'est pas ajustée.
         let cal = h.ok("get_calibration", json!({}));
         assert_eq!(cal["used"], 1);
         assert_eq!(cal["measurements"][0]["label"], "Q4_K_M");
-        assert_eq!(cal["efficiency"], json!(0.5));
+        assert_eq!(cal["gpuEfficiency"], json!(0.79));
+        assert_eq!(cal["ramEfficiency"], Value::Null);
         assert_eq!(cal["tokenOverheadMs"], Value::Null);
         assert_eq!(cal["changed"], true);
 
         let settings = h.ok("apply_calibration", json!({}));
-        assert_eq!(settings["estimate"]["efficiency"], json!(0.5));
-        assert_eq!(settings["estimate"]["tokenOverheadMs"], json!(1.5));
+        assert_eq!(settings["estimate"]["gpuEfficiency"], json!(0.79));
+        assert_eq!(settings["estimate"]["ramEfficiency"], json!(0.62));
+        assert_eq!(settings["estimate"]["tokenOverheadMs"], json!(0.8));
         assert_eq!(h.ok("get_settings", json!({})), settings);
         assert_eq!(h.ok("get_calibration", json!({}))["changed"], false);
         // L'estimation suit : la nouvelle valeur est proche de la mesure.
@@ -633,8 +641,8 @@ fn mesure_puis_calibration() {
     let cleared = h.ok("clear_measurements", json!({}));
     assert_eq!(cleared["measurements"], json!([]));
     assert_eq!(
-        h.ok("get_settings", json!({}))["estimate"]["efficiency"],
-        json!(0.5)
+        h.ok("get_settings", json!({}))["estimate"]["gpuEfficiency"],
+        json!(0.79)
     );
 }
 

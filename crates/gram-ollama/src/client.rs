@@ -124,14 +124,14 @@ impl OllamaClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testing::FakeOllama;
+    use crate::testing::{FakeOllama, VERSION};
 
     #[tokio::test]
     async fn listes_et_erreurs() {
         let fake = FakeOllama::standard();
         let client = OllamaClient::new(format!("{}/", fake.url())).unwrap();
         assert_eq!(client.base_url(), fake.url());
-        assert_eq!(client.version().await.unwrap(), "0.13.1");
+        assert_eq!(client.version().await.unwrap(), VERSION);
         assert_eq!(client.tags().await.unwrap().len(), 3);
         assert_eq!(client.ps().await.unwrap().len(), 1);
 

@@ -8,8 +8,8 @@
         <div class="tab">
           <p class="muted intro">
             Mémoire réellement utilisable et vitesse estimée. Les estimations restent à ±30 % près ;
-            l’efficacité et le temps fixe par token se recalibrent d’après une mesure réelle avec
-            Ollama (fiche d’un modèle installé).
+            les efficacités et le temps fixe par token se recalibrent d’après des mesures réelles
+            avec Ollama (fiche d’un modèle installé).
           </p>
           <div class="grid">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -101,22 +101,43 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Efficacité (vitesse)</mat-label>
+              <mat-label>Efficacité GPU</mat-label>
               <input
-                #eff
+                #gpuEff
                 matInput
                 type="number"
                 min="0.05"
                 max="2"
                 step="0.05"
-                data-testid="set-efficiency"
-                [value]="d.estimate.efficiency"
-                (input)="setEstimateNumber('efficiency', eff.value)"
+                data-testid="set-gpu-efficiency"
+                [value]="d.estimate.gpuEfficiency"
+                (input)="setEstimateNumber('gpuEfficiency', gpuEff.value)"
               />
               <mat-hint
-                >Part de la bande passante exploitée
+                >Part de la bande passante VRAM exploitée
                 @if (defaults(); as def) {
-                  · défaut {{ decimal(def.estimate.efficiency) }}
+                  · défaut {{ decimal(def.estimate.gpuEfficiency) }}
+                }
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Efficacité RAM</mat-label>
+              <input
+                #ramEff
+                matInput
+                type="number"
+                min="0.05"
+                max="2"
+                step="0.05"
+                data-testid="set-ram-efficiency"
+                [value]="d.estimate.ramEfficiency"
+                (input)="setEstimateNumber('ramEfficiency', ramEff.value)"
+              />
+              <mat-hint
+                >Part de la bande passante RAM exploitée (CPU, hybride)
+                @if (defaults(); as def) {
+                  · défaut {{ decimal(def.estimate.ramEfficiency) }}
                 }
               </mat-hint>
             </mat-form-field>

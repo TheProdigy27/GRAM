@@ -125,8 +125,9 @@ pub async fn get_calibration<R: Runtime>(
     calibration(&app, &state).await
 }
 
-/// Applique l'efficacité (et le temps fixe par token, s'il a pu être ajusté) proposés par les
-/// mesures, enregistre les paramètres et les renvoie.
+/// Applique les efficacités GPU et RAM (et le temps fixe par token, s'il a pu être ajusté)
+/// proposées par les mesures, enregistre les paramètres et les renvoie. Un côté sans mesure
+/// garde son efficacité.
 #[tauri::command]
 pub async fn apply_calibration<R: Runtime>(
     app: AppHandle<R>,
@@ -141,7 +142,8 @@ pub async fn apply_calibration<R: Runtime>(
     }
     let saved = state.save_settings(settings)?;
     tracing::info!(
-        efficiency = saved.estimate.efficiency,
+        gpu_efficiency = saved.estimate.gpu_efficiency,
+        ram_efficiency = saved.estimate.ram_efficiency,
         token_overhead_ms = saved.estimate.token_overhead_ms,
         "calibration appliquée"
     );

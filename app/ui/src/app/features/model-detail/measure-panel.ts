@@ -141,9 +141,9 @@ export class MeasurePanel {
 
   protected async apply(): Promise<void> {
     try {
-      const s = await this.store.apply();
+      const { estimate: e } = await this.store.apply();
       this.snackBar.open(
-        `Estimation recalibrée (efficacité ${decimal(s.estimate.efficiency)}) : vitesses recalculées.`,
+        `Estimation recalibrée (efficacité GPU ${decimal(e.gpuEfficiency)}, RAM ${decimal(e.ramEfficiency)}) : vitesses recalculées.`,
         undefined,
         { duration: 4000 },
       );

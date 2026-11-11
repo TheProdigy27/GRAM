@@ -9,7 +9,7 @@ export type Settings = {
  */
 runtime: Runtime, 
 /**
- * Marges, efficacité, surcoût, cache KV, minimums.
+ * Marges, efficacités, surcoût, cache KV, minimums.
  */
 estimate: EstimateParams, 
 /**

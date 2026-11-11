@@ -3,6 +3,7 @@
 //!
 //! Disponible pour les autres crates avec la fonctionnalité `test-support`.
 
+use crate::measure::MEASURE_TOKENS;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -12,6 +13,10 @@ use std::thread::JoinHandle;
 pub const TAGS: &str = include_str!("../../../tests/fixtures/ollama/tags.json");
 pub const PS: &str = include_str!("../../../tests/fixtures/ollama/ps.json");
 pub const GENERATE: &str = include_str!("../../../tests/fixtures/ollama/generate.json");
+pub const GENERATE_WARMUP: &str =
+    include_str!("../../../tests/fixtures/ollama/generate-warmup.json");
+/// Version d'Ollama qui a donné les réponses enregistrées.
+pub const VERSION: &str = "0.40.16";
 pub const NOT_FOUND: &str = include_str!("../../../tests/fixtures/ollama/error-not-found.json");
 
 /// Une requête reçue.
@@ -29,13 +34,21 @@ impl Recorded {
     }
 }
 
-/// Réponses enregistrées : version, modèles installés, modèles chargés, génération.
+/// Réponses enregistrées : version, modèles installés, modèles chargés, génération (celle de
+/// l'échauffement, qui charge le modèle, pour une requête de moins de [`MEASURE_TOKENS`]).
 pub fn standard_response(r: &Recorded) -> (u16, String) {
     match (r.method.as_str(), r.path.as_str()) {
-        ("GET", "/api/version") => (200, r#"{"version":"0.13.1"}"#.into()),
+        ("GET", "/api/version") => (200, format!(r#"{{"version":"{VERSION}"}}"#)),
         ("GET", "/api/tags") => (200, TAGS.into()),
         ("GET", "/api/ps") => (200, PS.into()),
-        ("POST", "/api/generate") => (200, GENERATE.into()),
+        ("POST", "/api/generate") => {
+            let tokens = r.json()["options"]["num_predict"].as_u64();
+            if tokens.is_some_and(|n| n < u64::from(MEASURE_TOKENS)) {
+                (200, GENERATE_WARMUP.into())
+            } else {
+                (200, GENERATE.into())
+            }
+        }
         _ => (404, r#"{"error":"404 page not found"}"#.into()),
     }
 }

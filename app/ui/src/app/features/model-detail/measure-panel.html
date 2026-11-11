@@ -111,7 +111,7 @@
       <div class="calibration" data-testid="calibration">
         <p>{{ c.summary }}</p>
         <div class="actions">
-          @if (c.changed && c.efficiency !== null) {
+          @if (c.changed && (c.gpuEfficiency !== null || c.ramEfficiency !== null)) {
             <button
               mat-flat-button
               type="button"

@@ -443,9 +443,11 @@ fn contexte_d_entrainement_inconnu() {
 
 // ── Vitesse (§8.4) ──────────────────────────────────────────────────────────────────────────
 
-/// Paramètres par défaut, sans temps fixe par token : la formule de bande passante seule.
+/// Formule de bande passante seule : efficacités 0,8 (GPU) et 0,6 (RAM), sans temps fixe.
 fn bandwidth_only() -> EstimateParams {
     EstimateParams {
+        gpu_efficiency: 0.8,
+        ram_efficiency: 0.6,
         token_overhead_ms: 0.0,
         ..EstimateParams::default()
     }
@@ -455,71 +457,152 @@ fn bandwidth_only() -> EstimateParams {
 fn vitesse_limitee_par_la_bande_passante() {
     let b = budget(12 * GIB, 32 * GIB);
     let p = bandwidth_only();
-    // 5 Go sur une RTX 3060 (360 Go/s) : ~40 tok/s ; sur DDR4-3200 double canal : ~5,6 tok/s.
-    let gpu = tok_s(RunMode::Gpu, 5_000_000_000, 1.0, &b, &p);
-    assert!((gpu - 39.6).abs() < 0.01, "{gpu}");
-    let cpu = tok_s(RunMode::Cpu, 5_000_000_000, 1.0, &b, &p);
-    assert!((cpu - 5.632).abs() < 0.001, "{cpu}");
-    // Hybride, moitié des couches : 2,5 Go / 360 Go/s + 2,5 Go / 51,2 Go/s.
+    // 5 Go sur une RTX 3060 (360 Go/s × 0,8) : ~58 tok/s ; sur DDR4-3200 double canal
+    // (51,2 Go/s × 0,6) : ~6,1 tok/s.
+    let five = TokenCost::dense(5_000_000_000);
+    let gpu = tok_s(RunMode::Gpu, five, &b, &p);
+    assert!((gpu - 57.6).abs() < 0.01, "{gpu}");
+    let cpu = tok_s(RunMode::Cpu, five, &b, &p);
+    assert!((cpu - 6.144).abs() < 0.001, "{cpu}");
+    // Hybride, moitié des couches : 2,5 Go / (360 × 0,8) + 2,5 Go / (51,2 × 0,6).
     let half = RunMode::Hybrid {
         gpu_layers: 16,
         layers: 32,
     };
-    let hybrid = tok_s(half, 5_000_000_000, 1.0, &b, &p);
-    let expected = 0.55 / (2.5 / 360.0 + 2.5 / 51.2);
+    let hybrid = tok_s(half, five, &b, &p);
+    let expected = 1.0 / (2.5 / (360.0 * 0.8) + 2.5 / (51.2 * 0.6));
     assert!((f64::from(hybrid) - expected).abs() < 0.01, "{hybrid}");
-    // MoE : seuls les paramètres actifs (10 %) sont lus à chaque token.
-    let moe = tok_s(RunMode::Gpu, 5_000_000_000, 0.1, &b, &p);
-    assert!((moe - 396.0).abs() < 0.1, "{moe}");
-    assert_eq!(tok_s(RunMode::TooBig, 5_000_000_000, 1.0, &b, &p), 0.0);
+    // Temps fixe propre au modèle (MoE) : 500 Mo lus en 1,74 ms, plus 1,3 ms.
+    let moe = TokenCost {
+        bytes: 500_000_000,
+        extra_ms: 1.3,
+    };
+    let expected = 1.0 / (0.5 / (360.0 * 0.8) + 0.0013);
+    assert!((f64::from(tok_s(RunMode::Gpu, moe, &b, &p)) - expected).abs() < 0.01);
+    assert_eq!(tok_s(RunMode::TooBig, five, &b, &p), 0.0);
 }
 
 #[test]
 fn temps_fixe_par_token() {
     let b = budget(12 * GIB, 32 * GIB);
-    let p = EstimateParams::default();
-    let at = |bytes: u64| f64::from(tok_s(RunMode::Gpu, bytes, 1.0, &b, &p));
-    // 5 Go sur une RTX 3060 : 25,3 ms de lecture + 1,5 ms, soit ~37 tok/s au lieu de ~40.
-    let expected = 1.0 / (5e9 / (360e9 * 0.55) + 0.0015);
+    let p = EstimateParams::default(); // 0,81 (GPU), 0,62 (RAM), 0,8 ms
+    let at = |bytes: u64| f64::from(tok_s(RunMode::Gpu, TokenCost::dense(bytes), &b, &p));
+    // 5 Go sur une RTX 3060 : 17,1 ms de lecture + 0,8 ms, soit ~56 tok/s au lieu de ~58.
+    let expected = 1.0 / (5e9 / (360e9 * 0.81) + 0.0008);
     assert!((at(5_000_000_000) - expected).abs() < 0.01);
-    assert!((36.0..38.0).contains(&expected));
+    assert!((55.0..57.0).contains(&expected));
     // Un token qui lit peu d'octets (MoE, petit modèle) bute sur le temps fixe :
-    // 500 Mo → ~250 tok/s au lieu de 396, et jamais plus de 1000 / 1,5 ≈ 667 tok/s.
+    // 500 Mo → ~400 tok/s au lieu de 583, et jamais plus de 1000 / 0,8 = 1250 tok/s.
     let small = at(500_000_000);
-    assert!((240.0..260.0).contains(&small), "{small}");
-    assert!(at(1_000_000) < 667.0);
+    assert!((390.0..410.0).contains(&small), "{small}");
+    assert!(at(1_000_000) < 1250.0);
     // Sur CPU, la bande passante domine toujours : moins de 1 % d'écart pour 5 Go.
-    let cpu = tok_s(RunMode::Cpu, 5_000_000_000, 1.0, &b, &p);
-    assert!((cpu - 5.632).abs() / 5.632 < 0.01, "{cpu}");
-    // Efficacité nulle (paramètre aberrant) : pas de vitesse infinie.
+    let five = TokenCost::dense(5_000_000_000);
+    let cpu = tok_s(RunMode::Cpu, five, &b, &p);
+    let bandwidth = 51.2 * 0.62 / 5.0;
+    assert!(
+        (f64::from(cpu) - bandwidth).abs() / bandwidth < 0.01,
+        "{cpu}"
+    );
+    // Efficacité nulle (paramètre aberrant) : pas de vitesse infinie. Celle d'un côté qui ne
+    // lit rien ne compte pas.
     let broken = EstimateParams {
-        efficiency: 0.0,
+        gpu_efficiency: 0.0,
         ..p.clone()
     };
-    assert_eq!(tok_s(RunMode::Gpu, 5_000_000_000, 1.0, &b, &broken), 0.0);
+    assert_eq!(tok_s(RunMode::Gpu, five, &b, &broken), 0.0);
+    assert!(tok_s(RunMode::Cpu, five, &b, &broken) > 6.0);
+    // Temps fixe propre négatif (valeur aberrante) : ignoré.
+    let negative = TokenCost {
+        extra_ms: -5.0,
+        ..five
+    };
+    assert_eq!(
+        tok_s(RunMode::Gpu, negative, &b, &p),
+        tok_s(RunMode::Gpu, five, &b, &p)
+    );
+}
+
+/// Ornith-1.5-35B-A3B : 35,5 milliards de paramètres dont 3,52 actifs.
+fn ornith() -> ModelEntry {
+    let mut m = model(35_505_251_456, Some(arch(41, 2, 256)), 262_144);
+    m.params_active = Some(3_519_489_152);
+    m
 }
 
 #[test]
-fn vitesse_moe_dans_l_estimation() {
-    let mut m = model(30_532_122_624, Some(arch(48, 4, 128)), 40_960);
-    let v = variant("Q4_K_M", 17 * GIB, 4.8);
-    let b = budget(80 * GIB, 32 * GIB);
-    for (p, min, max) in [
-        (bandwidth_only(), 9.99, 10.01),
-        (EstimateParams::default(), 5.0, 9.5),
+fn cout_d_un_token_moe() {
+    let m = ornith();
+    // Dense : tous les poids, sans temps fixe propre.
+    let mut dense = m.clone();
+    dense.params_active = None;
+    assert_eq!(token_cost(&dense, 13 * GIB), TokenCost::dense(13 * GIB));
+    // Actifs incohérents (≥ total) : modèle dense.
+    dense.params_active = Some(m.params_total);
+    assert_eq!(token_cost(&dense, 13 * GIB), TokenCost::dense(13 * GIB));
+
+    // Q2_K (13,09 Go, 2,95 bits par poids) : 3,56 bits lus par paramètre actif, soit 1,57 Go
+    // (1,66 Go d'après le fichier), lus à 75 % de l'efficacité d'un modèle dense.
+    let q2 = token_cost(&m, 13_085_779_616);
+    assert_eq!(q2.extra_ms, MOE_TOKEN_OVERHEAD_MS);
+    let read = 3.519_489_152e9 * (1.5 + 0.7 * 13_085_779_616.0 * 8.0 / 35_505_251_456.0) / 8.0;
+    assert!((q2.bytes as f64 - read / 0.75).abs() < 1.0, "{}", q2.bytes);
+    assert!((1.55e9..1.59e9).contains(&read));
+    // Plus que la part des paramètres actifs dans le fichier en Q2_K, moins en Q8_0 : les
+    // tenseurs hors experts y sont quantifiés comme les experts.
+    let share = |weights: u64| {
+        let c = token_cost(&m, weights);
+        c.bytes as f64 * MOE_READ_EFFICIENCY / (weights as f64 * 3.519_489_152 / 35.505_251_456)
+    };
+    assert!((1.15..1.3).contains(&share(13_085_779_616)), "Q2_K");
+    assert!((0.85..0.95).contains(&share(37_810_000_000)), "Q8_0");
+    // Jamais plus que le fichier entier.
+    let mut tiny = m.clone();
+    tiny.params_active = Some(m.params_total - 1);
+    assert_eq!(token_cost(&tiny, GIB).bytes, GIB);
+}
+
+#[test]
+fn vitesse_moe_mesuree() {
+    // Mesures réelles d'Ornith-1.5-35B-A3B en Q2_K (Ollama 0.40.16, contexte 8K) sur la machine
+    // de développement : RTX 5080 (960 Go/s) et DDR5-6000 en double canal (96 Go/s), médianes de
+    // 3 ou 4 essais. Les couches en VRAM (option `num_gpu`) sont imposées en hybride.
+    let m = ornith();
+    let v = variant("Q2_K", 13_085_779_616, 2.95);
+    let b = MemoryBudget {
+        gpu_bandwidth_gbs: Some(960.0),
+        ram_bandwidth_gbs: 96.0,
+        ..budget(14 * GIB, 46 * GIB)
+    };
+    let p = EstimateParams::default();
+    let cost = token_cost(&m, v.size_bytes);
+    let at = |mode: RunMode| f64::from(tok_s(mode, cost, &b, &p));
+    let hybrid = |gpu_layers| RunMode::Hybrid {
+        gpu_layers,
+        layers: 41,
+    };
+    for (mode, measured, tolerance) in [
+        (RunMode::Gpu, 208.0, 0.02),
+        (RunMode::Cpu, 26.7, 0.02),
+        (hybrid(30), 79.7, 0.08),
+        (hybrid(20), 50.4, 0.08),
     ] {
-        let dense = estimate(&m, &v, &b, work(8192), &p);
-        m.params_active = Some(3_053_212_262);
-        let moe = estimate(&m, &v, &b, work(8192), &p);
-        m.params_active = None;
-        assert_eq!(
-            moe.mem_gpu, dense.mem_gpu,
-            "même placement qu'un modèle dense"
-        );
-        // 10 fois moins d'octets lus ; le temps fixe réduit l'écart.
-        let ratio = moe.tok_s / dense.tok_s;
-        assert!((min..=max).contains(&ratio), "{ratio}");
+        let error = (at(mode) - measured) / measured;
+        assert!(error.abs() < tolerance, "{mode:?} : {} ({error})", at(mode));
     }
+    // Sans les termes propres aux MoE : ~405 tok/s sur GPU, près du double de la mesure.
+    let naive = TokenCost::dense((v.size_bytes as f64 * 3.519_489_152 / 35.505_251_456) as u64);
+    assert!(f64::from(tok_s(RunMode::Gpu, naive, &b, &p)) > 400.0);
+
+    // Dans l'estimation : même placement qu'un modèle dense de même taille.
+    let e = estimate(&m, &v, &b, work(8192), &p);
+    assert_eq!(e.mode, RunMode::Gpu);
+    assert_eq!(e.tok_s, tok_s(RunMode::Gpu, cost, &b, &p));
+    let mut dense = m.clone();
+    dense.params_active = None;
+    let d = estimate(&dense, &v, &b, work(8192), &p);
+    assert_eq!((d.mode, d.mem_gpu), (e.mode, e.mem_gpu));
+    assert!(e.tok_s > 3.0 * d.tok_s, "{} / {}", e.tok_s, d.tok_s);
 }
 
 // ── Adéquation (§9) ─────────────────────────────────────────────────────────────────────────

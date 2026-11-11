@@ -144,12 +144,12 @@ describe('ModelDetailPanel', () => {
         apply_calibration: () => {
           calibration = {
             ...CALIBRATION,
-            currentEfficiency: 0.48,
+            currentGpuEfficiency: 0.48,
             changed: false,
             summary:
-              'D’après 1 mesure : efficacité 0,48. Les réglages actuels correspondent déjà aux mesures.',
+              'D’après 1 mesure : efficacité GPU 0,48. Les réglages actuels correspondent déjà aux mesures.',
           };
-          return { ...SETTINGS, estimate: { ...SETTINGS.estimate, efficiency: 0.48 } };
+          return { ...SETTINGS, estimate: { ...SETTINGS.estimate, gpuEfficiency: 0.48 } };
         },
       });
       const { fixture, el } = await open(RUNTIMES);
@@ -183,7 +183,7 @@ describe('ModelDetailPanel', () => {
         'Mesurer à nouveau',
       );
       expect(text(el.querySelector('[data-testid="calibration"] p'))).toBe(
-        'D’après 1 mesure : efficacité 0,48 (actuelle 0,55).',
+        'D’après 1 mesure : efficacité GPU 0,48 (actuelle 0,81).',
       );
 
       const detailCalls = argsOf(calls, 'get_model_detail').length;

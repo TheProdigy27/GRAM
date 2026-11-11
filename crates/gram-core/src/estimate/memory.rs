@@ -29,11 +29,15 @@ pub struct EstimateParams {
     pub close_apps: bool,
     /// Surcoût du runtime (contexte CUDA/Vulkan, buffers de calcul), en octets.
     pub overhead_bytes: u64,
-    /// Facteur d'efficacité de la vitesse (fraction de la bande passante réellement exploitée).
-    pub efficiency: f32,
-    /// Temps fixe par token, en millisecondes : lancement des calculs, routage des experts,
-    /// synchronisations. Il domine quand un token lit peu d'octets (MoE, petits modèles) et
-    /// plafonne la vitesse à `1000 / token_overhead_ms` tok/s.
+    /// Part de la bande passante de la VRAM réellement exploitée pour lire les poids placés sur
+    /// le GPU.
+    pub gpu_efficiency: f32,
+    /// Part de la bande passante de la RAM réellement exploitée pour lire les poids restés en
+    /// RAM (CPU, hybride, machine sans GPU discret).
+    pub ram_efficiency: f32,
+    /// Temps fixe par token, en millisecondes : lancement des calculs, synchronisations. Il
+    /// domine quand un token lit peu d'octets (petits modèles, MoE) et plafonne la vitesse à
+    /// `1000 / token_overhead_ms` tok/s. Un MoE paie en plus `MOE_TOKEN_OVERHEAD_MS`.
     pub token_overhead_ms: f32,
     pub kv_cache: KvCacheType,
     /// Les quantifications sous ce nombre de bits par poids ne sont pas proposées.
@@ -49,12 +53,16 @@ impl Default for EstimateParams {
             ram_share: 0.75,
             close_apps: false,
             overhead_bytes: 512 * MIB,
-            efficiency: 0.55,
-            // Valeur prudente, tirée de vitesses publiées et non mesurée ici : Qwen3-30B-A3B en
-            // Q4_K_M sur RTX 4090 tourne vers 190 tok/s, alors que la formule sans temps fixe en
-            // donne ~280. Recalibré par des mesures réelles avec Ollama (`calibration`) : un
-            // modèle dense et un MoE suffisent à ajuster le temps fixe et l'efficacité.
-            token_overhead_ms: 1.5,
+            // Ajustés sur des mesures réelles (Ollama 0.40.16, contexte 8K) : Qwen3-1.7B et
+            // Qwen3-8B en Q4_K_M, sur une RTX 5080 (960 Go/s : ~450 et ~137 tok/s) puis sur
+            // CPU seul avec de la DDR5-6000 en double canal (96 Go/s : ~50 et ~12 tok/s).
+            // Écart maximal de 3 % sur ces quatre mesures. Une seule efficacité ne convient pas
+            // aux deux : 0,80 sur GPU, 0,64 sur CPU. Les MoE ont leurs propres termes, ajustés
+            // sur un MoE mesuré (`estimate::MOE_*`). Recalibrés pour la machine par les mesures
+            // avec Ollama (`calibration`).
+            gpu_efficiency: 0.81,
+            ram_efficiency: 0.62,
+            token_overhead_ms: 0.8,
             kv_cache: KvCacheType::F16,
             min_bpw: 2.5,
             min_ctx: 2048,
@@ -201,8 +209,10 @@ pub(super) struct ModelShape {
     pub kv_per_token: u64,
     /// Couches du modèle (option `-ngl` en hybride).
     pub layers: u32,
-    /// Paramètres actifs / paramètres totaux (1 pour un modèle dense).
-    pub active_ratio: f64,
+    /// Paramètres totaux (estimés d'après la taille de la variante s'ils sont inconnus).
+    pub params: u64,
+    /// Paramètres actifs par token d'un MoE ; absent pour un modèle dense.
+    pub active: Option<u64>,
     /// `false` : KV et couches estimés par le repli.
     pub arch_known: bool,
     pub sliding_window: bool,
@@ -216,13 +226,13 @@ impl ModelShape {
             p => p,
         };
         let active = model.params_active.filter(|&a| a > 0 && a < params);
-        let active_ratio = active.map_or(1.0, |a| a as f64 / params as f64);
 
         if let Some(a) = model.arch.as_ref().filter(|a| usable(a)) {
             return Self {
                 kv_per_token: kv_bytes_per_token(a, kv),
                 layers: a.n_layers,
-                active_ratio,
+                params,
+                active,
                 arch_known: a.source != ArchSource::Fallback,
                 sliding_window: a.sliding_window.is_some_and(|w| w > 0),
             };
@@ -232,7 +242,8 @@ impl ModelShape {
         Self {
             kv_per_token: fallback_kv_bytes_per_token(params_eff, kv),
             layers: fallback_layers(params),
-            active_ratio,
+            params,
+            active,
             arch_known: false,
             sliding_window: false,
         }

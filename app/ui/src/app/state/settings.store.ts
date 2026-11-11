@@ -11,7 +11,7 @@ export class SettingsStore {
   readonly error = signal<string | null>(null);
   /**
    * Incrémenté après un enregistrement du dialogue des paramètres : le classement et la fiche
-   * sont recalculés (marges, efficacité, seuils… changent les estimations à requête égale).
+   * sont recalculés (marges, efficacités, seuils… changent les estimations à requête égale).
    */
   readonly version = signal(0);
 

@@ -93,8 +93,9 @@ export const SETTINGS: Settings = {
     ramShare: 0.75,
     closeApps: false,
     overheadBytes: GIB / 2,
-    efficiency: 0.55,
-    tokenOverheadMs: 1.5,
+    gpuEfficiency: 0.81,
+    ramEfficiency: 0.62,
+    tokenOverheadMs: 0.8,
     kvCache: 'f16',
     minBpw: 2.5,
     minCtx: 2048,
@@ -424,6 +425,7 @@ export const MEASUREMENT: Measurement = {
   tokSError: 0.1446,
   memError: -0.023,
   activeBytes: 4.7 * GIB,
+  modelOverheadMs: 0,
   gpuShare: 1,
   reliable: true,
   notes: [],
@@ -432,9 +434,11 @@ export const MEASUREMENT: Measurement = {
 export const CALIBRATION_EMPTY: Calibration = {
   measurements: [],
   used: 0,
-  currentEfficiency: 0.55,
-  currentTokenOverheadMs: 1.5,
-  efficiency: null,
+  currentGpuEfficiency: 0.81,
+  currentRamEfficiency: 0.62,
+  currentTokenOverheadMs: 0.8,
+  gpuEfficiency: null,
+  ramEfficiency: null,
   tokenOverheadMs: null,
   changed: false,
   summary:
@@ -445,9 +449,9 @@ export const CALIBRATION: Calibration = {
   ...CALIBRATION_EMPTY,
   measurements: [MEASUREMENT],
   used: 1,
-  efficiency: 0.48,
+  gpuEfficiency: 0.48,
   changed: true,
-  summary: 'D’après 1 mesure : efficacité 0,48 (actuelle 0,55).',
+  summary: 'D’après 1 mesure : efficacité GPU 0,48 (actuelle 0,81).',
 };
 
 export const SYNC_SUMMARY: SyncSummary = {
