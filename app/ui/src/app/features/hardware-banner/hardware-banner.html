@@ -1,94 +1,200 @@
-<section class="banner" aria-label="Matériel détecté">
+<section
+  class="machine"
+  aria-labelledby="machine-title"
+  [attr.aria-busy]="!profile() && !error() ? 'true' : null"
+>
   @if (profile()) {
-    <dl class="grid">
-      @for (row of rows(); track row.key) {
-        <div class="item" [attr.data-testid]="'hw-' + row.key">
-          <dt>{{ row.key }}</dt>
-          <dd [attr.title]="row.title">
-            @for (part of row.parts; track $index) {
-              @if (!$first) {
-                <span class="sep" aria-hidden="true">·</span>
-              }
-              <span>{{ part.text }}</span>
-              @if (part.source) {
-                <span class="source" [matTooltip]="'Origine de la valeur : ' + part.source"
-                  >({{ part.source }})</span
-                >
-              }
-            }
-            @if (row.note) {
-              <span class="source" [matTooltip]="row.noteTooltip">{{ row.note }}</span>
-            }
-          </dd>
-        </div>
-      }
-      <div class="item" data-testid="hw-runtimes">
-        <dt>Runtimes</dt>
-        <dd>
-          @if (runtimes(); as list) {
-            @for (r of list; track r.label) {
-              <span class="runtime" [class.installed]="r.installed" [matTooltip]="r.tooltip">
-                <mat-icon aria-hidden="true">{{
-                  r.running
-                    ? 'play_circle'
-                    : r.installed
-                      ? 'check_circle'
-                      : 'radio_button_unchecked'
-                }}</mat-icon>
-                {{ r.label }}
-              </span>
-            }
-          } @else {
-            <span class="muted">détection…</span>
-          }
-        </dd>
-      </div>
-      <div class="item" data-testid="hw-usable">
-        <dt>Utilisable</dt>
-        <dd
-          matTooltip="Mémoire réellement disponible pour un modèle : VRAM moins la marge de sécurité et l’occupation actuelle, part de la RAM réglée dans les paramètres. En mémoire unifiée (Mac Apple Silicon), la part du GPU est prise sur la RAM."
-        >
-          {{ usable() ?? '…' }}
-        </dd>
-      </div>
-    </dl>
-    <div class="extras">
-      <div class="actions">
-        @if (warnings()) {
-          <mat-icon
-            class="warning"
-            tabindex="0"
-            aria-label="Avertissements de détection"
-            matTooltipClass="gram-multiline-tooltip"
-            [matTooltip]="warnings()"
-            >warning</mat-icon
-          >
+    <div class="memory">
+      <div class="memory__head">
+        <h2 class="label" id="machine-title">Votre machine</h2>
+        @if (simulation(); as sim) {
+          <span class="simulation" data-testid="simulation">
+            <g-tag tone="warn" icon="warning" size="sm" [gTooltip]="sim.tooltip">
+              Simulation · {{ sim.label }}
+            </g-tag>
+            <button
+              gButton
+              variant="ghost"
+              size="sm"
+              data-testid="stop-simulation"
+              (click)="stopSimulation()"
+            >
+              Arrêter
+            </button>
+          </span>
         }
+        <!-- Résumé, détails et avertissements passent à la ligne ensemble. -->
+        <span class="memory__about">
+          @if (card(); as c) {
+            <span class="memory__summary" data-testid="hw-usable">
+              {{ c.summary }}
+              @if (c.note) {
+                <span class="memory__note">· {{ c.note }}</span>
+              }
+            </span>
+          }
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            icon
+            class="memory__info"
+            aria-label="Détails de la machine"
+            data-testid="machine-details"
+            gTooltipPosition="below"
+            [gTooltip]="details()"
+          >
+            <g-icon name="info" />
+          </button>
+          @if (warnings().length > 0) {
+            <g-icon
+              class="warning"
+              name="warning"
+              tabindex="0"
+              data-testid="hw-warnings"
+              gTooltipPosition="below"
+              [size]="16"
+              [label]="'Avertissements de détection (' + warnings().length + ')'"
+              [gTooltip]="warnings().join('\n')"
+            />
+          }
+        </span>
+      </div>
+
+      @if (card(); as c) {
+        <div class="map" role="img" data-testid="memory-card" [attr.aria-label]="c.ariaLabel">
+          <div class="map__zones">
+            @for (z of c.zones; track z.kind) {
+              <div class="zone" [attr.data-kind]="z.kind" [style.width.%]="z.width * 100">
+                <span class="zone__title">{{ z.title }}</span>
+                <span class="zone__detail mono">{{ z.detail }}</span>
+              </div>
+            }
+            @if (c.gpuLimit; as g) {
+              <span
+                class="gpu-limit"
+                [class.gpu-limit--left]="g.pos > 0.7"
+                [style.left.%]="g.pos * 100"
+                ><span class="gpu-limit__label">{{ g.label }}</span></span
+              >
+            }
+          </div>
+          <div class="map__footprint" data-testid="memory-footprint">
+            @if (c.footprint?.gpu; as s) {
+              <span
+                class="fp fp--gpu"
+                [style.left.%]="s.start * 100"
+                [style.width.%]="s.width * 100"
+              ></span>
+            }
+            @if (c.footprint?.ram; as s) {
+              <span
+                class="fp fp--ram"
+                [style.left.%]="s.start * 100"
+                [style.width.%]="s.width * 100"
+              ></span>
+            }
+          </div>
+          <div class="map__ticks mono">
+            @for (t of c.ticks; track t.pos) {
+              <span class="tick" [attr.data-align]="t.align" [style.left.%]="t.pos * 100">{{
+                t.label
+              }}</span>
+            }
+          </div>
+        </div>
+        @if (c.selection; as s) {
+          <!-- Déjà dit par l'aria-label de la carte. -->
+          <p class="selection" data-testid="memory-selection" aria-hidden="true">
+            {{ s.label }} : <strong>{{ s.model }}</strong> — {{ s.where }}
+          </p>
+        }
+      } @else if (ranking.error() && !ranking.response()) {
+        <p class="memory__unknown">
+          Mémoire utilisable inconnue : elle est calculée avec le classement.
+        </p>
+      } @else {
+        <g-skeleton height="48px" radius="8px" />
+        <g-skeleton width="45%" height="12px" />
+      }
+    </div>
+
+    <div class="side">
+      @if (cpu(); as c) {
+        <p class="cpu" data-testid="hw-cpu" [gTooltip]="c.full !== c.name ? c.full : ''">
+          <strong>{{ c.name }}</strong
+          ><span class="muted"> · {{ c.rest }}</span>
+        </p>
+      }
+      @if (runtimes(); as list) {
+        <ul class="runtimes" aria-label="Runtimes" data-testid="hw-runtimes">
+          @for (r of list; track r.label) {
+            <li class="runtime" [attr.data-state]="r.state" [gTooltip]="r.tooltip">
+              <span class="runtime__dot" aria-hidden="true"></span>
+              <strong>{{ r.label }}</strong>
+              <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+              <span class="muted"> {{ r.stateLabel }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="runtimes muted" data-testid="hw-runtimes">Runtimes : détection…</p>
+      }
+      <div class="actions">
         <button
-          mat-stroked-button
-          type="button"
+          gButton
+          variant="ghost"
+          size="sm"
+          data-testid="rescan"
+          gTooltip="Détecter de nouveau le matériel et les runtimes"
+          gTooltipShortcut="R"
+          [busy]="hardware.scanning()"
+          (click)="rescan()"
+        >
+          @if (!hardware.scanning()) {
+            <g-icon name="refresh" />
+          }
+          Ré-analyser
+          <kbd class="g-kbd" aria-hidden="true">R</kbd>
+        </button>
+        <button
+          gButton
+          variant="secondary"
+          size="sm"
           data-testid="open-corrections"
-          matTooltip="Corriger une valeur détectée, ou simuler un autre GPU ou une autre quantité de RAM"
+          gTooltip="Corriger une valeur détectée, ou simuler un autre GPU ou une autre quantité de RAM"
           (click)="openCorrections()"
         >
+          <g-icon name="edit" />
           Corriger…
         </button>
       </div>
-      @if (simulated()) {
-        <span class="simulation-row" data-testid="simulation">
-          <span class="tag simulation" [matTooltip]="simulationTooltip()">Simulation</span>
-          <button mat-button type="button" data-testid="stop-simulation" (click)="stopSimulation()">
-            Arrêter
-          </button>
-        </span>
-      }
     </div>
   } @else if (error()) {
-    <p class="error" role="alert">Détection du matériel impossible : {{ error() }}</p>
+    <g-callout class="failure" kind="error" heading="Détection du matériel impossible" role="alert">
+      {{ error() }}
+      <button
+        gCalloutAction
+        gButton
+        size="sm"
+        data-testid="retry-hardware"
+        [busy]="hardware.scanning()"
+        (click)="rescan()"
+      >
+        Réessayer
+      </button>
+    </g-callout>
   } @else {
-    <div class="loading">
-      <span>Analyse du matériel…</span>
-      <mat-progress-bar mode="indeterminate" aria-label="Analyse du matériel en cours" />
+    <span class="g-sr-only">Analyse du matériel…</span>
+    <div class="memory">
+      <g-skeleton width="220px" height="12px" />
+      <g-skeleton height="48px" radius="8px" />
+      <g-skeleton width="45%" height="12px" />
+    </div>
+    <div class="side">
+      <g-skeleton width="70%" height="12px" />
+      <g-skeleton width="85%" height="12px" />
+      <g-skeleton width="60%" height="30px" radius="8px" />
     </div>
   }
 </section>

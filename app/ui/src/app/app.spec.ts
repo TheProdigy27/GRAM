@@ -2,17 +2,25 @@ import { TestBed } from '@angular/core/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
 import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
-import { MatInputHarness } from '@angular/material/input/testing';
-import { MatMenuHarness } from '@angular/material/menu/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { App } from './app';
 import { argsOf, mockBackend } from '../testing/backend';
+import {
+  byTestId,
+  chooseMenuItem,
+  click,
+  menuItems,
+  press,
+  queryTestId,
+  typeInto,
+} from '../testing/dom';
 import { HARDWARE, RANKING, SYNC_SUMMARY, makeResponse } from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
+import { DetailStore } from './state/detail.store';
 import { UPDATE_CHECK_DELAY_MS } from './state/update.store';
 
 async function start(updateCheckDelayMs = 60_000) {
@@ -38,19 +46,18 @@ describe('App', () => {
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
 
-    expect(text(el.querySelector('.brand'))).toBe('GRAM');
-    expect(text(el.querySelector('[data-testid="hw-GPU"]'))).toContain('NVIDIA GeForce RTX 5080');
-    expect(text(el.querySelector('[data-testid="hw-GPU"]'))).toContain('(table de référence)');
-    expect(text(el.querySelector('[data-testid="hw-RAM"]'))).toContain('64 Go DDR5-6000');
-    expect(text(el.querySelector('[data-testid="hw-usable"] dd'))).toBe(
-      'VRAM 14,3 Go · RAM 47,3 Go',
+    expect(text(el.querySelector('.brand__name'))).toBe('GRAM');
+    expect(text(byTestId('hw-usable', el))).toBe(
+      '61,6 Go utilisables par un modèle, à deux vitesses',
     );
+    const titles = [...byTestId('memory-card', el).querySelectorAll('.zone__title')].map(text);
+    expect(titles).toEqual(['VRAM · RTX 5080', 'RAM · 64 Go DDR5-6000, 2 canaux']);
 
     const names = [
       ...el.querySelectorAll('[data-testid="table-items"] [data-testid="model-name"]'),
     ];
     expect(names.map(text)).toEqual(['Qwen3-8B', 'Gemma-3-12B', 'Mistral-Small-24B']);
-    expect(text(el.querySelector('[data-testid="data-source"]'))).toContain('cache local');
+    expect(text(el.querySelector('[data-testid="data-source"]'))).toContain('Cache local');
 
     expect(argsOf(calls, 'sync_catalog')).toEqual([{ force: false }]);
     expect(argsOf(calls, 'get_settings')).toHaveLength(1);
@@ -86,7 +93,7 @@ describe('App', () => {
     expect(saved.runtime).toBe('llamaCpp');
   });
 
-  it('recherche un modèle par son nom, avec Ctrl+F, en gardant le rang du classement', async () => {
+  it('recherche un modèle depuis l’en-tête, avec Ctrl K, en gardant le rang', async () => {
     const calls = mockBackend({
       rank: (a) => {
         const search = (a['request'] as RankRequest).search;
@@ -97,17 +104,18 @@ describe('App', () => {
     });
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    const loader = TestbedHarnessEnvironment.loader(fixture);
-    const input = await loader.getHarness(
-      MatInputHarness.with({ selector: '[data-testid="filter-search"]' }),
-    );
+    const input = byTestId<HTMLInputElement>('filter-search', el);
+    expect(input.closest('header')).not.toBeNull();
+    expect(input.getAttribute('aria-keyshortcuts')).toBe('Control+K');
 
-    // Ctrl+F place le curseur dans la recherche.
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true }));
-    expect(await input.isFocused()).toBe(true);
+    // Ctrl K place le curseur dans la recherche (Ctrl F aussi, l'ancien raccourci).
+    await press(fixture, document.body, 'k', { ctrlKey: true });
+    expect(document.activeElement).toBe(input);
+    input.blur();
+    await press(fixture, document.body, 'f', { ctrlKey: true });
+    expect(document.activeElement).toBe(input);
 
-    await input.setValue('mistral');
-    await fixture.whenStable();
+    await typeInto(fixture, input, 'mistral');
     expect((argsOf(calls, 'rank').at(-1)!['request'] as RankRequest).search).toBe('mistral');
     const rows = el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row');
     expect(rows).toHaveLength(1);
@@ -115,16 +123,25 @@ describe('App', () => {
     expect(text(rows[0].querySelector('td.col-rank'))).toBe('3');
 
     // Rien trouvé : message, et le bouton efface la recherche.
-    await input.setValue('introuvable');
-    await fixture.whenStable();
+    await typeInto(fixture, input, 'introuvable');
     expect(text(el.querySelector('[data-testid="search-empty"]'))).toContain(
       'Aucun modèle ne correspond à « introuvable ».',
     );
     (el.querySelector('[data-testid="search-empty"] button') as HTMLButtonElement).click();
     await fixture.whenStable();
-    expect(await input.getValue()).toBe('');
+    expect(input.value).toBe('');
     expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
     expect(el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row')).toHaveLength(3);
+
+    // Le bouton du champ et Échap effacent aussi.
+    await typeInto(fixture, input, 'mistral');
+    await click(fixture, byTestId('field-clear', el));
+    expect(input.value).toBe('');
+    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
+    await typeInto(fixture, input, 'mistral');
+    await press(fixture, input, 'Escape');
+    expect(input.value).toBe('');
+    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
   });
 
   it('ouvre la fiche détail au clic sur une ligne', async () => {
@@ -154,9 +171,11 @@ describe('App', () => {
     await emit('sync-progress', { phase: 'details', done: 45, total: 150 });
     await emit('rate-limit', { remaining: 412, resetS: 240 });
     fixture.detectChanges();
-    expect(text(el.querySelector('[data-testid="sync-progress"]'))).toContain(
-      'Tailles des fichiers 45/150',
-    );
+    const sync = byTestId('sync-progress', el);
+    expect(text(sync)).toContain('Tailles des fichiers 45/150');
+    const bar = sync.querySelector('[role="progressbar"]')!;
+    expect(bar.getAttribute('aria-valuenow')).toBe('45');
+    expect(bar.getAttribute('aria-valuemax')).toBe('150');
     expect(el.textContent).toContain('Quota Hugging Face : 412 requêtes');
 
     finish({ ...SYNC_SUMMARY, source: { kind: 'online', fetchedAt: new Date().toISOString() } });
@@ -169,14 +188,9 @@ describe('App', () => {
   it('exporte le classement affiché depuis le menu', async () => {
     const calls = mockBackend();
     const fixture = await start();
-    const loader = TestbedHarnessEnvironment.loader(fixture);
     const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
 
-    const menu = await loader.getHarness(
-      MatMenuHarness.with({ selector: '[data-testid="export"]' }),
-    );
-    await menu.clickItem({ text: /CSV/ });
-    await fixture.whenStable();
+    await chooseMenuItem(fixture, 'export', 'CSV');
 
     // Sans chemin : le backend ouvre le dialogue « Enregistrer sous ».
     expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'csv' }]);
@@ -189,13 +203,8 @@ describe('App', () => {
   it('un export annulé ne montre rien', async () => {
     const calls = mockBackend({ export_ranking: () => null });
     const fixture = await start();
-    const loader = TestbedHarnessEnvironment.loader(fixture);
     const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
-    const menu = await loader.getHarness(
-      MatMenuHarness.with({ selector: '[data-testid="export"]' }),
-    );
-    await menu.clickItem({ text: /Markdown/ });
-    await fixture.whenStable();
+    await chooseMenuItem(fixture, 'export', 'Markdown');
     expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'md' }]);
     expect(await root.getAllHarnesses(MatSnackBarHarness)).toHaveLength(0);
   });
@@ -240,9 +249,7 @@ describe('App', () => {
 
     const snack = await root.getHarness(MatSnackBarHarness);
     expect(await snack.getMessage()).toBe('GRAM 0.2.0 est disponible.');
-    expect(text(el.querySelector('[data-testid="open-update"]'))).toBe(
-      'system_update_alt Mise à jour 0.2.0',
-    );
+    expect(text(el.querySelector('[data-testid="open-update"]'))).toBe('Mise à jour 0.2.0');
 
     await snack.dismissWithAction();
     await fixture.whenStable();
@@ -291,6 +298,53 @@ describe('App', () => {
     dialog = (await root.getAllHarnesses(MatDialogHarness)).at(-1)!;
     expect(await dialog.getTitleText()).toBe('Corriger le matériel');
     expect(argsOf(calls, 'hardware_options')).toHaveLength(1);
+  });
+
+  it('touche E : ouvre le menu Exporter, M exporte en Markdown', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    await press(fixture, document.body, 'e');
+    const items = menuItems();
+    expect(items.map(text)).toEqual(['Markdown (.md) M', 'CSV pour Excel (.csv) C']);
+    expect(document.activeElement).toBe(items[0]);
+
+    await press(fixture, items[0], 'm');
+    expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'md' }]);
+    expect(menuItems()).toEqual([]);
+  });
+
+  it('Échap ferme la fiche, mais vide d’abord la recherche', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const detail = TestBed.inject(DetailStore);
+    detail.open('Qwen/Qwen3-8B-GGUF');
+    await fixture.whenStable();
+
+    const input = byTestId<HTMLInputElement>('filter-search', el);
+    await typeInto(fixture, input, 'qwen');
+    await press(fixture, input, 'Escape');
+    expect(input.value).toBe('');
+    expect(detail.isOpen()).toBe(true);
+
+    await press(fixture, input, 'Escape');
+    expect(detail.isOpen()).toBe(false);
+  });
+
+  it('« Actualiser les modèles » force la synchronisation ; R ré-analyse, sauf sous un dialogue', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    await click(fixture, 'refresh-catalog');
+    expect(argsOf(calls, 'sync_catalog')).toEqual([{ force: false }, { force: true }]);
+
+    await press(fixture, document.body, 'r');
+    expect(argsOf(calls, 'rescan_hardware')).toHaveLength(1);
+
+    await click(fixture, byTestId('open-settings', el));
+    await press(fixture, document.body, 'r');
+    expect(argsOf(calls, 'rescan_hardware')).toHaveLength(1);
+    expect(queryTestId('rescan', el)).not.toBeNull();
   });
 
   it('signale une erreur de classement et permet de réessayer', async () => {

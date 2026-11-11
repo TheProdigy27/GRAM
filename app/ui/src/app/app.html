@@ -1,85 +1,122 @@
-<mat-toolbar class="toolbar">
-  <img class="logo" src="logo.svg" alt="" width="28" height="28" />
-  <span class="brand">GRAM</span>
-  <span class="tagline">GPU &amp; RAM Aware Matcher</span>
-  <span class="spacer"></span>
-  <button
-    mat-button
-    type="button"
-    data-testid="rescan"
-    matTooltip="Détecter de nouveau le matériel et les runtimes"
-    [disabled]="hardware.scanning()"
-    (click)="rescan()"
-  >
-    <mat-icon>refresh</mat-icon>
-    Ré-analyser
-  </button>
-  <button
-    mat-button
-    type="button"
-    data-testid="refresh-catalog"
-    matTooltip="Synchroniser le catalogue avec Hugging Face"
-    [disabled]="catalog.syncing()"
-    (click)="refreshCatalog()"
-  >
-    <mat-icon>cloud_sync</mat-icon>
-    Actualiser les modèles
-  </button>
-  <button
-    mat-button
-    type="button"
-    data-testid="export"
-    matTooltip="Enregistrer le classement affiché, en entier"
-    [matMenuTriggerFor]="exportMenu"
-    [disabled]="exporting() || !ranking.response()"
-  >
-    <mat-icon>download</mat-icon>
-    Exporter
-  </button>
-  <mat-menu #exportMenu="matMenu">
-    <button mat-menu-item type="button" data-testid="export-md" (click)="exportRanking('md')">
-      <mat-icon>article</mat-icon>
-      Markdown (.md)
-    </button>
-    <button mat-menu-item type="button" data-testid="export-csv" (click)="exportRanking('csv')">
-      <mat-icon>table</mat-icon>
-      CSV pour Excel (.csv)
-    </button>
-  </mat-menu>
-  @if (updates.available(); as u) {
+<header class="header">
+  <div class="brand">
+    <img class="logo" src="logo.svg" alt="" width="28" height="28" />
+    <span class="brand__name">GRAM</span>
+  </div>
+
+  <div class="search" role="search">
+    <g-field clearable clearLabel="Effacer la recherche">
+      <g-icon gPrefix name="search" />
+      <input
+        #search
+        gInput
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="Rechercher un modèle"
+        placeholder="Rechercher par nom, dépôt ou modèle de base…"
+        data-testid="filter-search"
+        [attr.aria-keyshortcuts]="searchShortcut"
+        [value]="ranking.search()"
+        (input)="ranking.setSearch(search.value)"
+        (keydown.escape)="clearSearch($event)"
+      />
+      <kbd gSuffix class="g-kbd search__kbd" aria-hidden="true">{{ searchShortcutLabel }}</kbd>
+    </g-field>
+  </div>
+
+  <div class="actions">
     <button
-      mat-flat-button
-      type="button"
-      data-testid="open-update"
-      [matTooltip]="'Installer GRAM ' + u.version"
-      (click)="openUpdate()"
+      gButton
+      variant="ghost"
+      data-testid="refresh-catalog"
+      gTooltip="Synchroniser le catalogue avec Hugging Face"
+      [busy]="catalog.syncing()"
+      (click)="refreshCatalog()"
     >
-      <mat-icon>system_update_alt</mat-icon>
-      Mise à jour {{ u.version }}
+      @if (!catalog.syncing()) {
+        <g-icon name="sync" />
+      }
+      Actualiser les modèles
     </button>
-  } @else {
     <button
-      mat-icon-button
-      type="button"
-      data-testid="open-update"
-      aria-label="Rechercher une mise à jour"
-      matTooltip="Rechercher une mise à jour"
-      (click)="openUpdate()"
+      gButton
+      variant="ghost"
+      data-testid="export"
+      gTooltip="Enregistrer le classement affiché, en entier"
+      gTooltipShortcut="E"
+      [cdkMenuTriggerFor]="exportMenu"
+      [busy]="exporting()"
+      [disabled]="!ranking.response()"
     >
-      <mat-icon>system_update_alt</mat-icon>
+      @if (!exporting()) {
+        <g-icon name="download" />
+      }
+      Exporter
+      <g-icon name="chevron-down" [size]="14" />
     </button>
-  }
-  <button
-    mat-icon-button
-    type="button"
-    data-testid="open-settings"
-    aria-label="Paramètres"
-    matTooltip="Paramètres"
-    (click)="openSettings()"
-  >
-    <mat-icon>settings</mat-icon>
-  </button>
-</mat-toolbar>
+    <ng-template #exportMenu>
+      <g-menu aria-label="Exporter le classement">
+        <button
+          gMenuItem
+          icon="file"
+          shortcut="M"
+          data-testid="export-md"
+          (triggered)="exportRanking('md')"
+        >
+          Markdown (.md)
+        </button>
+        <button
+          gMenuItem
+          icon="table"
+          shortcut="C"
+          data-testid="export-csv"
+          (triggered)="exportRanking('csv')"
+        >
+          CSV pour Excel (.csv)
+        </button>
+      </g-menu>
+    </ng-template>
+
+    <span class="separator" aria-hidden="true"></span>
+
+    @if (updates.available(); as u) {
+      <button
+        gButton
+        variant="primary"
+        data-testid="open-update"
+        [gTooltip]="'Installer GRAM ' + u.version"
+        (click)="openUpdate()"
+      >
+        <g-icon name="update" />
+        Mise à jour {{ u.version }}
+      </button>
+    } @else {
+      <button
+        gButton
+        variant="ghost"
+        icon
+        data-testid="open-update"
+        aria-label="Rechercher une mise à jour"
+        gTooltip="Rechercher une mise à jour"
+        (click)="openUpdate()"
+      >
+        <g-icon name="update" [size]="18" />
+      </button>
+    }
+    <button
+      gButton
+      variant="ghost"
+      icon
+      data-testid="open-settings"
+      aria-label="Paramètres"
+      gTooltip="Paramètres"
+      (click)="openSettings()"
+    >
+      <g-icon name="settings" [size]="18" />
+    </button>
+  </div>
+</header>
 
 <app-hardware-banner />
 

@@ -262,9 +262,10 @@ html {
 body {
   margin: 0;
   height: 100%;
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: var(--mat-sys-body-medium);
+  background-color: var(--g-bg);
+  color: var(--g-fg);
+  font: 13px/1.45 var(--g-font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 // Anneau de focus de 2 px. `:where` le rend surchargeable par n'importe quel composant.
@@ -347,7 +348,7 @@ kbd,
   background: var(--mat-sys-error-container);
 }
 
-// Étiquettes (cas d'usage, « Simulation »).
+// Étiquettes (cas d'usage de la fiche, état du jeton dans les paramètres).
 .tag {
   display: inline-block;
   padding: 1px 8px;
@@ -355,11 +356,6 @@ kbd,
   font: var(--mat-sys-label-medium);
   color: var(--mat-sys-on-secondary-container);
   background: var(--mat-sys-secondary-container);
-
-  &.simulation {
-    color: var(--gram-warn);
-    background: var(--gram-warn-bg);
-  }
 }
 
 // Infobulles sur plusieurs lignes (détail du score, avertissements).

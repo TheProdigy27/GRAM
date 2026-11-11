@@ -1,22 +1,38 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ShortcutsService } from '../../core/shortcuts.service';
 import { int, relativeTime } from '../../shared/format';
 import { DATA_SOURCE_LABELS, SYNC_PHASE_LABELS } from '../../shared/labels';
+import { Icon } from '../../shared/ui/icon/icon';
+import { Progress } from '../../shared/ui/progress/progress';
+import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { CatalogStore } from '../../state/catalog.store';
 import { RankingStore } from '../../state/ranking.store';
 
-/** Barre d'état : source des données, synchronisation, quota de l'API Hugging Face. */
+/**
+ * Barre d'état : rappels des raccourcis, source des données, nombre de modèles, progression de
+ * la synchronisation, quota de l'API Hugging Face, marge des estimations.
+ */
 @Component({
   selector: 'app-status-bar',
-  imports: [MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [Icon, Progress, Tooltip],
   templateUrl: './status-bar.html',
   styleUrl: './status-bar.scss',
 })
 export class StatusBar {
   protected readonly catalog = inject(CatalogStore);
   private readonly ranking = inject(RankingStore);
+  private readonly shortcuts = inject(ShortcutsService);
+
+  /**
+   * Raccourcis rappelés : seulement ceux qui marchent déjà (↑ ↓ arrivent avec le classement au
+   * clavier, ? avec l'aide des raccourcis).
+   */
+  protected readonly hints: readonly { keys: string[]; label: string }[] = [
+    { keys: [this.shortcuts.modShortcut('K')], label: 'chercher' },
+    { keys: ['Entrée'], label: 'fiche' },
+    { keys: ['R'], label: 'ré-analyser' },
+    { keys: ['E'], label: 'exporter' },
+  ];
 
   /** Heure courante, rafraîchie chaque minute pour « il y a 2 h ». */
   private readonly now = signal(Date.now());
@@ -29,7 +45,8 @@ export class StatusBar {
   protected readonly source = computed(() => {
     const s = this.ranking.response()?.dataSource;
     if (!s) return null;
-    return `${DATA_SOURCE_LABELS[s.kind]} · ${relativeTime(s.fetchedAt, this.now())}`;
+    const label = DATA_SOURCE_LABELS[s.kind];
+    return `${label.charAt(0).toUpperCase()}${label.slice(1)} · ${relativeTime(s.fetchedAt, this.now())}`;
   });
 
   protected readonly sourceTooltip = computed(() => {
@@ -49,8 +66,11 @@ export class StatusBar {
   protected readonly progress = computed(() => {
     const p = this.catalog.progress();
     if (!p) return null;
-    const pct = p.total > 0 ? (100 * p.done) / p.total : 0;
-    return { label: `${SYNC_PHASE_LABELS[p.phase]} ${p.done}/${p.total}`, pct };
+    return {
+      label: `${SYNC_PHASE_LABELS[p.phase]} ${p.done}/${p.total}`,
+      done: p.done,
+      total: Math.max(p.total, 1),
+    };
   });
 
   protected readonly quota = computed(() => {

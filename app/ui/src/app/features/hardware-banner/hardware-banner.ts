@@ -1,24 +1,35 @@
-import { Component, PendingTasks, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
+import { Component, DestroyRef, PendingTasks, computed, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
 import type { HardwareProfile } from '../../core/generated/HardwareProfile';
-import type { RuntimeStatus } from '../../core/generated/RuntimeStatus';
 import type { Source } from '../../core/generated/Source';
+import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
-import { bandwidth, gb, roundSize } from '../../shared/format';
-import { RAM_KIND_LABELS, RUNTIMES, SOURCE_LABELS } from '../../shared/labels';
+import { bandwidth, roundSize } from '../../shared/format';
+import { RUNTIMES, SOURCE_LABELS } from '../../shared/labels';
+import { Button } from '../../shared/ui/button/button';
+import { Callout } from '../../shared/ui/callout/callout';
+import { Icon } from '../../shared/ui/icon/icon';
+import { Skeleton } from '../../shared/ui/skeleton/skeleton';
+import { Tag } from '../../shared/ui/tag/tag';
+import { Tooltip } from '../../shared/ui/tooltip/tooltip';
+import { DetailStore } from '../../state/detail.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
+import {
+  type MemorySelection,
+  memoryCard,
+  ramChannels,
+  ramSizeType,
+  shortCpuName,
+  shortGpuName,
+} from './memory-card';
 
-/** Une valeur du bandeau, avec son origine quand elle n'est pas mesurée directement. */
+/** Une valeur du matériel, avec son origine quand elle n'est pas mesurée directement. */
 export interface BannerPart {
   text: string;
-  /** « estimée », « table de référence »… affiché en retrait (absent : valeur détectée). */
+  /** « estimée », « table de référence »… (absent : valeur détectée). */
   source?: string;
 }
 
@@ -27,25 +38,23 @@ function sourceNote(s: Source): string | undefined {
   return s === 'detected' || s === 'nvml' ? undefined : SOURCE_LABELS[s];
 }
 
+/** Jeu d'instructions utile aux runtimes : AVX-512, AVX2… (ARM64 sur une puce Apple). */
+function isa(p: HardwareProfile): string {
+  const c = p.cpu;
+  return c.arch === 'arm' ? 'ARM64' : c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
+}
+
 export function cpuParts(p: HardwareProfile): BannerPart[] {
   const c = p.cpu;
-  // Les drapeaux AVX n'ont de sens que sur x86 (une puce Apple est ARM).
-  const isa = c.arch === 'arm' ? 'ARM64' : c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
-  return [{ text: c.name }, { text: `${c.coresPhysical}c/${c.coresLogical}t` }, { text: isa }];
+  return [{ text: c.name }, { text: `${c.coresPhysical}c/${c.coresLogical}t` }, { text: isa(p) }];
 }
 
 export function ramParts(p: HardwareProfile): BannerPart[] {
   const r = p.ram;
-  const kind = RAM_KIND_LABELS[r.kind];
-  const type =
-    kind && r.speedMts ? `${kind}-${r.speedMts}` : kind || (r.speedMts ? `${r.speedMts} MT/s` : '');
   const parts: BannerPart[] = [
-    { text: [roundSize(r.installed ?? r.total), type].filter(Boolean).join(' ') },
+    { text: ramSizeType(r) },
+    { text: ramChannels(r), source: sourceNote(r.channelsSource) },
   ];
-  parts.push({
-    text: `${r.channels} ${r.channels > 1 ? 'canaux' : 'canal'}`,
-    source: sourceNote(r.channelsSource),
-  });
   if (r.bandwidthGbs) parts.push({ text: bandwidth(r.bandwidthGbs) });
   return parts;
 }
@@ -79,19 +88,58 @@ export function diskParts(p: HardwareProfile): BannerPart[] {
   }));
 }
 
+const joinParts = (parts: BannerPart[]) =>
+  parts.map((x) => (x.source ? `${x.text} (${x.source})` : x.text)).join(' · ');
+
+/** Toutes les valeurs détectées et leur origine (infobulle « Détails de la machine »). */
+export function machineDetails(p: HardwareProfile): string {
+  const others = p.otherGpus.map((g) => g.name);
+  const gpu =
+    joinParts(gpuParts(p)) +
+    (others.length > 0
+      ? ` · non utilisé${others.length > 1 ? 's' : ''} : ${others.join(', ')} (seul le GPU qui a le plus de VRAM calcule)`
+      : '');
+  const lines = [
+    `CPU : ${joinParts(cpuParts(p))}`,
+    `RAM : ${joinParts(ramParts(p))}`,
+    `GPU : ${gpu}`,
+  ];
+  if (p.disks.length > 0) lines.push(`Disques : ${joinParts(diskParts(p))}`);
+  lines.push(
+    '',
+    'Mémoire utilisable par un modèle : VRAM moins la marge de sécurité et l’occupation actuelle, ' +
+      'puis la part de la RAM réglée dans les paramètres. En mémoire unifiée (Mac Apple Silicon), ' +
+      'la part du GPU est prise sur la RAM.',
+  );
+  return lines.join('\n');
+}
+
+/** Libellé de la simulation : « RTX 4090 24 Go », « RAM 32 Go », ou les deux. */
+export function simulationLabel(p: HardwareProfile): string {
+  const o = p.overrides;
+  return [
+    o.simulatedGpu && shortGpuName(o.simulatedGpu),
+    o.simulatedRamTotal !== null && `RAM ${roundSize(o.simulatedRamTotal)}`,
+  ]
+    .filter(Boolean)
+    .join(', ');
+}
+
 /**
- * Bandeau du haut : matériel détecté, origine des valeurs, runtimes, mémoire utilisable, et
- * accès aux corrections et à la simulation (« Corriger… »).
+ * Bande « Votre machine » : carte mémoire (VRAM puis RAM sur une même échelle, empreinte du
+ * modèle sélectionné), CPU, runtimes, avertissements, « Ré-analyser » (touche R) et
+ * « Corriger… » (corrections et simulation).
  */
 @Component({
   selector: 'app-hardware-banner',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [Button, Callout, Icon, Skeleton, Tag, Tooltip],
   templateUrl: './hardware-banner.html',
   styleUrl: './hardware-banner.scss',
 })
 export class HardwareBanner {
-  private readonly hardware = inject(HardwareStore);
-  private readonly ranking = inject(RankingStore);
+  protected readonly hardware = inject(HardwareStore);
+  protected readonly ranking = inject(RankingStore);
+  private readonly detail = inject(DetailStore);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly pendingTasks = inject(PendingTasks);
@@ -99,76 +147,93 @@ export class HardwareBanner {
   protected readonly profile = this.hardware.profile;
   protected readonly error = this.hardware.error;
 
-  protected readonly rows = computed(() => {
-    const p = this.profile();
-    if (!p) return [];
-    // Les GPU non retenus (décision : le plus gros seulement) sont signalés sur la ligne GPU.
-    const others = p.otherGpus.map((g) => g.name);
-    return [
-      { key: 'CPU', parts: cpuParts(p) },
-      { key: 'RAM', parts: ramParts(p) },
-      {
-        key: 'GPU',
-        parts: gpuParts(p),
-        note:
-          others.length > 0 ? `+${others.length} non utilisé${others.length > 1 ? 's' : ''}` : '',
-        noteTooltip: `Seul le GPU qui a le plus de VRAM est utilisé pour le calcul. Non utilisé : ${others.join(', ')}`,
-      },
-      { key: 'Disques', parts: diskParts(p) },
-    ].map((row) => ({
-      note: '',
-      noteTooltip: '',
-      ...row,
-      // Texte complet, en infobulle native quand la ligne est tronquée.
-      title: row.parts.map((x) => (x.source ? `${x.text} (${x.source})` : x.text)).join(' · '),
-    }));
+  constructor() {
+    const off = inject(ShortcutsService).register([{ key: 'r', run: () => this.rescan() }]);
+    inject(DestroyRef).onDestroy(off);
+  }
+
+  /** Modèle ouvert dans la fiche (quantification choisie), sinon le premier du classement. */
+  private readonly selection = computed<MemorySelection | null>(() => {
+    const d = this.detail.detail();
+    const v = this.detail.selected();
+    if (d && v) {
+      const { memGpu, memCpu } = v.estimate;
+      return { name: d.model.displayName, quant: v.variant.label, memGpu, memCpu, opened: true };
+    }
+    const open = this.detail.repoId();
+    const item = open ? this.ranking.findItem(open) : this.ranking.response()?.items[0];
+    if (!item) return null;
+    const { memGpu, memCpu } = item.best.estimate;
+    return {
+      name: item.displayName,
+      quant: item.best.variant.label,
+      memGpu,
+      memCpu,
+      opened: !!open,
+    };
   });
 
-  protected readonly simulated = this.hardware.simulation;
+  protected readonly card = computed(() => {
+    const p = this.profile();
+    const b = this.ranking.response()?.budget;
+    return p && b ? memoryCard(b, p, this.selection()) : null;
+  });
 
-  /** Ce qui est simulé, en infobulle de l'étiquette « Simulation ». */
-  protected readonly simulationTooltip = computed(() => {
-    const o = this.profile()?.overrides;
-    if (!o) return '';
-    const parts = [
-      o.simulatedGpu && `GPU ${o.simulatedGpu}`,
-      o.simulatedRamTotal !== null && `RAM ${roundSize(o.simulatedRamTotal)}`,
-    ].filter(Boolean);
-    return `Classement calculé pour un matériel simulé : ${parts.join(', ')}.`;
+  protected readonly cpu = computed(() => {
+    const p = this.profile();
+    if (!p) return null;
+    return {
+      name: shortCpuName(p.cpu.name),
+      full: p.cpu.name,
+      rest: `${p.cpu.coresPhysical}c/${p.cpu.coresLogical}t · ${isa(p)}`,
+    };
+  });
+
+  protected readonly details = computed(() => {
+    const p = this.profile();
+    return p ? machineDetails(p) : '';
+  });
+
+  protected readonly simulation = computed(() => {
+    const p = this.profile();
+    if (!p || !this.hardware.simulation()) return null;
+    const label = simulationLabel(p);
+    return {
+      label,
+      tooltip: `Classement calculé pour un matériel simulé : ${label}. Les valeurs réelles sont gardées.`,
+    };
   });
 
   protected readonly runtimes = computed(() => {
     const status = this.hardware.runtimes();
     if (!status) return null;
     return RUNTIMES.map(({ value, label }) => {
-      const s: RuntimeStatus = status[value];
-      const state = !s.installed ? 'non installé' : s.running ? 'en cours d’exécution' : 'installé';
+      const s = status[value];
+      const state = s.running ? 'running' : s.installed ? 'installed' : 'absent';
       const models = value === 'ollama' ? status.ollamaModels.length : 0;
       return {
         label,
-        installed: s.installed,
-        running: s.running,
+        state,
+        stateLabel: { running: 'en cours', installed: 'installé', absent: 'absent' }[state],
         tooltip: [
-          state,
           s.version && `version ${s.version}`,
           models > 0 && `${models} modèle${models > 1 ? 's' : ''} installé${models > 1 ? 's' : ''}`,
           s.path,
         ]
           .filter(Boolean)
-          .join(' · '),
+          .join('\n'),
       };
     });
   });
 
-  /** Mémoire réellement utilisable pour un modèle (marges des paramètres appliquées). */
-  protected readonly usable = computed(() => {
-    const b = this.ranking.response()?.budget;
-    if (!b) return null;
-    if (b.unified) return `RAM ${gb(b.ram)}, dont GPU ${gb(b.vram)}`;
-    return b.vram > 0 ? `VRAM ${gb(b.vram)} · RAM ${gb(b.ram)}` : `RAM ${gb(b.ram)}`;
-  });
+  protected readonly warnings = computed(() => this.profile()?.warnings ?? []);
 
-  protected readonly warnings = computed(() => (this.profile()?.warnings ?? []).join('\n'));
+  /** Bouton « Ré-analyser » et touche R : nouvelle détection du matériel et des runtimes. */
+  protected rescan(): void {
+    this.hardware.rescan().catch((e: unknown) => {
+      this.snackBar.open(`Analyse impossible : ${errorMessage(e)}`, 'OK');
+    });
+  }
 
   /** Le dialogue est chargé à la première ouverture. */
   protected openCorrections(): void {

@@ -1,34 +1,4 @@
 <aside class="filters" aria-label="Filtres du classement">
-  <mat-form-field appearance="outline">
-    <mat-label>Rechercher</mat-label>
-    <mat-icon matIconPrefix aria-hidden="true">search</mat-icon>
-    <input
-      #search
-      matInput
-      type="text"
-      autocomplete="off"
-      spellcheck="false"
-      placeholder="qwen3 8b, llama…"
-      data-testid="filter-search"
-      [value]="ranking.search()"
-      (input)="ranking.setSearch(search.value)"
-      (keydown.escape)="ranking.setSearch('')"
-    />
-    @if (ranking.search() !== '') {
-      <button
-        matIconSuffix
-        mat-icon-button
-        type="button"
-        aria-label="Effacer la recherche"
-        data-testid="clear-search"
-        (click)="ranking.setSearch(''); search.focus()"
-      >
-        <mat-icon>close</mat-icon>
-      </button>
-    }
-    <mat-hint>Nom, dépôt ou modèle de base</mat-hint>
-  </mat-form-field>
-
   <mat-form-field appearance="outline" subscriptSizing="dynamic">
     <mat-label>Usage</mat-label>
     <mat-select

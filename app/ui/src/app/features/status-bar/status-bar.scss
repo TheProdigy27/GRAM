@@ -1,43 +1,65 @@
 .status {
   display: flex;
   align-items: center;
-  gap: 16px;
-  height: 28px;
-  padding: 0 16px;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  border-top: 1px solid var(--mat-sys-outline-variant);
-  background: var(--mat-sys-surface-container-low);
+  gap: 6px 16px;
+  min-height: 34px;
+  padding: 6px 20px;
+  border-top: 1px solid var(--g-line);
+  background: var(--g-surface);
+  font-size: 12px;
+  color: var(--g-muted);
   white-space: nowrap;
+}
+
+.hints {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// Fenêtre étroite : les informations passent avant les rappels de raccourcis.
+@media (max-width: 1199px) {
+  .hint:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .hints {
+    display: none;
+  }
+}
+
+.spacer {
+  flex: 1;
 }
 
 .item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-
-  mat-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-  }
+  gap: 6px;
+  border-radius: 4px;
 }
 
-.sync {
-  gap: 8px;
+.sync g-progress {
+  width: 140px;
+}
 
-  mat-progress-bar {
-    width: 160px;
-  }
+.error {
+  color: var(--g-error);
 }
 
 .warning {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
-  color: var(--gram-warn);
-}
-
-.spacer {
-  flex: 1;
+  color: var(--g-warn);
+  border-radius: 4px;
+  cursor: help;
 }

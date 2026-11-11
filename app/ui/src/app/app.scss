@@ -4,29 +4,65 @@
   height: 100%;
 }
 
-.toolbar {
+// --- En-tête ----------------------------------------------------------------------------------
+
+.header {
   flex: none;
-  gap: 12px;
-  --mat-toolbar-standard-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--g-surface);
+  border-bottom: 1px solid var(--g-line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .logo {
   display: block;
 }
 
-.brand {
-  font: var(--mat-sys-title-large);
-  font-weight: 600;
+.brand__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--g-fg);
 }
 
-.tagline {
-  font: var(--mat-sys-body-medium);
-  color: var(--mat-sys-on-surface-variant);
+.search {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+
+  g-field {
+    flex: 1;
+    max-width: 560px;
+  }
 }
 
-.spacer {
-  flex: 1;
+.search__kbd {
+  flex: none;
 }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.separator {
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--g-line);
+}
+
+// --- Classement et fiche (Material jusqu'aux phases 3 et 6) -----------------------------------
 
 .body {
   flex: 1;

@@ -1,19 +1,29 @@
-import { Component, DestroyRef, PendingTasks, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
+import { CdkMenuTrigger } from '@angular/cdk/menu';
+import {
+  Component,
+  DestroyRef,
+  type ElementRef,
+  PendingTasks,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import type { ExportFormat } from './core/generated/ExportFormat';
+import { ShortcutsService } from './core/shortcuts.service';
 import { TauriService, errorMessage } from './core/tauri.service';
 import { FiltersPanel } from './features/filters-panel/filters-panel';
 import { HardwareBanner } from './features/hardware-banner/hardware-banner';
 import { ModelDetailPanel } from './features/model-detail/model-detail';
 import { RankingView } from './features/ranking/ranking-view';
 import { StatusBar } from './features/status-bar/status-bar';
+import { Button } from './shared/ui/button/button';
+import { FIELD } from './shared/ui/field/field';
+import { Icon } from './shared/ui/icon/icon';
+import { MENU } from './shared/ui/menu/menu';
+import { Tooltip } from './shared/ui/tooltip/tooltip';
 import { CatalogStore } from './state/catalog.store';
 import { DetailStore } from './state/detail.store';
 import { HardwareStore } from './state/hardware.store';
@@ -22,20 +32,22 @@ import { SettingsStore } from './state/settings.store';
 import { UPDATE_CHECK_DELAY_MS, UpdateStore } from './state/update.store';
 
 /**
- * Coquille de l'application. Au lancement : matériel, paramètres et premier classement en
- * parallèle (catalogue du cache, sinon embarqué), puis synchronisation du catalogue en arrière-
- * plan (rien n'est téléchargé si le cache a moins de 24 h). Quelques secondes plus tard, GRAM
- * cherche une mise à jour dans les releases GitHub, sans rien afficher s'il n'y en a pas.
+ * Coque de l'application : en-tête (recherche, export, mise à jour, paramètres), bande
+ * « Votre machine », classement et fiche, barre d'état. Au lancement : matériel, paramètres et
+ * premier classement en parallèle (catalogue du cache, sinon embarqué), puis synchronisation du
+ * catalogue en arrière-plan (rien n'est téléchargé si le cache a moins de 24 h). Quelques
+ * secondes plus tard, GRAM cherche une mise à jour dans les releases GitHub, sans rien afficher
+ * s'il n'y en a pas.
  */
 @Component({
   selector: 'app-root',
   imports: [
-    MatButtonModule,
-    MatIconModule,
-    MatMenuModule,
     MatSidenavModule,
-    MatToolbarModule,
-    MatTooltipModule,
+    Button,
+    FIELD,
+    Icon,
+    MENU,
+    Tooltip,
     FiltersPanel,
     HardwareBanner,
     ModelDetailPanel,
@@ -55,8 +67,15 @@ export class App {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly pendingTasks = inject(PendingTasks);
+  private readonly shortcuts = inject(ShortcutsService);
+
+  private readonly searchInput = viewChild.required<ElementRef<HTMLInputElement>>('search');
+  private readonly exportTrigger = viewChild.required(CdkMenuTrigger);
 
   protected readonly exporting = signal(false);
+  /** « Control+K » (« Meta+K » sur Mac) pour `aria-keyshortcuts`, « Ctrl K » à l'écran. */
+  protected readonly searchShortcut = this.shortcuts.isMac ? 'Meta+K' : 'Control+K';
+  protected readonly searchShortcutLabel = this.shortcuts.modShortcut('K');
 
   constructor() {
     // Le classement part dès la création du store (injecté ci-dessus), sans attendre le reste.
@@ -65,7 +84,18 @@ export class App {
     void this.catalog.sync(false);
 
     const timer = setTimeout(() => void this.checkUpdate(), inject(UPDATE_CHECK_DELAY_MS));
-    inject(DestroyRef).onDestroy(() => clearTimeout(timer));
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => clearTimeout(timer));
+
+    destroyRef.onDestroy(
+      this.shortcuts.register([
+        // Ctrl F reste accepté : c'était le raccourci de la recherche.
+        { key: 'k', mod: true, inInputs: true, run: () => this.focusSearch() },
+        { key: 'f', mod: true, inInputs: true, run: () => this.focusSearch() },
+        { key: 'e', run: () => this.openExportMenu() },
+        { key: 'Escape', inInputs: true, run: () => this.closeDetail() },
+      ]),
+    );
   }
 
   /** Vérification automatique : une mise à jour trouvée est signalée, un échec ignoré. */
@@ -78,10 +108,33 @@ export class App {
       .subscribe(() => this.openUpdate());
   }
 
-  protected rescan(): void {
-    this.hardware.rescan().catch((e: unknown) => {
-      this.snackBar.open(`Analyse impossible : ${errorMessage(e)}`, 'OK');
-    });
+  /** Ctrl K (⌘K) : curseur dans la recherche, texte sélectionné. */
+  private focusSearch(): void {
+    const input = this.searchInput().nativeElement;
+    input.focus();
+    input.select();
+  }
+
+  /** Échap dans la recherche : la vide d'abord ; vide, Échap ferme la fiche. */
+  protected clearSearch(event: Event): void {
+    if (this.ranking.search() === '') return;
+    event.preventDefault();
+    this.ranking.setSearch('');
+  }
+
+  /** Touche E : ouvre le menu Exporter, focus sur son premier élément. */
+  private openExportMenu(): boolean {
+    if (this.exporting() || !this.ranking.response()) return false;
+    const trigger = this.exportTrigger();
+    trigger.open();
+    trigger.getMenu()?.focusFirstItem('keyboard');
+    return true;
+  }
+
+  private closeDetail(): boolean {
+    if (!this.detail.isOpen()) return false;
+    this.detail.close();
+    return true;
   }
 
   protected refreshCatalog(): void {
