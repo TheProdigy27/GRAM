@@ -47,7 +47,9 @@ pub fn hardware_summary(hw: &HardwareProfile) -> String {
             if let Some(bw) = g.bandwidth_gbs {
                 let _ = write!(s, ", ≈{} Go/s", num(f64::from(bw), 0));
             }
-            if g.integrated {
+            if g.unified_memory {
+                s.push_str(", mémoire unifiée");
+            } else if g.integrated {
                 s.push_str(", intégré");
             }
             s.push(')');

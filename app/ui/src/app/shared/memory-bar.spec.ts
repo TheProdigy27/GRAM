@@ -29,6 +29,22 @@ describe('memoryBar', () => {
     expect(m.markers[0].pct).toBeCloseTo((BUDGET.vram / capacity) * 100);
   });
 
+  it('mémoire unifiée : la part du GPU est prise sur la RAM, sans s’y ajouter', () => {
+    const mac = { ...BUDGET, vram: 10.7 * GIB, ram: 12 * GIB, unified: true };
+    const hybrid = memoryBar(
+      makeEstimate({ weights: 11 * GIB, mode: { kind: 'hybrid', gpuLayers: 30, layers: 40 } }),
+      mac,
+    );
+    expect(hybrid.capacity).toBe(12 * GIB);
+    expect(hybrid.markers.map((m) => m.label)).toEqual([
+      'Mémoire du GPU',
+      'RAM utilisable (GPU compris)',
+    ]);
+    const tooBig = memoryBar(makeEstimate({ weights: 40 * GIB, mode: { kind: 'tooBig' } }), mac);
+    expect(tooBig.capacity).toBe(12 * GIB);
+    expect(memoryBar(makeEstimate(), mac).markers[0].label).toBe('Mémoire du GPU');
+  });
+
   it('trop gros : l’échelle suit le besoin pour montrer le dépassement', () => {
     const e = makeEstimate({ weights: 80 * GIB, mode: { kind: 'tooBig' } });
     const m = memoryBar(e, BUDGET);

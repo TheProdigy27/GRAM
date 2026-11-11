@@ -1,4 +1,5 @@
-//! Fichiers JSON de l'application, dans `%LOCALAPPDATA%\fr.gram.desktop\` :
+//! Fichiers JSON de l'application, dans son dossier (`%LOCALAPPDATA%\fr.gram.desktop\` sous
+//! Windows, `~/Library/Application Support/fr.gram.desktop/` sous macOS) :
 //!
 //! - `settings.json` : paramètres utilisateur (§12), sans le token Hugging Face ;
 //! - `corrections.json` : corrections manuelles du matériel (§6.6), sans la simulation ;

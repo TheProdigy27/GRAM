@@ -39,7 +39,8 @@ fn simulation_gpus(specs: &GpuSpecs) -> Vec<SimulationGpu> {
                 gram_core::Vendor::Nvidia => 0,
                 gram_core::Vendor::Amd => 1,
                 gram_core::Vendor::Intel => 2,
-                gram_core::Vendor::Other => 3,
+                gram_core::Vendor::Apple => 3,
+                gram_core::Vendor::Other => 4,
             };
             let gpu = SimulationGpu {
                 label: s.label(),

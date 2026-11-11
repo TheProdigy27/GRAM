@@ -1,4 +1,5 @@
-//! Cache local (§7.7 du plan) : `%LOCALAPPDATA%\fr.gram.desktop\cache\`
+//! Cache local (§7.7 du plan) : `%LOCALAPPDATA%\fr.gram.desktop\cache\` sous Windows,
+//! `~/Library/Application Support/fr.gram.desktop/cache/` sous macOS
 //!
 //! - `catalog.json` : dernier catalogue synchronisé (durée de vie : 24 h par défaut) ;
 //! - `details/{org}--{nom}@{sha}.json` : fichiers d'un dépôt ([`RepoDetail`]) ;
@@ -22,8 +23,9 @@ pub struct Cache {
 /// Identifiant de l'application : `identifier` de `app/src-tauri/tauri.conf.json`.
 pub const APP_ID: &str = "fr.gram.desktop";
 
-/// Dossier de l'application : `%LOCALAPPDATA%\fr.gram.desktop` (cache, paramètres,
-/// corrections du matériel), partagé par l'application et `gram-cli`.
+/// Dossier de l'application : `%LOCALAPPDATA%\fr.gram.desktop` sous Windows,
+/// `~/Library/Application Support/fr.gram.desktop` sous macOS (cache, paramètres, corrections
+/// du matériel), partagé par l'application et `gram-cli`.
 ///
 /// C'est le dossier où Tauri range déjà les données de WebView2, et celui que la
 /// désinstallation propose de supprimer. `%LOCALAPPDATA%\GRAM` ne convient pas : c'est le

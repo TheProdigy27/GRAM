@@ -4,7 +4,8 @@ import type { Source } from "./Source";
 
 export type RamInfo = { 
 /**
- * Mémoire vue par Windows (installée moins la mémoire réservée au matériel), en octets.
+ * Mémoire vue par le système (sous Windows, installée moins la mémoire réservée au
+ * matériel), en octets.
  */
 total: number, 
 /**
@@ -12,7 +13,8 @@ total: number,
  */
 available: number, 
 /**
- * Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), en octets.
+ * Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), ou mémoire
+ * unifiée d'un Mac, en octets.
  */
 installed: number | null, kind: RamKind, 
 /**
@@ -28,7 +30,7 @@ modules: number,
  */
 slots: number | null, 
 /**
- * Nombre de canaux estimé (64 bits chacun).
+ * Nombre de canaux estimé (64 bits chacun ; largeur du bus / 64 sur Apple Silicon).
  */
 channels: number, channelsSource: Source, 
 /**

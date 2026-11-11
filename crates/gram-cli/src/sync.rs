@@ -23,7 +23,7 @@ pub struct SyncArgs {
 pub(crate) fn cache(dir: Option<PathBuf>) -> Result<Cache> {
     let root = dir
         .or_else(Cache::default_root)
-        .context("dossier %LOCALAPPDATA% introuvable : préciser --cache-dir")?;
+        .context("dossier des données locales introuvable : préciser --cache-dir")?;
     Ok(Cache::new(root))
 }
 

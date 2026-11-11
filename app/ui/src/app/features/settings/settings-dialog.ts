@@ -215,7 +215,7 @@ export class SettingsDialog {
 
   // ── Actions immédiates : token et cache ──────────────────────────────────────────────────
 
-  /** Le token est envoyé à Rust, qui le range dans le Gestionnaire d'identifiants Windows. */
+  /** Le token est envoyé à Rust, qui le range dans le trousseau du système. */
   protected async saveToken(): Promise<void> {
     const token = this.token().trim();
     if (!token) return;

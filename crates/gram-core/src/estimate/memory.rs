@@ -12,7 +12,7 @@ const KIB_F: f64 = 1024.0;
 /// La VRAM libre peut dépasser un peu la valeur lue : elle varie d'un instant à l'autre.
 pub const VRAM_FREE_TOLERANCE: u64 = 256 * MIB;
 
-/// Mode « je ferme tout avant de lancer le modèle » : RAM laissée à Windows.
+/// Mode « je ferme tout avant de lancer le modèle » : RAM laissée au système.
 pub const CLOSE_APPS_RAM_RESERVE: u64 = 4 * GIB;
 
 /// Réglages de l'estimation (§12 du plan), tous modifiables dans les Paramètres.
@@ -20,14 +20,15 @@ pub const CLOSE_APPS_RAM_RESERVE: u64 = 4 * GIB;
 #[serde(rename_all = "camelCase", default)]
 #[ts(export)]
 pub struct EstimateParams {
-    /// Part de la VRAM gardée pour l'affichage Windows et les applications ouvertes.
+    /// Part de la VRAM gardée pour l'affichage du système et les applications ouvertes (en
+    /// mémoire unifiée : part de la limite de Metal).
     pub vram_margin: f32,
     /// Part de la RAM totale utilisable (et au plus la RAM disponible).
     pub ram_share: f32,
     /// « Je ferme tout avant de lancer le modèle » : RAM totale moins 4 Go, VRAM sans tenir
     /// compte de l'occupation actuelle.
     pub close_apps: bool,
-    /// Surcoût du runtime (contexte CUDA/Vulkan, buffers de calcul), en octets.
+    /// Surcoût du runtime (contexte CUDA/Vulkan/Metal, buffers de calcul), en octets.
     pub overhead_bytes: u64,
     /// Part de la bande passante de la VRAM réellement exploitée pour lire les poids placés sur
     /// le GPU.
@@ -114,33 +115,32 @@ impl KvCacheType {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct MemoryBudget {
-    /// VRAM utilisable du GPU retenu, en octets ; 0 sans GPU discret (un iGPU partage la RAM).
+    /// VRAM utilisable du GPU retenu, en octets ; 0 sans GPU utilisable (un iGPU ordinaire
+    /// partage la RAM). En mémoire unifiée : la part de `ram` que le GPU peut occuper.
     pub vram: u64,
-    /// RAM utilisable, en octets.
+    /// RAM utilisable, en octets. En mémoire unifiée : tout ce que le modèle peut occuper, GPU
+    /// compris.
     pub ram: u64,
-    /// Bande passante du GPU retenu en Go/s ; absente sans GPU discret.
+    /// Bande passante du GPU retenu en Go/s ; absente sans GPU utilisable.
     pub gpu_bandwidth_gbs: Option<f32>,
     /// Bande passante de la RAM en Go/s (valeur prudente si la vitesse est inconnue).
     pub ram_bandwidth_gbs: f32,
+    /// Mémoire unifiée (Apple Silicon) : `vram` et `ram` sont la même mémoire, elles ne
+    /// s'additionnent pas.
+    #[serde(default)]
+    pub unified: bool,
 }
 
 impl MemoryBudget {
     /// §6.5 : `VRAM_u = min(VRAM × (1 − marge), VRAM libre + tolérance)` et
     /// `RAM_u = min(RAM disponible, RAM × part)`. En mode « je ferme tout », la VRAM ne dépend
     /// plus de son occupation actuelle et la RAM passe à `RAM − 4 Go` (sans jamais baisser).
+    ///
+    /// En mémoire unifiée, la « VRAM » est la limite de Metal moins la marge, et au plus la RAM
+    /// utilisable : le GPU puise dans la même mémoire que le reste du système.
     pub fn from_profile(hw: &HardwareProfile, p: &EstimateParams) -> Self {
-        let gpu = hw
-            .gpu
-            .as_ref()
-            .filter(|g| !g.integrated && g.vram_total > 0);
-        let margin = f64::from(p.vram_margin.clamp(0.0, 0.9));
-        let vram = gpu.map_or(0, |g| {
-            let cap = (g.vram_total as f64 * (1.0 - margin)) as u64;
-            match g.vram_free {
-                Some(free) if !p.close_apps => cap.min(free.saturating_add(VRAM_FREE_TOLERANCE)),
-                _ => cap,
-            }
-        });
+        let gpu = hw.gpu.as_ref().filter(|g| g.offload());
+        let unified = gpu.is_some_and(|g| g.unified_memory);
 
         let share = (hw.ram.total as f64 * f64::from(p.ram_share.clamp(0.0, 1.0))) as u64;
         let mut ram = match hw.ram.available {
@@ -151,9 +151,20 @@ impl MemoryBudget {
             ram = ram.max(hw.ram.total.saturating_sub(CLOSE_APPS_RAM_RESERVE));
         }
 
+        let margin = f64::from(p.vram_margin.clamp(0.0, 0.9));
+        let vram = gpu.map_or(0, |g| {
+            let cap = (g.vram_total as f64 * (1.0 - margin)) as u64;
+            let vram = match g.vram_free {
+                Some(free) if !p.close_apps => cap.min(free.saturating_add(VRAM_FREE_TOLERANCE)),
+                _ => cap,
+            };
+            if unified { vram.min(ram) } else { vram }
+        });
+
         Self {
             vram,
             ram,
+            unified,
             gpu_bandwidth_gbs: gpu.map(|g| {
                 g.bandwidth_gbs
                     .filter(|&b| b > 0.0)
@@ -167,9 +178,29 @@ impl MemoryBudget {
         }
     }
 
-    /// Peut-on placer des couches sur un GPU discret ?
+    /// Peut-on placer des couches sur le GPU (discret, ou à mémoire unifiée) ?
     pub fn gpu_offload(&self) -> bool {
         self.vram > 0 && self.gpu_bandwidth_gbs.is_some()
+    }
+
+    /// Mémoire totale quand le modèle déborde du GPU (mode hybride, modèle trop gros) :
+    /// VRAM + RAM, ou la seule RAM en mémoire unifiée.
+    pub fn combined(&self) -> u64 {
+        if self.unified {
+            self.ram.max(self.vram)
+        } else {
+            self.vram.saturating_add(self.ram)
+        }
+    }
+
+    /// RAM restante pour la part du modèle qui n'est pas sur le GPU, quand `on_gpu` octets y
+    /// sont : toute la RAM utilisable, moins `on_gpu` en mémoire unifiée.
+    pub fn ram_beside(&self, on_gpu: u64) -> u64 {
+        if self.unified {
+            self.ram.saturating_sub(on_gpu)
+        } else {
+            self.ram
+        }
     }
 }
 

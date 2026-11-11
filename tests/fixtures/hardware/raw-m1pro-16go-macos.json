@@ -1,0 +1,50 @@
+{
+  "os": "macos",
+  "cpu": {
+    "name": "Apple M1 Pro",
+    "coresPhysical": 10,
+    "coresLogical": 10,
+    "maxClockMhz": 3228,
+    "x86": false,
+    "arm": true,
+    "avx2": false,
+    "avx512": false,
+    "fma": false,
+    "f16c": false
+  },
+  "memory": {
+    "total": 17179869184,
+    "available": 12860096512,
+    "modules": [],
+    "slots": null,
+    "typeName": "LPDDR5"
+  },
+  "adapters": [],
+  "metal": [
+    {
+      "index": 0,
+      "name": "Apple M1 Pro",
+      "registryId": 4294969716,
+      "recommendedMaxWorkingSet": 12713115648,
+      "unifiedMemory": true,
+      "lowPower": false,
+      "removable": false,
+      "gpuCores": 16,
+      "vram": null
+    }
+  ],
+  "nvml": null,
+  "backends": {
+    "nvcuda": false,
+    "vulkan": false,
+    "metal": true
+  },
+  "disks": [
+    {
+      "mount": "/",
+      "total": 494384795648,
+      "available": 277841580032
+    }
+  ],
+  "notes": []
+}

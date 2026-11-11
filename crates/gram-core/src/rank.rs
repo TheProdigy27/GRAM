@@ -329,15 +329,22 @@ pub fn explain(
     ctx_train: u32,
 ) -> String {
     let (v, e) = (&ve.variant, &ve.estimate);
+    // En mémoire unifiée, pas de VRAM à proprement parler : la part de la RAM que Metal laisse
+    // au GPU.
+    let (in_vram, on_gpu) = if budget.unified {
+        ("dans la mémoire du GPU", "sur le GPU")
+    } else {
+        ("en VRAM", "en VRAM")
+    };
     let mut parts = vec![match e.mode {
         RunMode::Gpu => format!(
-            "Tient entièrement en VRAM ({} / {} Go) en {}",
+            "Tient entièrement {in_vram} ({} / {} Go) en {}",
             gb_value(e.mem_gpu),
             gb_value(budget.vram),
             v.label
         ),
         RunMode::Hybrid { gpu_layers, layers } => format!(
-            "Hybride : {gpu_layers} couches sur {layers} en VRAM, {} en RAM, en {}",
+            "Hybride : {gpu_layers} couches sur {layers} {on_gpu}, {} en RAM, en {}",
             gb(e.mem_cpu),
             v.label
         ),
@@ -349,7 +356,7 @@ pub fn explain(
         ),
         RunMode::TooBig => {
             let available = if budget.gpu_offload() {
-                budget.vram.saturating_add(budget.ram)
+                budget.combined()
             } else {
                 budget.ram
             };
@@ -529,6 +536,7 @@ pub fn model_detail(m: &ModelEntry, req: &DetailRequest, cx: &RankContext) -> Mo
                 &r.ve.estimate,
                 m.gated,
                 s.params.kv_cache,
+                cx.hardware.os,
             ),
             variant: r.ve.variant,
             estimate: r.ve.estimate,

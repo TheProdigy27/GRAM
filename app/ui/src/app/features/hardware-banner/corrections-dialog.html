@@ -12,7 +12,7 @@
     <p class="muted intro">
       Pour corriger une valeur mal détectée (canaux d’une mémoire LPDDR soudée, GPU absent de la
       table…). Le Gestionnaire des tâches (Performances → Mémoire) indique la vitesse et les
-      emplacements utilisés.
+      emplacements utilisés ; sur un Mac, la fiche technique de la puce donne sa bande passante.
     </p>
     <div class="grid">
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -53,7 +53,7 @@
         <mat-label>GPU intégré</mat-label>
         <mat-select
           data-testid="fix-integrated"
-          [disabled]="!chosenGpu()"
+          [disabled]="!chosenGpu() || unifiedGpu()"
           [value]="draft().gpuIntegrated === null ? 'auto' : draft().gpuIntegrated ? 'yes' : 'no'"
           (selectionChange)="
             patch({ gpuIntegrated: $event.value === 'auto' ? null : $event.value === 'yes' })
@@ -65,7 +65,11 @@
           <mat-option value="yes">Oui : compté comme du CPU</mat-option>
           <mat-option value="no">Non : GPU dédié</mat-option>
         </mat-select>
-        <mat-hint>Un GPU intégré partage la RAM</mat-hint>
+        <mat-hint>{{
+          unifiedGpu()
+            ? 'Mémoire unifiée : le GPU reçoit les couches'
+            : 'Un GPU intégré partage la RAM'
+        }}</mat-hint>
       </mat-form-field>
 
       <mat-form-field appearance="outline" subscriptSizing="dynamic">

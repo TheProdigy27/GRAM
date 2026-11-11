@@ -4,4 +4,8 @@ export type Backends = { cuda: boolean,
 /**
  * Version CUDA prise en charge par le driver (ex. « 12.8 »).
  */
-cudaDriverVersion: string | null, vulkan: boolean, };
+cudaDriverVersion: string | null, vulkan: boolean, 
+/**
+ * Au moins un GPU Metal (macOS).
+ */
+metal: boolean, };

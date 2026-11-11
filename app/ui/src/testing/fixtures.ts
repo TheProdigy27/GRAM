@@ -24,8 +24,10 @@ import type { VariantDetail } from '../app/core/generated/VariantDetail';
 export const GIB = 2 ** 30;
 
 export const HARDWARE: HardwareProfile = {
+  os: 'windows',
   cpu: {
     name: 'AMD Ryzen 7 9800X3D 8-Core Processor',
+    arch: 'x86',
     coresPhysical: 8,
     coresLogical: 16,
     maxClockMhz: 4700,
@@ -54,12 +56,13 @@ export const HARDWARE: HardwareProfile = {
     vramFree: 14.8 * GIB,
     sharedMem: 31.5 * GIB,
     integrated: false,
+    unifiedMemory: false,
     bandwidthGbs: 960,
     bandwidthSource: 'table',
     cudaCc: [12, 0],
   },
   otherGpus: [],
-  backends: { cuda: true, cudaDriverVersion: '12.9', vulkan: true },
+  backends: { cuda: true, cudaDriverVersion: '12.9', vulkan: true, metal: false },
   disks: [{ mount: 'C:\\', total: 1862 * GIB, available: 210 * GIB }],
   overrides: {
     ramChannels: null,
@@ -70,6 +73,50 @@ export const HARDWARE: HardwareProfile = {
     simulatedRamTotal: null,
   },
   warnings: [],
+};
+
+/** MacBook Pro M1 Pro 16 Go (`gram-cli hw` sur la machine) : mémoire unifiée, GPU Metal. */
+export const MAC_HARDWARE: HardwareProfile = {
+  ...HARDWARE,
+  os: 'macos',
+  cpu: {
+    name: 'Apple M1 Pro',
+    arch: 'arm',
+    coresPhysical: 10,
+    coresLogical: 10,
+    maxClockMhz: 3228,
+    avx2: false,
+    avx512: false,
+    fma: false,
+    f16c: false,
+  },
+  ram: {
+    total: 16 * GIB,
+    available: 12 * GIB,
+    installed: 16 * GIB,
+    kind: 'lpddr5',
+    speedMts: 6400,
+    modules: 0,
+    slots: null,
+    channels: 4,
+    channelsSource: 'table',
+    bandwidthGbs: 204.8,
+  },
+  gpu: {
+    index: 0,
+    name: 'Apple M1 Pro',
+    vendor: 'apple',
+    vramTotal: 11.84 * GIB,
+    vramFree: null,
+    sharedMem: 0,
+    integrated: true,
+    unifiedMemory: true,
+    bandwidthGbs: 204.8,
+    bandwidthSource: 'table',
+    cudaCc: null,
+  },
+  backends: { cuda: false, cudaDriverVersion: null, vulkan: false, metal: true },
+  disks: [{ mount: '/', total: 460 * GIB, available: 259 * GIB }],
 };
 
 export const RUNTIMES: RuntimesStatus = {
@@ -146,6 +193,7 @@ export const HARDWARE_OPTIONS: HardwareOptions = {
         vramFree: null,
         sharedMem: 31.5 * GIB,
         integrated: true,
+        unifiedMemory: false,
         bandwidthGbs: 96,
         bandwidthSource: 'estimated',
         cudaCc: null,
@@ -171,6 +219,7 @@ export const BUDGET: MemoryBudget = {
   ram: 47.3 * GIB,
   gpuBandwidthGbs: 960,
   ramBandwidthGbs: 96,
+  unified: false,
 };
 
 export function makeScore(total: number, overrides: Partial<Score> = {}): Score {

@@ -7,11 +7,13 @@
 //! | P2 : RTX 3060 12 Go + 32 Go DDR4-3600         | GPU complet, ~45–60 tok/s | Trop juste ou Limite          |
 //! | P3 : RTX 4090 24 Go + 64 Go DDR5-6000         | GPU complet, rapide       | Hybride, ~2 tok/s             |
 //! | P4 : RX 7800 XT 16 Go (sans NVML) + 32 Go DDR5 | GPU complet, ~70–110 tok/s | Trop juste ou Limite         |
+//! | P5 : MacBook Pro M1 Pro, 16 Go unifiés        | GPU (Metal), ~25–40 tok/s | Trop juste                    |
 //!
 //! Vitesses revues après les mesures réelles (efficacité 0,81 sur GPU, 0,62 sur CPU, termes
 //! propres aux MoE) et recoupées avec des vitesses publiées : ~50–57 tok/s pour un 8B en Q4_K_M
 //! sur RTX 3060, ~118 tok/s pour Llama 2 7B en Q4_0 (3,8 Go) sur RX 7800 XT, soit ~95 pour 5 Go,
-//! ~190 tok/s pour Qwen3-30B-A3B en Q4_K_M sur RTX 4090.
+//! ~190 tok/s pour Qwen3-30B-A3B en Q4_K_M sur RTX 4090, ~36 tok/s pour Llama 2 7B en Q4_0 sur
+//! M1 Pro (GPU 16 cœurs, llama.cpp), soit ~28 pour 5 Go.
 
 use gram_core::estimate::{QuantTable, estimate};
 use gram_core::{
@@ -36,6 +38,10 @@ fn p3() -> HardwareProfile {
 }
 fn p4() -> HardwareProfile {
     fixture!("profiles/p4-rx7800xt-16go-32go-ddr5.json")
+}
+/// MacBook Pro M1 Pro 16 Go : limite de Metal de 11,84 Gio, 204,8 Go/s.
+fn p5() -> HardwareProfile {
+    fixture!("profiles/p5-m1pro-16go-macos.json")
 }
 
 /// Qwen3-8B (dense, 36 couches, 8 têtes KV × 128) : Q4_K_M = 4,68 Gio.
@@ -252,4 +258,28 @@ fn le_contexte_plus_long_coute_plus() {
     assert_eq!(long.breakdown.kv, short.breakdown.kv * 4);
     assert!(long.mem_usage > short.mem_usage);
     assert_eq!(long.ctx_max, short.ctx_max);
+}
+
+#[test]
+fn p5_mac_apple_silicon() {
+    let hw = p5();
+    let b = MemoryBudget::from_profile(&hw, &EstimateParams::default());
+    assert!(b.unified && b.gpu_offload());
+
+    // Le GPU à mémoire unifiée reçoit le modèle (Metal), à la bande passante de la mémoire.
+    let small = q4(&qwen3_8b(), &hw);
+    assert_eq!(small.mode, RunMode::Gpu, "{small:?}");
+    assert!((25.0..=40.0).contains(&small.tok_s), "{}", small.tok_s);
+    assert_eq!(small.fit, FitLevel::Perfect);
+    // Contexte maximal limité par la mémoire du GPU (10,7 Gio), pas par VRAM + RAM.
+    assert!(
+        (32_768..=40_960).contains(&small.ctx_max),
+        "{}",
+        small.ctx_max
+    );
+
+    // 16 Go en tout : un 70B ne tient nulle part, même en comptant le GPU.
+    let big = q4(&llama_70b(), &hw);
+    assert_eq!(big.mode, RunMode::TooBig);
+    assert!(big.mem_usage > 3.0, "{}", big.mem_usage);
 }

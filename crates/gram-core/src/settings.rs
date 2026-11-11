@@ -1,5 +1,6 @@
 //! Paramètres utilisateur (§12 du plan), tous modifiables dans l'interface et enregistrés dans
-//! `%LOCALAPPDATA%\fr.gram.desktop\settings.json` (sans le token Hugging Face).
+//! `settings.json` du dossier de l'application (`%LOCALAPPDATA%\fr.gram.desktop` sous Windows,
+//! `~/Library/Application Support/fr.gram.desktop` sous macOS), sans le token Hugging Face.
 
 use crate::estimate::EstimateParams;
 use crate::launch::Runtime;

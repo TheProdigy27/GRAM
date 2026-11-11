@@ -30,8 +30,8 @@ pub use estimate::{
 };
 pub use export::ExportFormat;
 pub use hardware::{
-    Backends, CpuInfo, DEFAULT_GPU_BANDWIDTH_GBS, DEFAULT_RAM_BANDWIDTH_GBS, DiskInfo, GpuInfo,
-    HardwareProfile, Overrides, RamInfo, RamKind, Source, Vendor,
+    Backends, CpuArch, CpuInfo, DEFAULT_GPU_BANDWIDTH_GBS, DEFAULT_RAM_BANDWIDTH_GBS, DiskInfo,
+    GpuInfo, HardwareProfile, Os, Overrides, RamInfo, RamKind, Source, Vendor,
 };
 pub use launch::{CommandLine, LaunchPlan, Runtime};
 pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};

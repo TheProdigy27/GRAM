@@ -181,9 +181,14 @@ fn render(
 
     let gpu = match (&hw.gpu, b.gpu_offload()) {
         (Some(g), true) => format!(
-            "{} : {} de VRAM utilisables · ≈{} Go/s",
+            "{} : {} {} · ≈{} Go/s",
             g.name,
             gb(b.vram),
+            if b.unified {
+                "utilisables par le GPU (mémoire unifiée, prise sur la RAM)"
+            } else {
+                "de VRAM utilisables"
+            },
             num(f64::from(b.gpu_bandwidth_gbs.unwrap_or_default()), 0)
         ),
         (Some(g), false) => format!("{} (intégré) : exécution sur le CPU", g.name),

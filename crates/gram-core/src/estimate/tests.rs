@@ -1,6 +1,7 @@
 use super::*;
 use crate::hardware::{
-    Backends, CpuInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, RamKind, Source, Vendor,
+    Backends, CpuArch, CpuInfo, GpuInfo, HardwareProfile, Os, Overrides, RamInfo, RamKind, Source,
+    Vendor,
 };
 use crate::model::{ArchInfo, ArchSource, Pipeline, UseCase};
 use serde_json::json;
@@ -70,6 +71,18 @@ fn budget(vram: u64, ram: u64) -> MemoryBudget {
         ram,
         gpu_bandwidth_gbs: Some(360.0),
         ram_bandwidth_gbs: 51.2,
+        unified: false,
+    }
+}
+
+/// Mac à mémoire unifiée : `gpu` octets pour le GPU, pris sur `ram`.
+fn unified(gpu: u64, ram: u64) -> MemoryBudget {
+    MemoryBudget {
+        vram: gpu,
+        ram,
+        gpu_bandwidth_gbs: Some(204.8),
+        ram_bandwidth_gbs: 204.8,
+        unified: true,
     }
 }
 
@@ -79,6 +92,7 @@ fn cpu_only(ram: u64) -> MemoryBudget {
         ram,
         gpu_bandwidth_gbs: None,
         ram_bandwidth_gbs: 51.2,
+        unified: false,
     }
 }
 
@@ -180,6 +194,7 @@ fn gpu(vram_total: u64, vram_free: Option<u64>, integrated: bool) -> GpuInfo {
         vram_free,
         shared_mem: 16 * GIB,
         integrated,
+        unified_memory: false,
         bandwidth_gbs: Some(360.0),
         bandwidth_source: Source::Table,
         cuda_cc: None,
@@ -188,8 +203,10 @@ fn gpu(vram_total: u64, vram_free: Option<u64>, integrated: bool) -> GpuInfo {
 
 fn hw(gpu: Option<GpuInfo>, ram_total: u64, ram_available: u64) -> HardwareProfile {
     HardwareProfile {
+        os: Os::Windows,
         cpu: CpuInfo {
             name: "CPU de test".into(),
+            arch: CpuArch::X86,
             cores_physical: 8,
             cores_logical: 16,
             max_clock_mhz: None,
@@ -284,6 +301,91 @@ fn ram_utilisable() {
         MemoryBudget::from_profile(&hw(None, 8 * GIB, 5 * GIB), &close).ram,
         5 * GIB
     );
+}
+
+/// Limite de Metal d'un MacBook Pro M1 Pro 16 Go (`recommendedMaxWorkingSetSize`, 11,84 Gio).
+const M1_PRO_METAL: u64 = 12_713_115_648;
+
+/// MacBook Pro M1 Pro 16 Go : mémoire unifiée à 204,8 Go/s.
+fn apple_m1_pro(available: u64) -> HardwareProfile {
+    let mut g = gpu(M1_PRO_METAL, None, true);
+    g.name = "Apple M1 Pro".into();
+    g.vendor = Vendor::Apple;
+    g.unified_memory = true;
+    g.shared_mem = 0;
+    g.bandwidth_gbs = Some(204.8);
+    let mut profile = hw(Some(g), 16 * GIB, available);
+    profile.os = Os::MacOs;
+    profile.cpu.arch = CpuArch::Arm;
+    profile.ram.bandwidth_gbs = Some(204.8);
+    profile
+}
+
+#[test]
+fn memoire_unifiee() {
+    let p = EstimateParams::default();
+    let b = MemoryBudget::from_profile(&apple_m1_pro(14 * GIB), &p);
+    assert!(
+        b.unified && b.gpu_offload(),
+        "le GPU d'Apple Silicon reçoit les couches"
+    );
+    // GPU : limite de Metal moins la marge de 10 % ; RAM : 75 % de 16 Go, GPU compris.
+    assert_eq!(
+        b.vram,
+        (M1_PRO_METAL as f64 * (1.0 - f64::from(p.vram_margin))) as u64
+    );
+    assert_eq!(b.ram, 12 * GIB);
+    assert_eq!(b.combined(), 12 * GIB, "VRAM et RAM ne s'additionnent pas");
+    assert_eq!(
+        (b.gpu_bandwidth_gbs, b.ram_bandwidth_gbs),
+        (Some(204.8), 204.8)
+    );
+
+    // Peu de RAM disponible : le GPU n'a pas plus que ce qui reste.
+    let busy = MemoryBudget::from_profile(&apple_m1_pro(6 * GIB), &p);
+    assert_eq!((busy.vram, busy.ram), (6 * GIB, 6 * GIB));
+
+    // Un iGPU ordinaire reste compté comme du CPU.
+    let mut igpu = apple_m1_pro(14 * GIB);
+    igpu.gpu.as_mut().unwrap().unified_memory = false;
+    let b = MemoryBudget::from_profile(&igpu, &p);
+    assert!(!b.unified && !b.gpu_offload());
+}
+
+#[test]
+fn memoire_unifiee_gpu_puis_hybride_dans_la_meme_ram() {
+    // 5,5 Gio nécessaires : tout sur le GPU.
+    let e = run(unified(9 * GIB, 12 * GIB), 8192);
+    assert_eq!(e.mode, RunMode::Gpu);
+    assert_eq!(e.mem_usage, (5.5 / 9.0) as f32);
+    // Vitesse d'un GPU (efficacité GPU) sur la bande passante de la mémoire unifiée.
+    let p = EstimateParams::default();
+    let expected = 1.0 / (4.0 * GIB as f64 / (204.8e9 * f64::from(p.gpu_efficiency)) + 0.0008);
+    assert!((f64::from(e.tok_s) - expected).abs() < 0.1, "{}", e.tok_s);
+
+    // GPU limité à 3,5 Gio : hybride, la part CPU doit tenir dans la RAM qui reste.
+    let e = run(unified(3 * GIB + 512 * MIB, 12 * GIB), 8192);
+    assert_eq!(
+        e.mode,
+        RunMode::Hybrid {
+            gpu_layers: 16,
+            layers: 32
+        }
+    );
+    assert_eq!(e.mem_gpu + e.mem_cpu, e.breakdown.total());
+    // Mémoire du mode : la seule RAM (12 Gio), pas VRAM + RAM.
+    assert!((e.mem_usage - (5.5 / 12.0) as f32).abs() < 1e-6);
+    // Contexte maximal borné par la RAM entière, pas par VRAM + RAM.
+    let separate = run(budget(3 * GIB + 512 * MIB, 12 * GIB), 8192);
+    assert!(e.ctx_max <= separate.ctx_max);
+
+    // 3,5 Gio sur le GPU + 2 Gio à côté ne tiennent pas dans 5 Gio de RAM partagée, alors
+    // qu'ils tiendraient avec une VRAM séparée : contexte réduit (4k tient tout juste).
+    let e = run(unified(3 * GIB + 512 * MIB, 5 * GIB), 8192);
+    let separate = run(budget(3 * GIB + 512 * MIB, 5 * GIB), 8192);
+    assert_eq!(separate.ctx_used, 8192);
+    assert!(e.ctx_used < 8192, "{:?}", e.mode);
+    assert!(e.mem_gpu + e.mem_cpu <= 5 * GIB);
 }
 
 #[test]

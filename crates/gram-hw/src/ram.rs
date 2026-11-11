@@ -16,13 +16,30 @@ pub fn kind_from_smbios(code: u32) -> RamKind {
     }
 }
 
+/// Type de mémoire écrit en clair (`system_profiler` : « DDR4 », « LPDDR5 », « LPDDR4X »).
+pub fn kind_from_name(name: &str) -> RamKind {
+    match name.trim().to_ascii_uppercase().as_str() {
+        "DDR3" => RamKind::Ddr3,
+        "DDR4" => RamKind::Ddr4,
+        "DDR5" => RamKind::Ddr5,
+        "LPDDR4" => RamKind::Lpddr4,
+        "LPDDR4X" => RamKind::Lpddr4x,
+        "LPDDR5" => RamKind::Lpddr5,
+        "LPDDR5X" => RamKind::Lpddr5x,
+        _ => RamKind::Unknown,
+    }
+}
+
+/// Type d'une barrette : code SMBIOS, sinon type écrit en clair.
+fn module_kind(m: &RawMemoryModule) -> Option<RamKind> {
+    m.smbios_type
+        .map(kind_from_smbios)
+        .or_else(|| m.type_name.as_deref().map(kind_from_name))
+}
+
 /// Type commun aux barrettes (le plus fréquent).
 pub fn kind_of(modules: &[RawMemoryModule]) -> RamKind {
-    let kinds: Vec<RamKind> = modules
-        .iter()
-        .filter_map(|m| m.smbios_type)
-        .map(kind_from_smbios)
-        .collect();
+    let kinds: Vec<RamKind> = modules.iter().filter_map(module_kind).collect();
     kinds
         .iter()
         .copied()
@@ -31,7 +48,10 @@ pub fn kind_of(modules: &[RawMemoryModule]) -> RamKind {
 }
 
 pub fn is_lpddr(kind: RamKind) -> bool {
-    matches!(kind, RamKind::Lpddr4 | RamKind::Lpddr5)
+    matches!(
+        kind,
+        RamKind::Lpddr4 | RamKind::Lpddr4x | RamKind::Lpddr5 | RamKind::Lpddr5x
+    )
 }
 
 /// Débit en dessous duquel la valeur est sûrement en MHz (horloge réelle = moitié du débit),
@@ -41,8 +61,8 @@ fn mhz_threshold(kind: RamKind) -> Option<u32> {
         RamKind::Ddr3 => Some(1000),
         RamKind::Ddr4 => Some(2000),
         RamKind::Ddr5 => Some(4000),
-        RamKind::Lpddr4 => Some(2400),
-        RamKind::Lpddr5 => Some(5000),
+        RamKind::Lpddr4 | RamKind::Lpddr4x => Some(2400),
+        RamKind::Lpddr5 | RamKind::Lpddr5x => Some(5000),
         RamKind::Unknown => None,
     }
 }
@@ -137,6 +157,7 @@ mod tests {
             speed: Some(3200),
             configured_speed: Some(3200),
             smbios_type: Some(26),
+            type_name: None,
             data_width: Some(64),
             device_locator: locator.into(),
             bank_label: bank.into(),
@@ -151,6 +172,19 @@ mod tests {
         assert_eq!(kind_from_smbios(34), RamKind::Ddr5);
         assert_eq!(kind_from_smbios(35), RamKind::Lpddr5);
         assert_eq!(kind_from_smbios(0), RamKind::Unknown);
+    }
+
+    #[test]
+    fn types_en_clair() {
+        assert_eq!(kind_from_name("DDR4"), RamKind::Ddr4);
+        assert_eq!(kind_from_name(" lpddr4x "), RamKind::Lpddr4x);
+        assert_eq!(kind_from_name("LPDDR5X"), RamKind::Lpddr5x);
+        assert_eq!(kind_from_name("LPDDR3"), RamKind::Unknown);
+        // Mac Intel : barrettes sans code SMBIOS.
+        let mut m = module("BANK 0", "ChannelA-DIMM0");
+        m.smbios_type = None;
+        m.type_name = Some("DDR4".into());
+        assert_eq!(kind_of(&[m.clone(), m]), RamKind::Ddr4);
     }
 
     #[test]

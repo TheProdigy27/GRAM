@@ -27,7 +27,7 @@
               />
               <span matTextSuffix>%</span>
               <mat-hint
-                >Affichage Windows, applications ouvertes
+                >Affichage du système, applications ouvertes
                 @if (defaults(); as def) {
                   · défaut {{ pct(def.estimate.vramMargin) }} %
                 }
@@ -79,7 +79,7 @@
               />
               <span matTextSuffix>Go</span>
               <mat-hint
-                >Contexte CUDA/Vulkan et buffers
+                >Contexte CUDA/Vulkan/Metal et buffers
                 @if (defaults(); as def) {
                   · défaut {{ decimal(toGb(def.estimate.overheadBytes)) }} Go
                 }
@@ -371,7 +371,8 @@
         <div class="tab">
           <p class="muted intro">
             Un token (lecture seule suffit) élargit les quotas de l’API Hugging Face. Il est rangé
-            dans le Gestionnaire d’identifiants Windows et n’est jamais affiché.
+            dans le trousseau du système (Gestionnaire d’identifiants Windows, Trousseau d’accès
+            macOS) et n’est jamais affiché.
           </p>
           <p data-testid="token-status">
             Token :

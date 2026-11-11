@@ -110,6 +110,11 @@ pub fn render(hw: &HardwareProfile, r: &RankResponse) -> String {
     let mut out = String::new();
     let b = &r.budget;
     let gpu = match (&hw.gpu, b.gpu_offload()) {
+        (Some(g), true) if b.unified => format!(
+            "{} : {} utilisables par le GPU (mémoire unifiée)",
+            g.name,
+            gb(b.vram)
+        ),
         (Some(g), true) => format!("{} : {} de VRAM utilisables", g.name, gb(b.vram)),
         (Some(g), false) => format!("{} (intégré) : exécution sur le CPU", g.name),
         (None, _) => "aucun GPU : exécution sur le CPU".into(),

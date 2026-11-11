@@ -1,0 +1,28 @@
+{
+  "about": "Mémoire unifiée des puces Apple Silicon (partagée par le CPU et le GPU), d'après les fiches Apple : type, débit en MT/s et largeur du bus en bits. Bande passante = bus / 8 × débit (Go/s), comme pour la RAM des PC : canaux de 64 bits = bus / 64. Le nom est comparé au nom du processeur (machdep.cpu.brand_string, ex. « Apple M1 Pro »), voir gram-hw/src/apple.rs. Quand une puce existe avec deux largeurs de bus (M3 Max, M4 Max, M5 Max), max_gpu_cores désigne la version réduite : elle est retenue si le GPU a au plus ce nombre de cœurs. Une puce absente de la table prend la dernière puce connue de la même gamme (valeur estimée).",
+  "chips": [
+    { "name": "Apple M1", "memory": "lpddr4x", "speed_mts": 4266, "bus_bits": 128 },
+    { "name": "Apple M1 Pro", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 256 },
+    { "name": "Apple M1 Max", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 512 },
+    { "name": "Apple M1 Ultra", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 1024 },
+    { "name": "Apple M2", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 128 },
+    { "name": "Apple M2 Pro", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 256 },
+    { "name": "Apple M2 Max", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 512 },
+    { "name": "Apple M2 Ultra", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 1024 },
+    { "name": "Apple M3", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 128 },
+    { "name": "Apple M3 Pro", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 192 },
+    { "name": "Apple M3 Max", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 384, "max_gpu_cores": 30 },
+    { "name": "Apple M3 Max", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 512 },
+    { "name": "Apple M3 Ultra", "memory": "lpddr5", "speed_mts": 6400, "bus_bits": 1024 },
+    { "name": "Apple M4", "memory": "lpddr5x", "speed_mts": 7500, "bus_bits": 128 },
+    { "name": "Apple M4 Pro", "memory": "lpddr5x", "speed_mts": 8533, "bus_bits": 256 },
+    { "name": "Apple M4 Max", "memory": "lpddr5x", "speed_mts": 8533, "bus_bits": 384, "max_gpu_cores": 32 },
+    { "name": "Apple M4 Max", "memory": "lpddr5x", "speed_mts": 8533, "bus_bits": 512 },
+    { "name": "Apple M5", "memory": "lpddr5x", "speed_mts": 9600, "bus_bits": 128 },
+    { "name": "Apple M5 Pro", "memory": "lpddr5x", "speed_mts": 9600, "bus_bits": 256 },
+    { "name": "Apple M5 Max", "memory": "lpddr5x", "speed_mts": 9600, "bus_bits": 384, "max_gpu_cores": 32 },
+    { "name": "Apple M5 Max", "memory": "lpddr5x", "speed_mts": 9600, "bus_bits": 512 },
+    { "name": "Apple M5 Ultra", "memory": "lpddr5x", "speed_mts": 9600, "bus_bits": 1024 },
+    { "name": "Apple A18 Pro", "memory": "lpddr5x", "speed_mts": 7500, "bus_bits": 64 }
+  ]
+}

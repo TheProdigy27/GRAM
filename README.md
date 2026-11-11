@@ -1,27 +1,37 @@
 # GRAM
 
-*GPU & RAM Aware Matcher* : une application Windows (Tauri 2 + Rust + Angular) qui analyse le matériel de la machine et classe les modèles IA exécutables en local, à partir des données Hugging Face.
+*GPU & RAM Aware Matcher* : une application Windows et macOS (Tauri 2 + Rust + Angular) qui analyse le matériel de la machine et classe les modèles IA exécutables en local, à partir des données Hugging Face.
 
 ## Prérequis
+
+Windows :
 
 - Rust stable (MSVC) et les Build Tools Visual Studio
 - Node.js 24+ et npm
 - WebView2 (déjà présent sous Windows 11)
 
+macOS (10.15 ou plus récent ; Apple Silicon ou Intel) :
+
+- Outils en ligne de commande de Xcode (`xcode-select --install`)
+- Rust stable (`rustup`, cible `aarch64-apple-darwin` ou `x86_64-apple-darwin`)
+- Node.js 24+ et npm
+
 ## Commandes
+
+Les mêmes sous Windows (PowerShell) et macOS (Terminal), sauf les scripts indiqués.
 
 ```powershell
 cd app/ui
 npm install
 npm run tauri dev       # lance l'application (Angular sur :1420 + fenêtre Tauri)
 npm run test:ci         # tests Angular (Vitest)
-npm run tauri build     # installeurs NSIS et MSI (voir « Installeur »)
+npm run tauri build     # installeurs NSIS et MSI sous Windows, GRAM.app et .dmg sous macOS (voir « Installeur »)
 npm run tauri icon public/logo.svg   # régénère les icônes depuis le logo
 
 cd ../..
 cargo test --workspace  # tests Rust ; régénère aussi les types TypeScript
 cargo run -p gram-cli -- --help
-cargo run -p gram-cli -- hw          # matériel détecté (à comparer au Gestionnaire des tâches)
+cargo run -p gram-cli -- hw          # matériel détecté (à comparer au Gestionnaire des tâches, ou à « Informations système » sur un Mac)
 cargo run -p gram-cli -- hw --json   # { hardware, runtimes }
 cargo run -p gram-cli -- hw --raw    # données brutes, à enregistrer dans tests/fixtures/hardware/
 cargo run -p gram-cli -- sync        # catalogue Hugging Face (cache de 24 h ; --force pour resynchroniser)
@@ -34,11 +44,13 @@ cargo run -p gram-cli -- rank                          # classement polyvalent (
 cargo run -p gram-cli -- rank --usage code --ctx 16384 --json
 cargo run -p gram-cli -- rank --usage vision --runtime llama-cpp --max-size-gb 12 --show-too-big --limit 0
 cargo run -p gram-cli -- rank --profile tests/fixtures/profiles/p1-portable-igpu-16go.json --usage fast-chat
+cargo run -p gram-cli -- estimate Qwen3-8B --profile tests/fixtures/profiles/p5-m1pro-16go-macos.json   # Mac Apple Silicon
 cargo run -p gram-cli -- ollama                        # modèles installés dans Ollama, rapprochés du catalogue
 cargo run -p gram-cli -- ollama --measure Qwen3-8B --quant Q4_K_M --ctx 8192   # mesure réelle face à l'estimation
 
-powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complète
+powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complète (Windows)
 powershell -ExecutionPolicy Bypass -File scripts/test-installer.ps1   # installeur testé dans Windows Sandbox
+scripts/check.sh                                             # CI locale complète (macOS, Linux)
 ```
 
 ## Structure
@@ -46,14 +58,14 @@ powershell -ExecutionPolicy Bypass -File scripts/test-installer.ps1   # installe
 | Dossier | Rôle |
 |---|---|
 | `crates/gram-core` | Types, moteur d'estimation, scoring (pur, sans I/O) |
-| `crates/gram-hw` | Détection matériel et runtimes installés (Windows) |
+| `crates/gram-hw` | Détection matériel et runtimes installés (Windows, macOS ; CPU et RAM seulement ailleurs) |
 | `crates/gram-hub` | Client Hugging Face, cache, parseur GGUF, dédoublonnage, catalogue embarqué |
 | `crates/gram-ollama` | API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles |
 | `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `estimate`, `rank`, `ollama`, `snapshot` |
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements, icônes (`icons/`, générées) |
 | `app/ui` | Frontend Angular + Angular Material : `core/` (service Tauri typé, types générés), `state/` (stores à base de signals), `features/` (bandeau matériel et dialogue « Corriger… », filtres, classement, fiche détail, paramètres, barre d'état), `shared/` (mise en forme française, libellés, badge de mode), `src/testing/` (fixtures typées et faux backend pour les tests), `public/logo.svg` (logo, source des icônes) |
-| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques pour les modèles pas encore détaillés, et facteur de qualité selon les bits par poids), `quality_overrides.json` (bonus de qualité manuels par famille, vide au départ), `seed_catalog.json` (catalogue de démarrage, généré) |
-| `scripts` | `check.ps1` (CI locale), `test-installer.ps1` et `sandbox/` (installeur testé sur une Windows vierge) |
+| `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `apple_chips.json` (type, débit et largeur du bus de la mémoire unifiée des puces Apple Silicon), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques pour les modèles pas encore détaillés, et facteur de qualité selon les bits par poids), `quality_overrides.json` (bonus de qualité manuels par famille, vide au départ), `seed_catalog.json` (catalogue de démarrage, généré) |
+| `scripts` | `check.ps1` (CI locale sous Windows), `check.sh` (CI locale sous macOS et Linux), `test-installer.ps1` et `sandbox/` (installeur testé sur une Windows vierge) |
 | `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`), modèles réels du catalogue (`models/`), échantillon figé de 35 modèles pour le classement (`catalog/`) et réponses de l'API d'Ollama (`ollama/`) |
 
 Les types Rust exposés au frontend sont convertis en TypeScript par `ts-rs` dans `app/ui/src/app/core/generated/` à chaque `cargo test`. Ne pas modifier ces fichiers à la main.
@@ -62,9 +74,15 @@ Les types Rust exposés au frontend sont convertis en TypeScript par `ts-rs` dan
 
 ## Détection du matériel
 
-`gram-hw` sépare la collecte (DXGI + DXCore, NVML optionnelle, WMI, sysinfo : propre à Windows) de la construction du profil (`build_profile`, pure et testée). Les corrections manuelles et la simulation (`Overrides`) sont des entrées de `build_profile` : on repart toujours des données brutes.
+`gram-hw` sépare la collecte (propre à chaque système) de la construction du profil (`build_profile`, pure et testée). Les corrections manuelles et la simulation (`Overrides`) sont des entrées de `build_profile` : on repart toujours des données brutes.
 
-Pour ajouter un cas de test matériel (portable, GPU AMD, machine sans GPU…) : lancer `gram-cli hw --raw` sur la machine concernée, enregistrer la sortie dans `tests/fixtures/hardware/` et ajouter un test dans `crates/gram-hw/src/profile/tests.rs`.
+- **Windows** : DXGI + DXCore (GPU de tous constructeurs, iGPU), NVML optionnelle (NVIDIA), WMI (barrettes, CPU), sysinfo.
+- **macOS** : Metal (`MTLCopyAllDevices`, qui ne fait pas basculer un Mac Intel sur son GPU dédié), `system_profiler` (type de mémoire, barrettes d'un Mac Intel, cœurs du GPU ; lancé sur un thread à part, abandonné au bout de 10 s), sysinfo (CPU, RAM, disques sans les volumes système d'APFS). Sur **Apple Silicon**, le GPU est intégré mais à **mémoire unifiée** (`GpuInfo::unified_memory`) : il reçoit les couches du modèle (Metal) jusqu'à la limite `recommendedMaxWorkingSetSize` de Metal, la « VRAM » que comptent llama.cpp et Ollama (11,8 Gio sur un M1 Pro de 16 Go ; `sudo sysctl iogpu.wired_limit_mb=…` la relève). macOS ne donne ni la vitesse ni la largeur du bus de cette mémoire : elles viennent de `data/apple_chips.json` d'après le nom de la puce (« Apple M1 Pro » : LPDDR5-6400 sur 256 bits, 4 canaux de 64 bits, 204,8 Go/s), et la version d'une puce se choisit d'après les cœurs de son GPU (M3 Max 30 ou 40 cœurs : 307 ou 410 Go/s). Une puce plus récente que la table prend la dernière puce connue de la même gamme, avec un avertissement. Sur un **Mac Intel**, l'iGPU Intel compte comme du CPU et le GPU AMD dédié comme sous Windows (bande passante par défaut s'il est absent de la table).
+- **Ailleurs** (Linux) : CPU, RAM et disques seulement.
+
+Les runtimes sont cherchés dans le `PATH` et aux emplacements des installateurs : dossiers des programmes sous Windows ; `/Applications` et `~/Applications` (`Ollama.app`, `LM Studio.app`), `~/.lmstudio/bin` et les dossiers de Homebrew et MacPorts sous macOS (une application lancée depuis le Finder n'hérite pas du `PATH` du terminal).
+
+Pour ajouter un cas de test matériel (portable, GPU AMD, machine sans GPU, autre Mac…) : lancer `gram-cli hw --raw` sur la machine concernée, enregistrer la sortie dans `tests/fixtures/hardware/` et ajouter un test dans `crates/gram-hw/src/profile/tests.rs`. Deux dumps réels y sont : un PC Windows (Ryzen 7 9800X3D, RTX 5080) et un MacBook Pro M1 Pro 16 Go.
 
 ## Données Hugging Face
 
@@ -86,7 +104,7 @@ Une première synchronisation coûte environ 230 appels API et 150 appels resolv
 
 `gram-core::estimate` calcule, pour un modèle, une quantification et une machine, la mémoire nécessaire, le mode d'exécution, le contexte maximal et la vitesse de génération (§8 du plan). C'est du calcul pur, sans I/O.
 
-1. **Mémoire utilisable** (`MemoryBudget::from_profile`) : `min(VRAM × 90 %, VRAM libre + 256 Mio)` sur le GPU retenu, et `min(RAM disponible, RAM × 75 %)`. Le réglage « je ferme tout » passe à `RAM − 4 Go`. Un iGPU compte comme du CPU.
+1. **Mémoire utilisable** (`MemoryBudget::from_profile`) : `min(VRAM × 90 %, VRAM libre + 256 Mio)` sur le GPU retenu, et `min(RAM disponible, RAM × 75 %)`. Le réglage « je ferme tout » passe à `RAM − 4 Go`. Un iGPU compte comme du CPU, sauf en **mémoire unifiée** (Mac Apple Silicon) : la « VRAM » est alors `limite de Metal × 90 %`, au plus la RAM utilisable, et elle est prise sur la RAM (`MemoryBudget::unified`) : en hybride, la part GPU et la part CPU doivent tenir ensemble dans la RAM utilisable, au lieu de s'additionner. Les deux bandes passantes sont celles de la mémoire unifiée ; seule l'efficacité diffère (Metal ou CPU).
 2. **Besoin** : poids (taille réelle des fichiers) + cache KV (`2 × couches d'attention × têtes KV × head_dim × octets`, f16 / q8_0 / q4_0) + 0,5 Go de surcoût (+ le projecteur vision si l'usage vision est demandé).
 3. **Mode** : GPU si tout tient en VRAM ; sinon hybride (KV et surcoût en VRAM, puis des couches entières : le `-ngl` de llama.cpp) ; sinon CPU. Si rien ne tient, le contexte est divisé par deux jusqu'à 2 048 tokens, puis le modèle est déclaré trop gros.
 4. **Vitesse** : la génération est limitée par la bande passante, plus un temps fixe par token. `temps = octets GPU / (BW GPU × 0,81) + octets RAM / (BW RAM × 0,62) + 0,8 ms` et `tok/s = 1 / temps`. Le GPU et le CPU n'exploitent pas la même part de leur bande passante, d'où deux efficacités. Le temps fixe (lancement des calculs, synchronisations) compte surtout quand un token lit peu d'octets : un modèle de 1,7B en Q4_K_M lit ses poids en 1,2 ms sur une RTX 5080, et le temps fixe ajoute 0,8 ms. Les valeurs 0,81, 0,62 et 0,8 ms viennent de mesures réelles de deux modèles denses, sur GPU et sur CPU (voir « Calibration avec Ollama ») ; une mesure avec Ollama les recalibre pour la machine. Un MoE ne lit que ses paramètres actifs, avec trois termes propres, ajustés sur un MoE mesuré : `paramètres actifs × (1,5 + 0,7 × bpw) / 8` octets par token (hors experts, l'attention, la tête de sortie et l'expert partagé restent quantifiés plus finement : en Q2_K, un MoE lit ~1,25 fois la part de ses paramètres actifs dans le fichier, en Q8_0 ~0,9 fois), lus à 75 % de l'efficacité d'un modèle dense, et 1,3 ms de temps fixe en plus par token (routeur, noyaux des experts).
@@ -104,6 +122,9 @@ Profils types du §15 (`tests/fixtures/profiles/`), testés dans `crates/gram-co
 | P2 : RTX 3060 12 Go + 32 Go DDR4-3600 | GPU, ~37 tok/s, parfait | trop gros |
 | P3 : RTX 4090 24 Go + 64 Go DDR5-6000 | GPU, ~95 tok/s, parfait | hybride 37/80 couches, ~2,1 tok/s |
 | P4 : RX 7800 XT 16 Go + 32 Go DDR5-6000 | GPU, ~62 tok/s, parfait | trop gros |
+| P5 : MacBook Pro M1 Pro, 16 Go unifiés (204,8 Go/s) | GPU (Metal), ~32 tok/s, parfait | trop gros |
+
+Sur Mac, les efficacités par défaut (mesurées sur une RTX 5080 et de la DDR5) donnent des vitesses un peu optimistes : ~+15 % sur un M1 Pro d'après les mesures publiées de llama.cpp, davantage sur les puces Max et Ultra, dont le GPU exploite une plus petite part de leur bande passante. Une mesure avec Ollama (« Calibration avec Ollama ») recalibre l'efficacité GPU pour la machine.
 
 ## Classement
 
@@ -123,7 +144,7 @@ Pourquoi ce calcul plutôt qu'une somme simple : avec des bonus ajoutés puis un
 
 Chaque ligne indique aussi les quantifications du modèle déjà installées dans Ollama (`installed`, voir « Calibration avec Ollama »).
 
-La fiche détail (`model_detail`) évalue de la même façon toutes les quantifications d'un modèle et génère les commandes du runtime choisi (§10.3) : `ollama run hf.co/{dépôt}:{QUANT}` puis `/set parameter num_ctx`, `llama-server -hf … -c … -ngl …` (999 si tout tient en VRAM), ou la page Hugging Face pour LM Studio. Les règles propres aux runtimes (contexte par défaut d'Ollama, GPU intégré, cache KV quantifié, dépôt protégé, fichier découpé) sont toutes dans `crates/gram-core/src/launch.rs`.
+La fiche détail (`model_detail`) évalue de la même façon toutes les quantifications d'un modèle et génère les commandes du runtime choisi (§10.3) : `ollama run hf.co/{dépôt}:{QUANT}` puis `/set parameter num_ctx`, `llama-server -hf … -c … -ngl …` (999 si tout tient en VRAM), ou la page Hugging Face pour LM Studio. Les variables d'environnement d'Ollama dépendent du système du profil (`HardwareProfile::os`) : `setx` sous Windows, `launchctl setenv` sous macOS (ce que lit l'application Ollama, jusqu'au redémarrage), `export` sous Linux. Sur un Mac, des notes signalent la limite de Metal ; sur un Mac Intel, qu'Ollama n'y utilise pas le GPU et que LM Studio n'y fonctionne pas. Les règles propres aux runtimes (contexte par défaut d'Ollama, GPU intégré, cache KV quantifié, dépôt protégé, fichier découpé) sont toutes dans `crates/gram-core/src/launch.rs`.
 
 Le snapshot du classement (`crates/gram-core/tests/snapshots/`) porte sur un échantillon figé de 35 modèles réels et les 4 profils types. Il a été relu à la main. Après un changement volontaire du scoring, relire les différences avec `cargo insta review`, ou `INSTA_UPDATE=always cargo test -p gram-core` puis `git diff`.
 
@@ -143,7 +164,7 @@ Toute la logique est en Rust (`app/src-tauri`). Au démarrage, le matériel, les
 | `get_model_detail` | `{ request: DetailRequest }` | `ModelDetail`. À la première ouverture, les quantifications de tous les dépôts du modèle sont chargées (cache, sinon réseau) |
 | `get_settings` / `save_settings` | – / `{ settings: Settings }` | `Settings`, enregistrés dans `%LOCALAPPDATA%\fr.gram.desktop\settings.json` et ramenés dans leurs bornes |
 | `get_default_settings` | – | `Settings` du §12 (bouton « Valeurs par défaut », rappels « défaut : … ») |
-| `set_hf_token` / `clear_hf_token` / `has_hf_token` | `{ token }` / – / – | `null` / `null` / `boolean`. Le token est rangé dans le Gestionnaire d'identifiants Windows et n'est jamais renvoyé |
+| `set_hf_token` / `clear_hf_token` / `has_hf_token` | `{ token }` / – / – | `null` / `null` / `boolean`. Le token est rangé dans le trousseau du système (Gestionnaire d'identifiants Windows, Trousseau d'accès macOS) et n'est jamais renvoyé |
 | `get_cache_info` / `clear_cache` | – | `CacheInfo { path, files, bytes }`. Vider le cache est refusé pendant une synchronisation ; le catalogue en mémoire reste utilisé |
 | `ollama_measure` | `{ request: MeasureRequest }` | `Measurement`. Mesure réelle d'une quantification déjà installée dans Ollama (`repoId`, `label`, `useCase`, `ctx` comme la fiche), enregistrée dans `measurements.json`. Une seule à la fois ; refusée si la quantification ne tient pas d'après l'estimation |
 | `get_calibration` / `clear_measurements` | – | `Calibration` : mesures enregistrées (la plus récente d'abord) et réglages de vitesse proposés |
@@ -237,6 +258,8 @@ L'écart ne vient pas d'un seul facteur : il est de +95 % sur GPU et de +65 % su
 
 ## Installeur
 
+### Windows
+
 `npm run tauri build` (depuis `app/ui`) compile l'application en release (LTO, binaire de 15 Mo) puis produit deux installeurs en français :
 
 | Fichier | Taille | Installation |
@@ -255,6 +278,23 @@ Ce qui rend l'installeur autonome sur une machine Windows propre :
 
 Données de l'application : `%LOCALAPPDATA%\fr.gram.desktop\` (`cache\`, `settings.json`, `corrections.json`, `measurements.json`, et `EBWebView\` pour WebView2). Le token Hugging Face reste dans le Gestionnaire d'identifiants Windows. Le plan prévoyait `%LOCALAPPDATA%\GRAM\`, mais c'est le dossier d'installation par défaut de l'installeur NSIS. Le dossier qui porte l'identifiant de l'application est aussi celui que la désinstallation NSIS supprime quand on coche « Supprimer les données de l'application ». `gram-cli` utilise le même dossier.
 
-Icônes : `npm run tauri icon public/logo.svg` (depuis `app/ui`) régénère `app/src-tauri/icons/` depuis le logo. Supprimer ensuite les dossiers `android/` et `ios/` créés par la commande : seul Windows est visé. `public/favicon.ico` est une copie de `icons/icon.ico`.
+Icônes : `npm run tauri icon public/logo.svg` (depuis `app/ui`) régénère `app/src-tauri/icons/` depuis le logo (`icon.ico` pour Windows, `icon.icns` pour macOS). Supprimer ensuite les dossiers `android/` et `ios/` créés par la commande : seuls Windows et macOS sont visés. `public/favicon.ico` est une copie de `icons/icon.ico`.
 
 **Test sur une Windows vierge** : `scripts/test-installer.ps1` lance Windows Sandbox (Windows Pro ou Entreprise), une Windows jetable sans outils de développement ni redistribuable Visual C++. Dans la sandbox, `scripts/sandbox/install-test.ps1` installe GRAM en silencieux (`/S`), vérifie le raccourci et WebView2, lance l'application, contrôle qu'elle tourne encore après 25 s et prend une capture d'écran. Résultat : `target/sandbox-results/resultat.txt` et `capture.png`. Windows Sandbox s'active une fois, dans un PowerShell administrateur, puis on redémarre : `Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM`.
+
+### macOS
+
+Sous macOS, `npm run tauri build` (depuis `app/ui`) produit :
+
+| Fichier | Contenu |
+|---|---|
+| `target/release/bundle/macos/GRAM.app` | L'application, à glisser dans `/Applications` |
+| `target/release/bundle/dmg/GRAM_0.1.0_aarch64.dmg` | Image disque à distribuer (`x64` pour un Mac Intel) |
+
+Pour un binaire universel (Apple Silicon et Intel) : `rustup target add x86_64-apple-darwin aarch64-apple-darwin`, puis `npm run tauri build -- --target universal-apple-darwin`. Avec `CI=true`, le script de création du `.dmg` ne pilote pas le Finder (pas de mise en page de la fenêtre, mais pas de demande d'autorisation non plus).
+
+- **Système minimal** : macOS 10.15 (`bundle.macOS.minimumSystemVersion`), pour les propriétés de Metal lues par la détection (`hasUnifiedMemory`, macOS 10.15+).
+- **Aucune dépendance à installer** : WebKit et Metal font partie de macOS ; tables et catalogue de démarrage sont compilés dans le binaire.
+- **Signature** : l'application n'est pas signée par un compte Apple Developer. Au premier lancement, Gatekeeper la bloque : clic droit → Ouvrir (ou Réglages Système → Confidentialité et sécurité → Ouvrir quand même). Pour la distribuer, configurer `bundle.macOS.signingIdentity` et la notarisation (variables `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` de la CLI Tauri).
+
+Données de l'application : `~/Library/Application Support/fr.gram.desktop/` (`cache/`, `settings.json`, `corrections.json`, `measurements.json`), partagé avec `gram-cli`. Le token Hugging Face est rangé dans le Trousseau d'accès (entrée « GRAM »).

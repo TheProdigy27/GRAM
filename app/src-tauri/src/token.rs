@@ -1,4 +1,5 @@
-//! Token Hugging Face, stocké dans le Gestionnaire d'identifiants Windows (`keyring`).
+//! Token Hugging Face, stocké dans le trousseau du système (`keyring`) : Gestionnaire
+//! d'identifiants sous Windows, Trousseau d'accès (Keychain) sous macOS.
 //!
 //! Il ne quitte jamais le côté Rust : les commandes ne renvoient que « configuré ou non », et il
 //! n'est écrit ni dans un fichier, ni dans un journal, ni dans un message d'erreur.
@@ -10,7 +11,7 @@ pub trait TokenStore: Send + Sync {
     fn clear(&self) -> Result<(), String>;
 }
 
-/// Gestionnaire d'identifiants Windows : entrée « GRAM » / « huggingface-token ».
+/// Trousseau du système : entrée « GRAM » / « huggingface-token ».
 pub struct KeyringStore;
 
 const SERVICE: &str = "GRAM";

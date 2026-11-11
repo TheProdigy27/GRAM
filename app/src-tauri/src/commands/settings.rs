@@ -16,8 +16,8 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     Ok(state.settings())
 }
 
-/// Enregistre les paramètres dans `%LOCALAPPDATA%\fr.gram.desktop\settings.json` et les renvoie, ramenés
-/// dans leurs bornes.
+/// Enregistre les paramètres dans `settings.json` (dossier de l'application) et les renvoie,
+/// ramenés dans leurs bornes.
 #[tauri::command]
 pub async fn save_settings(state: State<'_, AppState>, settings: Settings) -> CmdResult<Settings> {
     state.save_settings(settings)

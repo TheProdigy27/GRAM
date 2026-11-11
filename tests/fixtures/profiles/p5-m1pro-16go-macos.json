@@ -1,0 +1,55 @@
+{
+  "os": "macos",
+  "cpu": {
+    "name": "Apple M1 Pro",
+    "arch": "arm",
+    "coresPhysical": 10,
+    "coresLogical": 10,
+    "maxClockMhz": 3228,
+    "avx2": false,
+    "avx512": false,
+    "fma": false,
+    "f16c": false
+  },
+  "ram": {
+    "total": 17179869184,
+    "available": 12884901888,
+    "installed": 17179869184,
+    "kind": "lpddr5",
+    "speedMts": 6400,
+    "modules": 0,
+    "slots": null,
+    "channels": 4,
+    "channelsSource": "table",
+    "bandwidthGbs": 204.8
+  },
+  "gpu": {
+    "index": 0,
+    "name": "Apple M1 Pro",
+    "vendor": "apple",
+    "vramTotal": 12713115648,
+    "vramFree": null,
+    "sharedMem": 0,
+    "integrated": true,
+    "unifiedMemory": true,
+    "bandwidthGbs": 204.8,
+    "bandwidthSource": "table",
+    "cudaCc": null
+  },
+  "otherGpus": [],
+  "backends": {
+    "cuda": false,
+    "cudaDriverVersion": null,
+    "vulkan": false,
+    "metal": true
+  },
+  "disks": [
+    {
+      "mount": "/",
+      "total": 494384795648,
+      "available": 278475050496
+    }
+  ],
+  "overrides": {},
+  "warnings": []
+}

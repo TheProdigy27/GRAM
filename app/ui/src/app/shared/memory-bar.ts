@@ -23,7 +23,8 @@ export interface MemoryBarModel {
   markers: BarMarker[];
   /** Besoin total au contexte retenu. */
   total: number;
-  /** Mémoire utilisable dans le mode (VRAM, VRAM + RAM, ou RAM). */
+  /** Mémoire utilisable dans le mode (VRAM, VRAM + RAM, ou RAM ; en mémoire unifiée, la RAM
+   * contient la part du GPU). */
   capacity: number;
   /** Le besoin dépasse la mémoire utilisable. */
   overflow: boolean;
@@ -40,6 +41,9 @@ const SEGMENT_LABELS: Record<SegmentKey, string> = {
  * Barre mémoire de la fiche détail : besoin poste par poste face à la mémoire utilisable du
  * mode. L'échelle est le plus grand des deux, pour qu'un dépassement reste visible. En hybride
  * (et pour un modèle trop gros, s'il y a un GPU), un repère marque la fin de la VRAM.
+ *
+ * En mémoire unifiée (Mac Apple Silicon), la mémoire du GPU est prise sur la RAM : la mémoire
+ * du mode hybride est la seule RAM, comme `MemoryBudget::combined` côté Rust.
  */
 export function memoryBar(e: Estimate, budget: MemoryBudget): MemoryBarModel {
   const b = e.breakdown;
@@ -51,26 +55,30 @@ export function memoryBar(e: Estimate, budget: MemoryBudget): MemoryBarModel {
   ];
   const total = parts.reduce((sum, [, v]) => sum + v, 0);
   const gpu = budget.vram > 0;
+  const combined = budget.unified ? Math.max(budget.ram, budget.vram) : budget.vram + budget.ram;
+  const [vramLabel, combinedLabel] = budget.unified
+    ? ['Mémoire du GPU', 'RAM utilisable (GPU compris)']
+    : ['VRAM', 'VRAM + RAM'];
 
   let capacity: number;
   const marks: [string, number][] = [];
   switch (e.mode.kind) {
     case 'gpu':
       capacity = budget.vram;
-      marks.push(['VRAM utilisable', budget.vram]);
+      marks.push([budget.unified ? 'Mémoire du GPU' : 'VRAM utilisable', budget.vram]);
       break;
     case 'hybrid':
-      capacity = budget.vram + budget.ram;
-      marks.push(['VRAM', budget.vram], ['VRAM + RAM', capacity]);
+      capacity = combined;
+      marks.push([vramLabel, budget.vram], [combinedLabel, capacity]);
       break;
     case 'cpu':
       capacity = budget.ram;
       marks.push(['RAM utilisable', budget.ram]);
       break;
     case 'tooBig':
-      capacity = gpu ? budget.vram + budget.ram : budget.ram;
-      if (gpu) marks.push(['VRAM', budget.vram]);
-      marks.push([gpu ? 'VRAM + RAM' : 'RAM utilisable', capacity]);
+      capacity = gpu ? combined : budget.ram;
+      if (gpu) marks.push([vramLabel, budget.vram]);
+      marks.push([gpu ? combinedLabel : 'RAM utilisable', capacity]);
       break;
   }
 

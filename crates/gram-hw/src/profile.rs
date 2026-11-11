@@ -1,11 +1,15 @@
 //! Données brutes + corrections manuelles → [`HardwareProfile`]. Sans I/O.
 
+use crate::apple::{self, AppleChips, ChipMatch};
 use crate::gpu;
 use crate::ram;
-use crate::raw::{RawAdapter, RawCpu, RawHardware, RawMemory, RawNvmlDevice};
+use crate::raw::{RawAdapter, RawCpu, RawHardware, RawMetalDevice, RawNvmlDevice};
 use crate::specs::GpuSpecs;
 pub use gram_core::DEFAULT_GPU_BANDWIDTH_GBS;
-use gram_core::{Backends, CpuInfo, GpuInfo, HardwareProfile, Overrides, RamInfo, Source, Vendor};
+use gram_core::{
+    Backends, CpuArch, CpuInfo, GpuInfo, HardwareProfile, Os, Overrides, RamInfo, RamKind, Source,
+    Vendor,
+};
 
 /// Construit le profil avec la table GPU embarquée.
 pub fn build_profile(raw: &RawHardware, overrides: &Overrides) -> HardwareProfile {
@@ -21,9 +25,10 @@ pub fn build_profile_with(
 ) -> HardwareProfile {
     let mut warnings = raw.notes.clone();
     let cpu = build_cpu(&raw.cpu, &mut warnings);
-    let ram = build_ram(&raw.memory, overrides, &mut warnings);
+    let ram = build_ram(raw, apple_chip(raw), overrides, &mut warnings);
     let (gpu, other_gpus) = build_gpus(raw, &ram, overrides, specs, &mut warnings);
     HardwareProfile {
+        os: raw.os,
         cpu,
         ram,
         gpu,
@@ -35,6 +40,7 @@ pub fn build_profile_with(
                 .as_ref()
                 .and_then(|n| n.cuda_driver_version.clone()),
             vulkan: raw.backends.vulkan,
+            metal: raw.backends.metal,
         },
         disks: raw.disks.clone(),
         overrides: overrides.clone(),
@@ -50,8 +56,16 @@ fn build_cpu(c: &RawCpu, warnings: &mut Vec<String>) -> CpuInfo {
                 .into(),
         );
     }
+    let arch = if c.x86 {
+        CpuArch::X86
+    } else if c.arm {
+        CpuArch::Arm
+    } else {
+        CpuArch::Other
+    };
     CpuInfo {
         name: c.name.trim().to_string(),
+        arch,
         cores_physical: c.cores_physical,
         cores_logical: c.cores_logical,
         max_clock_mhz: c.max_clock_mhz,
@@ -62,14 +76,71 @@ fn build_cpu(c: &RawCpu, warnings: &mut Vec<String>) -> CpuInfo {
     }
 }
 
-fn build_ram(m: &RawMemory, o: &Overrides, warnings: &mut Vec<String>) -> RamInfo {
-    let kind = ram::kind_of(&m.modules);
-    let speed_mts = ram::speed_of(kind, &m.modules);
-    let (mut channels, mut channels_source) = ram::estimate_channels(kind, &m.modules);
+/// Puce Apple Silicon de la machine, d'après le nom du processeur et les cœurs de son GPU.
+fn apple_chip(raw: &RawHardware) -> Option<ChipMatch<'static>> {
+    if !apple::is_apple_chip(&raw.cpu.name) {
+        return None;
+    }
+    let cores = raw
+        .metal
+        .iter()
+        .find(|d| d.unified_memory)
+        .and_then(|d| d.gpu_cores);
+    AppleChips::embedded().lookup(&raw.cpu.name, cores)
+}
+
+/// RAM : barrettes (WMI, `system_profiler` sur un Mac Intel), ou table des puces Apple pour la
+/// mémoire unifiée d'un Mac Apple Silicon (ni barrette, ni vitesse lisibles).
+fn build_ram(
+    raw: &RawHardware,
+    chip: Option<ChipMatch>,
+    o: &Overrides,
+    warnings: &mut Vec<String>,
+) -> RamInfo {
+    let m = &raw.memory;
+    let apple_silicon = apple::is_apple_chip(&raw.cpu.name);
+    let (kind, speed_mts, mut channels, mut channels_source) = match chip {
+        Some(c) => (
+            c.chip.memory,
+            Some(c.chip.speed_mts),
+            c.chip.channels(),
+            if c.exact {
+                Source::Table
+            } else {
+                Source::Estimated
+            },
+        ),
+        None => {
+            let mut kind = ram::kind_of(&m.modules);
+            if kind == RamKind::Unknown
+                && let Some(name) = &m.type_name
+            {
+                kind = ram::kind_from_name(name);
+            }
+            let (channels, source) = ram::estimate_channels(kind, &m.modules);
+            (kind, ram::speed_of(kind, &m.modules), channels, source)
+        }
+    };
 
     if let Some(c) = o.ram_channels.filter(|&c| c > 0) {
         channels = c;
         channels_source = Source::Manual;
+    } else if let Some(c) = chip {
+        if !c.exact {
+            warnings.push(format!(
+                "Puce « {} » absente de la table : mémoire supposée identique à celle de \
+                 l'{} ({} Go/s), à corriger si besoin.",
+                raw.cpu.name.trim(),
+                c.chip.name,
+                gram_core::fmt::num(f64::from(c.chip.bandwidth_gbs()), 0)
+            ));
+        }
+    } else if apple_silicon {
+        warnings.push(format!(
+            "Puce « {} » absente de la table : vitesse et largeur du bus de la mémoire unifiée \
+             inconnues (bande passante à corriger à la main).",
+            raw.cpu.name.trim()
+        ));
     } else if m.modules.is_empty() {
         warnings.push(
             "Barrettes mémoire non détectées : type, vitesse et nombre de canaux inconnus \
@@ -87,7 +158,12 @@ fn build_ram(m: &RawMemory, o: &Overrides, warnings: &mut Vec<String>) -> RamInf
         warnings.push("Vitesse de la RAM inconnue : bande passante non calculée.".into());
     }
 
-    let mut installed = (!m.modules.is_empty()).then(|| m.modules.iter().map(|x| x.capacity).sum());
+    // Mac Apple Silicon : la mémoire vue par macOS est toute la mémoire installée.
+    let mut installed = if apple_silicon {
+        Some(m.total)
+    } else {
+        (!m.modules.is_empty()).then(|| m.modules.iter().map(|x| x.capacity).sum())
+    };
     let (mut total, mut available) = (m.total, m.available);
     if let Some(sim) = o.simulated_ram_total.filter(|&t| t > 0) {
         // Simulation : même consommation actuelle, sur une RAM plus grande (ou plus petite).
@@ -138,6 +214,7 @@ fn candidate(a: &RawAdapter, dev: Option<&RawNvmlDevice>) -> Candidate {
             vram_free,
             shared_mem: a.shared_system_memory,
             integrated,
+            unified_memory: false,
             bandwidth_gbs: None,
             bandwidth_source: Source::Default,
             cuda_cc: dev.and_then(|d| d.cuda_cc),
@@ -152,8 +229,55 @@ fn candidate(a: &RawAdapter, dev: Option<&RawNvmlDevice>) -> Candidate {
     }
 }
 
+/// Un GPU vu par Metal (macOS). Sur Apple Silicon, le GPU est intégré mais à mémoire unifiée :
+/// il reçoit les couches, jusqu'à la limite de Metal. L'iGPU Intel d'un Mac Intel (lui aussi
+/// `hasUnifiedMemory`) reste compté comme du CPU, comme sous Windows.
+fn metal_candidate(d: &RawMetalDevice) -> Candidate {
+    let vendor = gpu::vendor_from_name(&d.name);
+    let unified_memory = d.unified_memory && vendor == Vendor::Apple;
+    let integrated = d.unified_memory || d.low_power;
+    let vram_total = if unified_memory {
+        d.recommended_max_working_set
+    } else if integrated {
+        d.vram.unwrap_or(0)
+    } else {
+        d.vram
+            .filter(|&v| v > 0)
+            .unwrap_or(d.recommended_max_working_set)
+    };
+    Candidate {
+        info: GpuInfo {
+            index: d.index,
+            name: d.name.trim().to_string(),
+            vendor,
+            vram_total,
+            // Metal ne dit pas ce que les autres applications occupent.
+            vram_free: None,
+            shared_mem: 0,
+            integrated,
+            unified_memory,
+            bandwidth_gbs: None,
+            bandwidth_source: Source::Default,
+            cuda_cc: None,
+        },
+        nvml_bandwidth: None,
+    }
+}
+
 /// §6.3 : un iGPU utilise la bande passante de la RAM ; sinon table, puis NVML, puis défaut.
+/// En mémoire unifiée aussi, mais la valeur vient alors de la table des puces Apple.
 fn resolve_bandwidth(c: &Candidate, ram: &RamInfo, specs: &GpuSpecs) -> (Option<f32>, Source) {
+    if c.info.unified_memory {
+        let source = if ram.channels_source == Source::Table {
+            Source::Table
+        } else {
+            Source::Estimated
+        };
+        return match ram.bandwidth_gbs {
+            Some(bw) => (Some(bw), source),
+            None => (None, Source::Default),
+        };
+    }
     if c.info.integrated {
         return match ram.bandwidth_gbs {
             Some(bw) => (Some(bw), Source::Estimated),
@@ -188,6 +312,8 @@ fn build_gpus(
         .zip(gpu::match_nvml(&adapters, devices))
         .map(|(a, j)| candidate(a, j.map(|j| &devices[j])))
         .collect();
+    // macOS : GPU vus par Metal (pas de DXGI).
+    candidates.extend(raw.metal.iter().map(metal_candidate));
 
     // Sélection : GPU imposé par l'utilisateur, sinon le plus gros GPU discret.
     let forced = o.gpu_index.and_then(|wanted| {
@@ -202,7 +328,10 @@ fn build_gpus(
     let infos: Vec<GpuInfo> = candidates.iter().map(|c| c.info.clone()).collect();
     let selected = forced.or_else(|| gpu::select(&infos));
 
-    if let (Some(i), Some(integrated)) = (selected, o.gpu_integrated) {
+    // Sans effet sur un GPU à mémoire unifiée : il reçoit les couches de toute façon.
+    if let (Some(i), Some(integrated)) = (selected, o.gpu_integrated)
+        && !candidates[i].info.unified_memory
+    {
         candidates[i].info.integrated = integrated;
     }
     for c in &mut candidates {
@@ -217,6 +346,16 @@ fn build_gpus(
         } else {
             others.push(c.info);
         }
+    }
+
+    // RAM simulée sur un Mac Apple Silicon : la limite de Metal suit la RAM, dans la même
+    // proportion.
+    if let (Some(sim), Some(g)) = (o.simulated_ram_total.filter(|&t| t > 0), chosen.as_mut())
+        && g.unified_memory
+        && raw.memory.total > 0
+    {
+        g.vram_total =
+            (u128::from(g.vram_total) * u128::from(sim) / u128::from(raw.memory.total)) as u64;
     }
 
     let simulated = o.simulated_gpu.as_deref().and_then(|label| {
@@ -240,6 +379,7 @@ fn build_gpus(
             vram_free: None,
             shared_mem: 0,
             integrated: false,
+            unified_memory: false,
             bandwidth_gbs: Some(spec.bandwidth_gbs),
             bandwidth_source: Source::Table,
             cuda_cc: None,
@@ -259,12 +399,16 @@ fn gpu_warnings(chosen: Option<&GpuInfo>, raw: &RawHardware, warnings: &mut Vec<
         warnings.push("Aucun GPU détecté : les modèles tourneront sur le CPU.".into());
         return;
     };
-    if g.integrated {
-        warnings.push(
+    if g.integrated && !g.unified_memory {
+        warnings.push(if raw.os == Os::MacOs {
+            "Seul un GPU intégré est disponible : il partage la RAM. llama.cpp (Metal) peut \
+             l'exploiter ; Ollama l'ignore."
+                .into()
+        } else {
             "Seul un GPU intégré est disponible : il partage la RAM. llama.cpp ou LM Studio \
              (Vulkan) peuvent l'exploiter ; Ollama l'ignore souvent par défaut."
-                .into(),
-        );
+                .into()
+        });
     }
     if g.bandwidth_source == Source::Default && g.bandwidth_gbs.is_some() {
         warnings.push(format!(
@@ -273,7 +417,7 @@ fn gpu_warnings(chosen: Option<&GpuInfo>, raw: &RawHardware, warnings: &mut Vec<
             g.name
         ));
     }
-    if g.vendor == Vendor::Nvidia && raw.nvml.is_none() {
+    if g.vendor == Vendor::Nvidia && raw.nvml.is_none() && raw.os == Os::Windows {
         warnings.push(
             "NVML indisponible : VRAM libre estimée par Windows (DXGI), sans version CUDA.".into(),
         );

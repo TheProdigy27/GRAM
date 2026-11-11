@@ -4,11 +4,13 @@ import type { Vendor } from "./Vendor";
 
 export type GpuInfo = { 
 /**
- * Position de l'adaptateur dans l'énumération DXGI ; référence de `Overrides::gpu_index`.
+ * Position de l'adaptateur dans l'énumération DXGI (Metal sous macOS) ; référence de
+ * `Overrides::gpu_index`.
  */
 index: number, name: string, vendor: Vendor, 
 /**
- * VRAM dédiée, en octets.
+ * VRAM dédiée, en octets. En mémoire unifiée : la part de la RAM que le GPU peut utiliser
+ * (`recommendedMaxWorkingSetSize` de Metal : 11,8 Gio sur un Mac de 16 Go).
  */
 vramTotal: number, 
 /**
@@ -19,6 +21,12 @@ vramFree: number | null,
  * Mémoire système partagée, en octets.
  */
 sharedMem: number, integrated: boolean, 
+/**
+ * Mémoire unifiée (Apple Silicon) : GPU intégré qui calcule directement dans la RAM, à sa
+ * bande passante, jusqu'à `vram_total` octets. Contrairement aux autres GPU intégrés, il
+ * reçoit les couches du modèle (Metal) ; sa mémoire est prise sur la RAM.
+ */
+unifiedMemory: boolean, 
 /**
  * Bande passante mémoire en Go/s.
  */

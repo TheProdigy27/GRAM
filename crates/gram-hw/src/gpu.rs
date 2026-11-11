@@ -22,6 +22,24 @@ pub fn vendor_from_pci(id: u32) -> Vendor {
     }
 }
 
+/// Constructeur d'après le nom (Metal ne donne pas l'identifiant PCI) : « Apple M1 Pro »,
+/// « AMD Radeon Pro 5500M », « Intel(R) UHD Graphics 630 », « NVIDIA GeForce GT 750M ».
+pub fn vendor_from_name(name: &str) -> Vendor {
+    let lower = name.trim().to_lowercase();
+    let has = |w: &str| lower.split(|c: char| !c.is_alphanumeric()).any(|x| x == w);
+    if lower.starts_with("apple") {
+        Vendor::Apple
+    } else if has("nvidia") || has("geforce") || has("quadro") {
+        Vendor::Nvidia
+    } else if has("amd") || has("radeon") || has("ati") {
+        Vendor::Amd
+    } else if has("intel") {
+        Vendor::Intel
+    } else {
+        Vendor::Other
+    }
+}
+
 /// Adaptateur matériel réel : ni logiciel (WARP, Basic Render), ni virtuel selon DXCore.
 pub fn is_physical(a: &RawAdapter) -> bool {
     !a.software && a.vendor_id != VENDOR_MICROSOFT && a.hardware != Some(false)
@@ -70,6 +88,8 @@ pub fn looks_integrated(vendor: Vendor, name: &str, dedicated: u64) -> bool {
         }
         // Discrets : « Arc A770 », « Arc B580 », « Arc Pro A60 ». iGPU : « UHD », « Iris Xe », « Arc 140V ».
         Vendor::Intel => !is_intel_arc_discrete(&key),
+        // Les GPU d'Apple sont tous intégrés à la puce.
+        Vendor::Apple => true,
         Vendor::Nvidia | Vendor::Other => false,
     }
 }
@@ -115,17 +135,18 @@ pub fn match_nvml(adapters: &[&RawAdapter], devices: &[RawNvmlDevice]) -> Vec<Op
         .collect()
 }
 
-/// GPU retenu (décision §3) : le GPU discret qui a le plus de VRAM dédiée ; à défaut, l'iGPU
-/// qui en a le plus. À égalité, le premier énuméré.
+/// GPU retenu (décision §3) : parmi les GPU qui reçoivent des couches (discrets, ou à mémoire
+/// unifiée), celui qui a le plus de VRAM ; à défaut, l'iGPU qui en a le plus. À égalité, le
+/// premier énuméré.
 pub fn select(gpus: &[GpuInfo]) -> Option<usize> {
-    let best = |integrated: bool| {
+    let best = |usable: bool| {
         gpus.iter()
             .enumerate()
-            .filter(|(_, g)| g.integrated == integrated)
+            .filter(|(_, g)| (!g.integrated || g.unified_memory) == usable)
             .max_by(|(ia, a), (ib, b)| a.vram_total.cmp(&b.vram_total).then(ib.cmp(ia)))
             .map(|(i, _)| i)
     };
-    best(false).or_else(|| best(true))
+    best(true).or_else(|| best(false))
 }
 
 #[cfg(test)]
@@ -142,6 +163,7 @@ mod tests {
             vram_free: None,
             shared_mem: 0,
             integrated,
+            unified_memory: false,
             bandwidth_gbs: None,
             bandwidth_source: Source::Default,
             cuda_cc: None,
@@ -154,6 +176,26 @@ mod tests {
         assert_eq!(vendor_from_pci(0x1002), Vendor::Amd);
         assert_eq!(vendor_from_pci(0x8086), Vendor::Intel);
         assert_eq!(vendor_from_pci(0x1414), Vendor::Other);
+    }
+
+    #[test]
+    fn constructeurs_d_apres_le_nom() {
+        assert_eq!(vendor_from_name("Apple M1 Pro"), Vendor::Apple);
+        assert_eq!(vendor_from_name("AMD Radeon Pro 5500M"), Vendor::Amd);
+        assert_eq!(vendor_from_name("Radeon Pro Vega 20"), Vendor::Amd);
+        assert_eq!(vendor_from_name("Intel(R) UHD Graphics 630"), Vendor::Intel);
+        assert_eq!(vendor_from_name("NVIDIA GeForce GT 750M"), Vendor::Nvidia);
+        assert_eq!(vendor_from_name("Paravirtual GPU"), Vendor::Other);
+        // « ati » seulement comme mot entier.
+        assert_eq!(vendor_from_name("Corporation Graphics"), Vendor::Other);
+    }
+
+    #[test]
+    fn selection_mac_apple_silicon() {
+        // GPU à mémoire unifiée : intégré, mais il reçoit les couches.
+        let mut apple = gpu(0, 10, true);
+        apple.unified_memory = true;
+        assert_eq!(select(&[gpu(1, 12, true), apple]), Some(1));
     }
 
     #[test]

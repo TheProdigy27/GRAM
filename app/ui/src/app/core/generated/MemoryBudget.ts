@@ -5,18 +5,25 @@
  */
 export type MemoryBudget = { 
 /**
- * VRAM utilisable du GPU retenu, en octets ; 0 sans GPU discret (un iGPU partage la RAM).
+ * VRAM utilisable du GPU retenu, en octets ; 0 sans GPU utilisable (un iGPU ordinaire
+ * partage la RAM). En mémoire unifiée : la part de `ram` que le GPU peut occuper.
  */
 vram: number, 
 /**
- * RAM utilisable, en octets.
+ * RAM utilisable, en octets. En mémoire unifiée : tout ce que le modèle peut occuper, GPU
+ * compris.
  */
 ram: number, 
 /**
- * Bande passante du GPU retenu en Go/s ; absente sans GPU discret.
+ * Bande passante du GPU retenu en Go/s ; absente sans GPU utilisable.
  */
 gpuBandwidthGbs: number | null, 
 /**
  * Bande passante de la RAM en Go/s (valeur prudente si la vitesse est inconnue).
  */
-ramBandwidthGbs: number, };
+ramBandwidthGbs: number, 
+/**
+ * Mémoire unifiée (Apple Silicon) : `vram` et `ram` sont la même mémoire, elles ne
+ * s'additionnent pas.
+ */
+unified: boolean, };

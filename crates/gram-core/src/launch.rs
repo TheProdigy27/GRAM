@@ -5,8 +5,8 @@
 //! l'estimation ; il change la commande et les avertissements affichés.
 
 use crate::estimate::{Estimate, KvCacheType, MemoryBudget, RunMode};
-use crate::fmt::thousands;
-use crate::hardware::HardwareProfile;
+use crate::fmt::{gb, thousands};
+use crate::hardware::{CpuArch, HardwareProfile, Os};
 use crate::model::QuantVariant;
 use crate::runtime::{RuntimeStatus, RuntimesStatus};
 use serde::{Deserialize, Serialize};
@@ -86,6 +86,18 @@ pub fn ollama_pull_command(variant: &QuantVariant) -> String {
     format!("ollama pull {}", ollama_name(variant))
 }
 
+/// Commande qui définit une variable d'environnement lue par Ollama au démarrage :
+/// `setx` sous Windows (permanent), `launchctl setenv` sous macOS (ce que lit l'application
+/// Ollama, jusqu'au redémarrage du Mac), `export` sous Linux (pour `ollama serve` lancé depuis
+/// le même terminal).
+pub fn env_command(os: Os, key: &str, value: &str) -> String {
+    match os {
+        Os::Windows => format!("setx {key} {value}"),
+        Os::MacOs => format!("launchctl setenv {key} {value}"),
+        Os::Linux => format!("export {key}={value}"),
+    }
+}
+
 /// Couches à placer sur le GPU (`-ngl` de llama.cpp) : toutes (999) en mode GPU.
 pub fn gpu_layers_arg(mode: RunMode) -> u32 {
     match mode {
@@ -95,13 +107,15 @@ pub fn gpu_layers_arg(mode: RunMode) -> u32 {
     }
 }
 
-/// Commandes et réglages pour lancer `variant` au contexte retenu par l'estimation (§10.3).
+/// Commandes et réglages pour lancer `variant` au contexte retenu par l'estimation (§10.3), sur
+/// une machine sous `os` (les variables d'environnement d'Ollama ne se règlent pas pareil).
 pub fn launch_plan(
     runtime: Runtime,
     variant: &QuantVariant,
     estimate: &Estimate,
     gated: bool,
     kv: KvCacheType,
+    os: Os,
 ) -> LaunchPlan {
     let ctx = estimate.ctx_used;
     let tag = format!("{}:{}", variant.repo_id, variant.label);
@@ -127,22 +141,35 @@ pub fn launch_plan(
             });
             commands.push(CommandLine {
                 label: "Ou, pour tous les modèles (puis relancer Ollama)".into(),
-                command: format!("setx OLLAMA_CONTEXT_LENGTH {ctx}"),
+                command: env_command(os, "OLLAMA_CONTEXT_LENGTH", &ctx.to_string()),
             });
             if kv != KvCacheType::F16 {
                 // Deux commandes : `&&` n'existe pas dans Windows PowerShell 5.1.
                 commands.push(CommandLine {
                     label: format!("Cache KV {} : Flash Attention requise", kv.label()),
-                    command: "setx OLLAMA_FLASH_ATTENTION 1".into(),
+                    command: env_command(os, "OLLAMA_FLASH_ATTENTION", "1"),
                 });
                 commands.push(CommandLine {
                     label: format!("Cache KV {} (puis relancer Ollama)", kv.label()),
-                    command: format!("setx OLLAMA_KV_CACHE_TYPE {}", kv.label()),
+                    command: env_command(os, "OLLAMA_KV_CACHE_TYPE", kv.label()),
                 });
+            }
+            match os {
+                Os::MacOs => notes.push(
+                    "macOS : `launchctl setenv` vaut jusqu'au redémarrage du Mac ; quitter \
+                     l'application Ollama (barre des menus) puis la relancer pour qu'elle le lise."
+                        .into(),
+                ),
+                Os::Linux => notes.push(
+                    "Linux : `export` vaut pour `ollama serve` lancé depuis ce terminal ; pour le \
+                     service systemd, ajouter la variable avec `sudo systemctl edit ollama`."
+                        .into(),
+                ),
+                Os::Windows => {}
             }
             if matches!(estimate.mode, RunMode::Hybrid { .. }) {
                 notes.push(
-                    "Ollama répartit seul les couches entre la VRAM et la RAM (`ollama ps` \
+                    "Ollama répartit seul les couches entre le GPU et le CPU (`ollama ps` \
                      affiche la répartition)."
                         .into(),
                 );
@@ -237,6 +264,13 @@ pub fn runtime_notes(
 ) -> Vec<String> {
     let mut notes = Vec::new();
     let igpu_only = !budget.gpu_offload() && hw.all_gpus().any(|g| g.integrated);
+    let intel_mac = hw.os == Os::MacOs && hw.cpu.arch != CpuArch::Arm;
+    // Backend des GPU intégrés pour llama.cpp et LM Studio.
+    let igpu_backend = if hw.os == Os::MacOs {
+        "Metal"
+    } else {
+        "Vulkan"
+    };
 
     if let Some(rt) = runtimes
         && !runtime.status(rt).installed
@@ -264,12 +298,25 @@ pub fn runtime_notes(
         });
     }
 
+    if budget.unified
+        && let Some(g) = hw.gpu.as_ref()
+    {
+        notes.push(format!(
+            "Mémoire unifiée : le GPU peut utiliser jusqu'à {} des {} de RAM (limite de macOS). \
+             `sudo sysctl iogpu.wired_limit_mb=<Mo>` la relève jusqu'au redémarrage, en laissant \
+             assez de RAM au système.",
+            gb(g.vram_total),
+            gb(hw.ram.total)
+        ));
+    }
+
     match runtime {
         Runtime::Ollama => {
+            // Sur un Mac, Ollama compte comme VRAM la limite de Metal (mémoire unifiée).
             let vram = hw
                 .gpu
                 .as_ref()
-                .filter(|g| !g.integrated)
+                .filter(|g| g.offload())
                 .map_or(0, |g| g.vram_total);
             let default = ollama_default_ctx(vram);
             notes.push(format!(
@@ -278,12 +325,21 @@ pub fn runtime_notes(
                  diffère de l'estimation.",
                 thousands(u64::from(default))
             ));
-            if igpu_only {
+            if intel_mac && budget.gpu_offload() {
                 notes.push(
-                    "Ollama ignore les GPU intégrés par défaut : LM Studio (Vulkan) peut \
-                     utiliser celui-ci."
+                    "Sur un Mac Intel, Ollama n'utilise pas le GPU : les modèles tournent sur le \
+                     CPU, plus lentement qu'estimé. llama.cpp (Metal) peut utiliser ce GPU."
                         .into(),
                 );
+            } else if igpu_only {
+                notes.push(if hw.os == Os::MacOs {
+                    "Ollama ignore les GPU intégrés : llama.cpp (Metal) peut utiliser celui-ci."
+                        .into()
+                } else {
+                    "Ollama ignore les GPU intégrés par défaut : LM Studio (Vulkan) peut \
+                     utiliser celui-ci."
+                        .into()
+                });
             }
             notes.push(
                 "Une architecture très récente peut être prise en charge par llama.cpp avant \
@@ -291,10 +347,17 @@ pub fn runtime_notes(
                     .into(),
             );
         }
+        Runtime::LmStudio if intel_mac => {
+            notes.push(
+                "LM Studio ne fonctionne que sur les Mac Apple Silicon : choisir Ollama ou \
+                 llama.cpp dans le filtre Runtime."
+                    .into(),
+            );
+        }
         Runtime::LlamaCpp | Runtime::LmStudio if igpu_only => {
             notes.push(format!(
-                "{} peut utiliser le GPU intégré avec Vulkan : l'estimation le compte comme du \
-                 CPU (même mémoire, même bande passante).",
+                "{} peut utiliser le GPU intégré avec {igpu_backend} : l'estimation le compte \
+                 comme du CPU (même mémoire, même bande passante).",
                 runtime.label()
             ));
         }
@@ -355,6 +418,7 @@ mod tests {
             &estimate(RunMode::Gpu),
             false,
             KvCacheType::F16,
+            Os::Windows,
         );
         assert_eq!(
             commands(&p),
@@ -376,6 +440,7 @@ mod tests {
             }),
             true,
             KvCacheType::Q8_0,
+            Os::Windows,
         );
         assert_eq!(
             commands(&p)[3..],
@@ -392,7 +457,15 @@ mod tests {
     #[test]
     fn llama_cpp_par_mode() {
         let cmd = |mode, kv| {
-            launch_plan(Runtime::LlamaCpp, &variant(1), &estimate(mode), false, kv).commands[0]
+            launch_plan(
+                Runtime::LlamaCpp,
+                &variant(1),
+                &estimate(mode),
+                false,
+                kv,
+                Os::Windows,
+            )
+            .commands[0]
                 .command
                 .clone()
         };
@@ -425,6 +498,7 @@ mod tests {
             &estimate(RunMode::Gpu),
             true,
             KvCacheType::F16,
+            Os::Windows,
         );
         assert!(gated.notes[0].contains("HF_TOKEN"));
     }
@@ -440,6 +514,7 @@ mod tests {
             }),
             false,
             KvCacheType::F16,
+            Os::Windows,
         );
         assert!(p.commands.is_empty());
         assert_eq!(
@@ -456,8 +531,49 @@ mod tests {
             &estimate(RunMode::TooBig),
             false,
             KvCacheType::F16,
+            Os::Windows,
         );
         assert!(too_big.notes[0].contains("Ne tient pas"));
+    }
+
+    #[test]
+    fn variables_d_ollama_selon_le_systeme() {
+        let plan = |os| {
+            launch_plan(
+                Runtime::Ollama,
+                &variant(1),
+                &estimate(RunMode::Gpu),
+                false,
+                KvCacheType::Q8_0,
+                os,
+            )
+        };
+        let mac = plan(Os::MacOs);
+        assert_eq!(
+            commands(&mac)[2..],
+            [
+                "launchctl setenv OLLAMA_CONTEXT_LENGTH 16384",
+                "launchctl setenv OLLAMA_FLASH_ATTENTION 1",
+                "launchctl setenv OLLAMA_KV_CACHE_TYPE q8_0",
+            ]
+        );
+        assert!(mac.notes[0].contains("launchctl"));
+        let linux = plan(Os::Linux);
+        assert_eq!(commands(&linux)[2], "export OLLAMA_CONTEXT_LENGTH=16384");
+        assert!(linux.notes[0].contains("systemctl"));
+        // Les commandes de llama.cpp ne dépendent pas du système.
+        let cmd = |os| {
+            launch_plan(
+                Runtime::LlamaCpp,
+                &variant(1),
+                &estimate(RunMode::Gpu),
+                false,
+                KvCacheType::F16,
+                os,
+            )
+            .commands
+        };
+        assert_eq!(cmd(Os::MacOs), cmd(Os::Windows));
     }
 
     #[test]

@@ -1,9 +1,10 @@
 //! Runtimes installés (§6.4 du plan) : Ollama, LM Studio, llama.cpp.
 //!
-//! Installé = exécutable trouvé dans le `PATH` ou à l'emplacement d'installation par défaut.
+//! Installé = exécutable trouvé dans le `PATH` ou à l'emplacement d'installation par défaut
+//! (dossier des programmes sous Windows, applications `.app` et Homebrew sous macOS).
 //! En cours d'exécution = processus présent, ou API locale d'Ollama qui répond.
 
-use gram_core::{RuntimeStatus, RuntimesStatus};
+use gram_core::{Os, RuntimeStatus, RuntimesStatus};
 use gram_ollama::ollama_addr;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -29,15 +30,24 @@ pub fn detect_runtimes() -> RuntimesStatus {
     detect_with(&env, &processes, ollama_version)
 }
 
-/// Variables d'environnement utiles, injectables dans les tests.
+/// Variables d'environnement et dossiers utiles, injectables dans les tests.
 #[derive(Debug, Default)]
 struct Env {
+    os: Os,
     path: Vec<PathBuf>,
     local_app_data: Option<PathBuf>,
     user_profile: Option<PathBuf>,
     program_files: Option<PathBuf>,
+    /// Dossier personnel (`HOME`, macOS et Linux).
+    home: Option<PathBuf>,
+    /// Dossiers des applications macOS : `/Applications`, puis `~/Applications`.
+    applications: Vec<PathBuf>,
     ollama_host: Option<String>,
 }
+
+/// Dossiers où Homebrew, MacPorts et les installateurs rangent les commandes. Une application
+/// lancée depuis le Finder n'hérite pas du `PATH` du terminal (`/usr/bin:/bin:/usr/sbin:/sbin`).
+const MACOS_BIN_DIRS: [&str; 3] = ["/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"];
 
 impl Env {
     fn from_process() -> Self {
@@ -46,15 +56,40 @@ impl Env {
                 .filter(|v| !v.is_empty())
                 .map(PathBuf::from)
         };
+        let os = Os::current();
+        let home = var("HOME");
+        let mut path: Vec<PathBuf> = std::env::var_os("PATH")
+            .map(|p| std::env::split_paths(&p).collect())
+            .unwrap_or_default();
+        let mut applications = Vec::new();
+        if os == Os::MacOs {
+            for dir in MACOS_BIN_DIRS.map(PathBuf::from) {
+                if !path.contains(&dir) {
+                    path.push(dir);
+                }
+            }
+            applications.push(PathBuf::from("/Applications"));
+            applications.extend(home.as_ref().map(|h| h.join("Applications")));
+        }
         Self {
-            path: std::env::var_os("PATH")
-                .map(|p| std::env::split_paths(&p).collect())
-                .unwrap_or_default(),
+            os,
+            path,
             local_app_data: var("LOCALAPPDATA"),
             user_profile: var("USERPROFILE"),
             program_files: var("ProgramFiles"),
+            home,
+            applications,
             ollama_host: std::env::var("OLLAMA_HOST").ok(),
         }
+    }
+
+    /// Exécutable d'une application macOS (`Ollama.app/Contents/Resources/ollama`) dans chacun
+    /// des dossiers d'applications.
+    fn in_apps(&self, app: &str, rel: &str) -> Vec<Option<PathBuf>> {
+        self.applications
+            .iter()
+            .map(|dir| Some(dir.join(app).join(rel)))
+            .collect()
     }
 }
 
@@ -64,12 +99,31 @@ type Processes = HashMap<String, Option<PathBuf>>;
 fn detect_with(env: &Env, procs: &Processes, ollama_version: Option<String>) -> RuntimesStatus {
     // Emplacements par défaut des installateurs (à compléter si d'autres apparaissent).
     let under = |base: &Option<PathBuf>, rel: &str| base.as_ref().map(|b| b.join(rel));
+    let (ollama_known, lm_studio_known) = match env.os {
+        Os::Windows => (
+            vec![under(&env.local_app_data, r"Programs\Ollama\ollama.exe")],
+            vec![
+                under(&env.user_profile, r".lmstudio\bin\lms.exe"),
+                under(&env.local_app_data, r"Programs\LM Studio\LM Studio.exe"),
+                under(&env.program_files, r"LM Studio\LM Studio.exe"),
+            ],
+        ),
+        // L'application Ollama embarque la commande (et crée `/usr/local/bin/ollama`).
+        Os::MacOs => (
+            env.in_apps("Ollama.app", "Contents/Resources/ollama"),
+            [under(&env.home, ".lmstudio/bin/lms")]
+                .into_iter()
+                .chain(env.in_apps("LM Studio.app", "Contents/MacOS/LM Studio"))
+                .collect(),
+        ),
+        Os::Linux => (vec![], vec![under(&env.home, ".lmstudio/bin/lms")]),
+    };
 
     let mut ollama = status(
         env,
         procs,
         &[exe("ollama")],
-        &[under(&env.local_app_data, r"Programs\Ollama\ollama.exe")],
+        &ollama_known,
         &[exe("ollama"), exe("ollama app")],
     );
     if ollama_version.is_some() {
@@ -82,11 +136,7 @@ fn detect_with(env: &Env, procs: &Processes, ollama_version: Option<String>) -> 
         env,
         procs,
         &[exe("lms")],
-        &[
-            under(&env.user_profile, r".lmstudio\bin\lms.exe"),
-            under(&env.local_app_data, r"Programs\LM Studio\LM Studio.exe"),
-            under(&env.program_files, r"LM Studio\LM Studio.exe"),
-        ],
+        &lm_studio_known,
         &[exe("lm studio"), exe("lms")],
     );
 
@@ -284,6 +334,8 @@ mod tests {
         let env = Env {
             path: vec![tmp.0.clone()],
             local_app_data: Some(tmp.0.clone()),
+            home: Some(tmp.0.clone()),
+            applications: vec![tmp.0.clone()],
             ..Default::default()
         };
         assert_eq!(
@@ -299,6 +351,7 @@ mod tests {
         let server = tmp.touch(&["bin", &exe("llama-server")]);
         let ollama = tmp.touch(&["Programs", "Ollama", "ollama.exe"]);
         let env = Env {
+            os: Os::Windows,
             path: vec![tmp.0.join("absent"), bin],
             local_app_data: Some(tmp.0.clone()),
             ..Default::default()
@@ -311,6 +364,59 @@ mod tests {
             assert_eq!(r.ollama.path, Some(ollama.display().to_string()));
         }
         assert!(!r.lm_studio.installed);
+    }
+
+    #[test]
+    fn emplacements_macos() {
+        let tmp = TempDir::new("macos");
+        let ollama = tmp.touch(&[
+            "Applications",
+            "Ollama.app",
+            "Contents",
+            "Resources",
+            "ollama",
+        ]);
+        let lm_studio = tmp.touch(&[
+            "Users",
+            "moi",
+            "Applications",
+            "LM Studio.app",
+            "Contents",
+            "MacOS",
+            "LM Studio",
+        ]);
+        let env = Env {
+            os: Os::MacOs,
+            path: vec![tmp.0.join("usr-bin")],
+            home: Some(tmp.0.join("Users").join("moi")),
+            applications: vec![
+                tmp.0.join("Applications"),
+                tmp.0.join("Users").join("moi").join("Applications"),
+            ],
+            ..Default::default()
+        };
+        let r = detect_with(&env, &Processes::new(), None);
+        assert!(r.ollama.installed && !r.ollama.running);
+        assert_eq!(r.ollama.path, Some(ollama.display().to_string()));
+        assert!(r.lm_studio.installed);
+        assert_eq!(r.lm_studio.path, Some(lm_studio.display().to_string()));
+        assert!(!r.llama_cpp.installed);
+
+        // La commande `lms` passe avant l'application.
+        let lms = tmp.touch(&["Users", "moi", ".lmstudio", "bin", "lms"]);
+        let r = detect_with(&env, &Processes::new(), None);
+        assert_eq!(r.lm_studio.path, Some(lms.display().to_string()));
+    }
+
+    #[test]
+    fn path_complete_pour_les_applications_du_finder() {
+        if cfg!(target_os = "macos") {
+            let env = Env::from_process();
+            for dir in MACOS_BIN_DIRS {
+                assert!(env.path.contains(&PathBuf::from(dir)), "{dir}");
+            }
+            assert_eq!(env.applications[0], PathBuf::from("/Applications"));
+        }
     }
 
     #[test]

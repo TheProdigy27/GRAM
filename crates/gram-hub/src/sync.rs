@@ -82,7 +82,8 @@ const Q2K_BYTES_PER_PARAM: f64 = 0.37;
 
 /// Borne haute du catalogue (§7.3) : plus gros modèle plausible en Q2_K dans la VRAM du GPU
 /// discret et la RAM. Calculée sur les totaux (90 % de la VRAM, 75 % de la RAM), pour ne pas
-/// dépendre des applications ouvertes au moment de la synchronisation.
+/// dépendre des applications ouvertes au moment de la synchronisation. La mémoire d'un GPU
+/// intégré, à mémoire unifiée compris (Mac Apple Silicon), est déjà dans la RAM.
 pub fn max_params_for(hw: &HardwareProfile) -> u64 {
     let vram = hw
         .gpu

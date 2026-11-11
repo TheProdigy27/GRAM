@@ -290,7 +290,7 @@ pub fn estimate(
             mem_cpu: 0,
             breakdown,
             kv_per_token: shape.kv_per_token,
-            mem_usage: usage(total, budget.vram.saturating_add(budget.ram)),
+            mem_usage: usage(total, budget.combined()),
             ctx_used: ctx,
             ctx_max: 0,
             tok_s: 0.0,
@@ -309,7 +309,7 @@ pub fn estimate(
     let capacity = match p.mode {
         RunMode::Gpu => budget.vram,
         RunMode::Cpu => budget.ram,
-        _ => budget.vram.saturating_add(budget.ram),
+        _ => budget.combined(),
     };
     let mem_usage = usage(total, capacity);
     Estimate {
@@ -342,6 +342,7 @@ fn kv_for(kv_per_token: u64, ctx: u32) -> u64 {
 
 /// §8.2. En hybride, le cache KV, le surcoût et le projecteur vision restent en VRAM
 /// (simplification du MVP) ; les poids y prennent la place restante, par couches entières.
+/// En mémoire unifiée, la part sur le GPU est prise sur la RAM : le reste doit tenir à côté.
 fn place(weights: u64, kv: u64, fixed: u64, layers: u32, b: &MemoryBudget) -> Option<Placement> {
     let resident = kv.saturating_add(fixed);
     let total = weights.saturating_add(resident);
@@ -359,11 +360,12 @@ fn place(weights: u64, kv: u64, fixed: u64, layers: u32, b: &MemoryBudget) -> Op
             (u128::from(room) * u128::from(layers) / u128::from(weights.max(1))) as u32;
         if gpu_layers > 0 {
             let on_gpu = (u128::from(weights) * u128::from(gpu_layers) / u128::from(layers)) as u64;
+            let mem_gpu = resident + on_gpu;
             let mem_cpu = weights - on_gpu;
-            if mem_cpu <= b.ram {
+            if mem_cpu <= b.ram_beside(mem_gpu) {
                 return Some(Placement {
                     mode: RunMode::Hybrid { gpu_layers, layers },
-                    mem_gpu: resident + on_gpu,
+                    mem_gpu,
                     mem_cpu,
                 });
             }
@@ -377,7 +379,8 @@ fn place(weights: u64, kv: u64, fixed: u64, layers: u32, b: &MemoryBudget) -> Op
 }
 
 /// §8.3 : `min(contexte d'entraînement, (mémoire du mode − poids − surcoût) / KV par token)`.
-/// En hybride, le cache KV doit aussi laisser au moins une couche en VRAM.
+/// En hybride, le cache KV doit aussi laisser au moins une couche en VRAM ; la mémoire du mode
+/// est VRAM + RAM, ou la seule RAM en mémoire unifiée.
 fn ctx_max(
     mode: RunMode,
     weights: u64,
@@ -391,8 +394,7 @@ fn ctx_max(
         RunMode::Gpu => b.vram.saturating_sub(static_mem),
         RunMode::Hybrid { layers, .. } => {
             let one_layer = weights.div_ceil(u64::from(layers.max(1)));
-            b.vram
-                .saturating_add(b.ram)
+            b.combined()
                 .saturating_sub(static_mem)
                 .min(b.vram.saturating_sub(fixed.saturating_add(one_layer)))
         }
@@ -465,8 +467,9 @@ impl Transfer {
     }
 }
 
-/// Temps de lecture des poids d'un token à pleine bande passante. Sans GPU discret, tout passe
-/// par la RAM (un iGPU partage sa bande passante).
+/// Temps de lecture des poids d'un token à pleine bande passante. Sans GPU utilisable, tout
+/// passe par la RAM (un iGPU ordinaire partage sa bande passante). En mémoire unifiée, les deux
+/// bandes passantes sont celles de la même mémoire : seule l'efficacité diffère (Metal ou CPU).
 pub fn transfer_seconds(active_bytes: u64, gpu_share: f64, b: &MemoryBudget) -> Transfer {
     let share = if b.gpu_offload() {
         gpu_share.clamp(0.0, 1.0)

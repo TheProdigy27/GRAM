@@ -12,7 +12,7 @@ use ts_rs::TS;
 pub enum DataSourceKind {
     /// Synchronisé à l'instant depuis Hugging Face.
     Online,
-    /// Lu dans le cache local (`%LOCALAPPDATA%\fr.gram.desktop\cache`).
+    /// Lu dans le cache local (`fr.gram.desktop/cache` des données locales).
     Cache,
     /// Catalogue de démarrage embarqué dans l'application.
     Snapshot,

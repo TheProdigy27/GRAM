@@ -29,7 +29,8 @@ tracing-subscriber.workspace = true
 chrono.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-# Token Hugging Face dans le Gestionnaire d'identifiants Windows.
+# Token Hugging Face dans le trousseau du système (Gestionnaire d'identifiants Windows,
+# Trousseau d'accès macOS : choisis par l'API v1, fonctionnalité par défaut).
 keyring = "4.2.0"
 # Pages Hugging Face ouvertes dans le navigateur (fiche détail).
 tauri-plugin-opener = "2.7.2"

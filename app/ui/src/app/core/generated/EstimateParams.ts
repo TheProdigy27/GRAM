@@ -6,7 +6,8 @@ import type { KvCacheType } from "./KvCacheType";
  */
 export type EstimateParams = { 
 /**
- * Part de la VRAM gardée pour l'affichage Windows et les applications ouvertes.
+ * Part de la VRAM gardée pour l'affichage du système et les applications ouvertes (en
+ * mémoire unifiée : part de la limite de Metal).
  */
 vramMargin: number, 
 /**
@@ -19,7 +20,7 @@ ramShare: number,
  */
 closeApps: boolean, 
 /**
- * Surcoût du runtime (contexte CUDA/Vulkan, buffers de calcul), en octets.
+ * Surcoût du runtime (contexte CUDA/Vulkan/Metal, buffers de calcul), en octets.
  */
 overheadBytes: number, 
 /**

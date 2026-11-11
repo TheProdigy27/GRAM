@@ -44,7 +44,8 @@ enum Command {
         /// Sortie JSON (`SyncSummary`).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales :
+        /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -68,7 +69,8 @@ enum Command {
         /// Sortie JSON (budget mémoire et estimation de chaque quantification).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales :
+        /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -97,7 +99,8 @@ enum Command {
         /// Sortie JSON (`RankResponse`).
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales :
+        /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -116,7 +119,8 @@ enum Command {
         /// Sortie JSON.
         #[arg(long)]
         json: bool,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%r.gram.desktop\cache).
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales :
+        /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
@@ -124,7 +128,8 @@ enum Command {
     Snapshot {
         #[arg(long, default_value = "data/seed_catalog.json")]
         output: PathBuf,
-        /// Dossier du cache (défaut : %LOCALAPPDATA%\fr.gram.desktop\cache).
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales :
+        /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },

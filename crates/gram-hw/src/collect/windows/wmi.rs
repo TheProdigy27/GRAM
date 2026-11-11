@@ -86,6 +86,7 @@ impl WmiData {
                         speed: m.speed,
                         configured_speed: m.configured_clock_speed,
                         smbios_type: m.smbios_memory_type,
+                        type_name: None,
                         data_width: m.data_width,
                         device_locator: m.device_locator.unwrap_or_default().trim().to_string(),
                         bank_label: m.bank_label.unwrap_or_default().trim().to_string(),

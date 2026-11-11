@@ -14,9 +14,14 @@ pub const DEFAULT_RAM_BANDWIDTH_GBS: f32 = 38.4;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct HardwareProfile {
+    /// Système de la machine : il décide des commandes de lancement (variables d'environnement
+    /// d'Ollama) et de ce que les runtimes savent faire. Absent des anciens profils : Windows.
+    #[serde(default)]
+    pub os: Os,
     pub cpu: CpuInfo,
     pub ram: RamInfo,
-    /// Le GPU retenu pour le calcul : celui qui a le plus de VRAM dédiée.
+    /// Le GPU retenu pour le calcul : celui qui a le plus de VRAM dédiée (ou le GPU à mémoire
+    /// unifiée d'un Mac Apple Silicon).
     pub gpu: Option<GpuInfo>,
     /// Les autres GPU, affichés pour information et non utilisés pour le calcul.
     pub other_gpus: Vec<GpuInfo>,
@@ -35,11 +40,61 @@ impl HardwareProfile {
     }
 }
 
+/// Système d'exploitation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum Os {
+    #[default]
+    Windows,
+    #[serde(rename = "macos")]
+    MacOs,
+    Linux,
+}
+
+impl Os {
+    /// Système pour lequel le programme est compilé.
+    pub const fn current() -> Self {
+        if cfg!(target_os = "macos") {
+            Self::MacOs
+        } else if cfg!(windows) {
+            Self::Windows
+        } else {
+            Self::Linux
+        }
+    }
+
+    /// Nom affiché.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Windows => "Windows",
+            Self::MacOs => "macOS",
+            Self::Linux => "Linux",
+        }
+    }
+}
+
+/// Architecture du processeur.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum CpuArch {
+    /// x86 / x86-64 : les drapeaux AVX ont un sens.
+    #[default]
+    X86,
+    /// ARM 64 bits (Apple Silicon, Snapdragon) : NEON toujours présent, pas d'AVX.
+    Arm,
+    Other,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CpuInfo {
     pub name: String,
+    /// Absent des anciens profils : x86.
+    #[serde(default)]
+    pub arch: CpuArch,
     pub cores_physical: u32,
     pub cores_logical: u32,
     pub max_clock_mhz: Option<u32>,
@@ -49,7 +104,7 @@ pub struct CpuInfo {
     pub f16c: bool,
 }
 
-/// Type de mémoire vive (d'après `SMBIOSMemoryType`).
+/// Type de mémoire vive (d'après `SMBIOSMemoryType`, ou la table des puces Apple).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -58,7 +113,9 @@ pub enum RamKind {
     Ddr4,
     Ddr5,
     Lpddr4,
+    Lpddr4x,
     Lpddr5,
+    Lpddr5x,
     Unknown,
 }
 
@@ -70,7 +127,9 @@ impl RamKind {
             RamKind::Ddr4 => "DDR4",
             RamKind::Ddr5 => "DDR5",
             RamKind::Lpddr4 => "LPDDR4",
+            RamKind::Lpddr4x => "LPDDR4X",
             RamKind::Lpddr5 => "LPDDR5",
+            RamKind::Lpddr5x => "LPDDR5X",
             RamKind::Unknown => "type inconnu",
         }
     }
@@ -80,11 +139,13 @@ impl RamKind {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RamInfo {
-    /// Mémoire vue par Windows (installée moins la mémoire réservée au matériel), en octets.
+    /// Mémoire vue par le système (sous Windows, installée moins la mémoire réservée au
+    /// matériel), en octets.
     pub total: u64,
     /// Octets.
     pub available: u64,
-    /// Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), en octets.
+    /// Somme des capacités des barrettes (ce qu'affiche le Gestionnaire des tâches), ou mémoire
+    /// unifiée d'un Mac, en octets.
     pub installed: Option<u64>,
     pub kind: RamKind,
     /// Vitesse configurée en MT/s.
@@ -93,14 +154,14 @@ pub struct RamInfo {
     pub modules: u32,
     /// Nombre d'emplacements de la carte mère.
     pub slots: Option<u32>,
-    /// Nombre de canaux estimé (64 bits chacun).
+    /// Nombre de canaux estimé (64 bits chacun ; largeur du bus / 64 sur Apple Silicon).
     pub channels: u32,
     pub channels_source: Source,
     /// Bande passante théorique en Go/s.
     pub bandwidth_gbs: Option<f32>,
 }
 
-/// Constructeur d'un GPU (d'après le vendor ID PCI).
+/// Constructeur d'un GPU (d'après le vendor ID PCI, ou le nom sous macOS).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -108,6 +169,7 @@ pub enum Vendor {
     Nvidia,
     Amd,
     Intel,
+    Apple,
     Other,
 }
 
@@ -116,11 +178,12 @@ pub enum Vendor {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum Source {
-    /// Lue directement sur la machine (WMI, DXGI, sysinfo).
+    /// Lue directement sur la machine (WMI, DXGI, Metal, sysinfo).
     Detected,
     /// Lue ou calculée via NVML.
     Nvml,
-    /// Trouvée dans `data/gpu_specs.json`.
+    /// Trouvée dans une table de référence : `data/gpu_specs.json` (GPU) ou
+    /// `data/apple_chips.json` (puces Apple Silicon).
     Table,
     /// Déduite par une heuristique.
     Estimated,
@@ -134,22 +197,37 @@ pub enum Source {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct GpuInfo {
-    /// Position de l'adaptateur dans l'énumération DXGI ; référence de `Overrides::gpu_index`.
+    /// Position de l'adaptateur dans l'énumération DXGI (Metal sous macOS) ; référence de
+    /// `Overrides::gpu_index`.
     pub index: u32,
     pub name: String,
     pub vendor: Vendor,
-    /// VRAM dédiée, en octets.
+    /// VRAM dédiée, en octets. En mémoire unifiée : la part de la RAM que le GPU peut utiliser
+    /// (`recommendedMaxWorkingSetSize` de Metal : 11,8 Gio sur un Mac de 16 Go).
     pub vram_total: u64,
     /// VRAM libre (NVML) ou budget DXGI, en octets.
     pub vram_free: Option<u64>,
     /// Mémoire système partagée, en octets.
     pub shared_mem: u64,
     pub integrated: bool,
+    /// Mémoire unifiée (Apple Silicon) : GPU intégré qui calcule directement dans la RAM, à sa
+    /// bande passante, jusqu'à `vram_total` octets. Contrairement aux autres GPU intégrés, il
+    /// reçoit les couches du modèle (Metal) ; sa mémoire est prise sur la RAM.
+    #[serde(default)]
+    pub unified_memory: bool,
     /// Bande passante mémoire en Go/s.
     pub bandwidth_gbs: Option<f32>,
     pub bandwidth_source: Source,
     /// Compute capability CUDA (majeure, mineure).
     pub cuda_cc: Option<(u32, u32)>,
+}
+
+impl GpuInfo {
+    /// Le GPU peut recevoir des couches du modèle : GPU discret, ou GPU à mémoire unifiée.
+    /// Un autre GPU intégré compte comme du CPU (même mémoire, même bande passante).
+    pub fn offload(&self) -> bool {
+        (!self.integrated || self.unified_memory) && self.vram_total > 0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, TS)]
@@ -160,13 +238,16 @@ pub struct Backends {
     /// Version CUDA prise en charge par le driver (ex. « 12.8 »).
     pub cuda_driver_version: Option<String>,
     pub vulkan: bool,
+    /// Au moins un GPU Metal (macOS).
+    #[serde(default)]
+    pub metal: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct DiskInfo {
-    /// Point de montage (ex. « C:\ »).
+    /// Point de montage (ex. « C:\ », « / »).
     pub mount: String,
     /// Octets.
     pub total: u64,
@@ -214,8 +295,10 @@ mod tests {
 
     fn sample() -> HardwareProfile {
         HardwareProfile {
+            os: Os::Windows,
             cpu: CpuInfo {
                 name: "AMD Ryzen 7 5800X".into(),
+                arch: CpuArch::X86,
                 cores_physical: 8,
                 cores_logical: 16,
                 max_clock_mhz: Some(3800),
@@ -244,6 +327,7 @@ mod tests {
                 vram_free: Some(11 << 30),
                 shared_mem: 16 << 30,
                 integrated: false,
+                unified_memory: false,
                 bandwidth_gbs: Some(360.0),
                 bandwidth_source: Source::Table,
                 cuda_cc: Some((8, 6)),
@@ -253,6 +337,7 @@ mod tests {
                 cuda: true,
                 cuda_driver_version: Some("12.8".into()),
                 vulkan: true,
+                metal: false,
             },
             disks: vec![DiskInfo {
                 mount: "C:\\".into(),
@@ -279,6 +364,40 @@ mod tests {
         assert_eq!(json["gpu"]["vramTotal"], 12u64 << 30);
         assert_eq!(json["gpu"]["vendor"], "nvidia");
         assert_eq!(json["gpu"]["cudaCc"], serde_json::json!([8, 6]));
+    }
+
+    #[test]
+    fn anciens_profils_lisibles() {
+        // Profil enregistré avant la prise en charge de macOS : sans `os`, `arch`,
+        // `unifiedMemory` ni `metal`.
+        let mut json = serde_json::to_value(sample()).unwrap();
+        json.as_object_mut().unwrap().remove("os");
+        json["cpu"].as_object_mut().unwrap().remove("arch");
+        json["gpu"].as_object_mut().unwrap().remove("unifiedMemory");
+        json["backends"].as_object_mut().unwrap().remove("metal");
+        let back: HardwareProfile = serde_json::from_value(json).unwrap();
+        assert_eq!(back, sample());
+    }
+
+    #[test]
+    fn noms_serialises() {
+        assert_eq!(serde_json::to_value(Os::MacOs).unwrap(), "macos");
+        assert_eq!(serde_json::to_value(Os::Windows).unwrap(), "windows");
+        assert_eq!(serde_json::to_value(CpuArch::Arm).unwrap(), "arm");
+        assert_eq!(serde_json::to_value(RamKind::Lpddr5x).unwrap(), "lpddr5x");
+        assert_eq!(serde_json::to_value(Vendor::Apple).unwrap(), "apple");
+    }
+
+    #[test]
+    fn gpu_utilisable_pour_les_couches() {
+        let mut g = sample().gpu.unwrap();
+        assert!(g.offload());
+        g.integrated = true;
+        assert!(!g.offload(), "un iGPU compte comme du CPU");
+        g.unified_memory = true;
+        assert!(g.offload(), "sauf en mémoire unifiée");
+        g.vram_total = 0;
+        assert!(!g.offload());
     }
 
     #[test]

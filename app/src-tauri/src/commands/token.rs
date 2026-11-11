@@ -5,7 +5,7 @@ use crate::state::AppState;
 use gram_hub::HfToken;
 use tauri::State;
 
-/// Enregistre le token dans le Gestionnaire d'identifiants Windows (espaces retirés).
+/// Enregistre le token dans le trousseau du système (espaces retirés).
 #[tauri::command]
 pub async fn set_hf_token(state: State<'_, AppState>, token: String) -> CmdResult<()> {
     let token = token.trim();

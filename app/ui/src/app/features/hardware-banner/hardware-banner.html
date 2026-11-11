@@ -46,7 +46,7 @@
       <div class="item" data-testid="hw-usable">
         <dt>Utilisable</dt>
         <dd
-          matTooltip="Mémoire réellement disponible pour un modèle : VRAM moins la marge de sécurité et l’occupation actuelle, part de la RAM réglée dans les paramètres."
+          matTooltip="Mémoire réellement disponible pour un modèle : VRAM moins la marge de sécurité et l’occupation actuelle, part de la RAM réglée dans les paramètres. En mémoire unifiée (Mac Apple Silicon), la part du GPU est prise sur la RAM."
         >
           {{ usable() ?? '…' }}
         </dd>

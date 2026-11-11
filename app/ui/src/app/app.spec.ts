@@ -35,7 +35,7 @@ describe('App', () => {
 
     expect(text(el.querySelector('.brand'))).toBe('GRAM');
     expect(text(el.querySelector('[data-testid="hw-GPU"]'))).toContain('NVIDIA GeForce RTX 5080');
-    expect(text(el.querySelector('[data-testid="hw-GPU"]'))).toContain('(table des GPU)');
+    expect(text(el.querySelector('[data-testid="hw-GPU"]'))).toContain('(table de référence)');
     expect(text(el.querySelector('[data-testid="hw-RAM"]'))).toContain('64 Go DDR5-6000');
     expect(text(el.querySelector('[data-testid="hw-usable"] dd'))).toBe(
       'VRAM 14,3 Go · RAM 47,3 Go',

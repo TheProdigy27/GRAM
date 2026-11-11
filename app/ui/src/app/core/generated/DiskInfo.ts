@@ -2,7 +2,7 @@
 
 export type DiskInfo = { 
 /**
- * Point de montage (ex. « C:\ »).
+ * Point de montage (ex. « C:\ », « / »).
  */
 mount: string, 
 /**

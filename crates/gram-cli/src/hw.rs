@@ -1,8 +1,11 @@
-//! `gram-cli hw` : matériel détecté, en texte (à comparer au Gestionnaire des tâches) ou en JSON.
+//! `gram-cli hw` : matériel détecté, en texte (à comparer au Gestionnaire des tâches, ou à
+//! « Informations système » sur un Mac) ou en JSON.
 
 use anyhow::Result;
 use gram_core::fmt::{gb, gb_round, num};
-use gram_core::{GpuInfo, HardwareProfile, Overrides, RuntimeStatus, RuntimesStatus, Source};
+use gram_core::{
+    CpuArch, GpuInfo, HardwareProfile, Overrides, RuntimeStatus, RuntimesStatus, Source,
+};
 use serde::Serialize;
 use std::fmt::Write as _;
 use std::time::{Duration, Instant};
@@ -81,7 +84,9 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
     .into_iter()
     .filter_map(|(on, name)| on.then_some(name))
     .collect();
-    if !flags.is_empty() {
+    if c.arch == CpuArch::Arm {
+        parts.push("ARM64".into());
+    } else if !flags.is_empty() {
         parts.push(flags.join(" "));
     }
     line(&mut out, indent, &parts.join(" · "));
@@ -93,7 +98,9 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
         Some(s) => format!("{}-{s}", r.kind.label()),
         None => format!("{}, vitesse inconnue", r.kind.label()),
     };
+    let unified = hw.gpu.as_ref().is_some_and(|g| g.unified_memory);
     let modules = match r.slots {
+        _ if unified && r.modules == 0 => "mémoire unifiée".to_string(),
         Some(slots) => format!(
             "{} / {slots} emplacements",
             plural(r.modules, "barrette", "barrettes")
@@ -109,7 +116,7 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
     if let Some(bw) = r.bandwidth_gbs {
         parts.push(format!("≈ {} Go/s", num(f64::from(bw), 1)));
     }
-    parts.push(format!("{} vus par Windows", gb(r.total)));
+    parts.push(format!("{} vus par le système", gb(r.total)));
     parts.push(format!("{} disponibles", gb(r.available)));
     line(&mut out, indent, &parts.join(" · "));
 
@@ -133,6 +140,9 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
     }
     if b.vulkan {
         parts.push("Vulkan".to_string());
+    }
+    if b.metal {
+        parts.push("Metal".to_string());
     }
     line(
         &mut out,
@@ -185,13 +195,23 @@ pub fn render(hw: &HardwareProfile, rt: &RuntimesStatus, elapsed: Option<Duratio
 }
 
 fn gpu_lines(out: &mut String, label: &str, g: &GpuInfo, role: &str) {
-    let kind = if g.integrated { "intégré, " } else { "" };
+    let kind = if g.unified_memory {
+        "mémoire unifiée, "
+    } else if g.integrated {
+        "intégré, "
+    } else {
+        ""
+    };
     line(
         out,
         label,
         &format!("{} ({kind}{role}, n° {})", g.name, g.index),
     );
     let mut parts = vec![match g.vram_free {
+        _ if g.unified_memory => format!(
+            "{} utilisables par le GPU (limite de Metal)",
+            gb(g.vram_total)
+        ),
         Some(free) => format!("{} de VRAM ({} libres)", gb(g.vram_total), gb(free)),
         None => format!("{} de VRAM", gb(g.vram_total)),
     }];
@@ -269,6 +289,30 @@ mod tests {
             assert!(text.contains(e), "« {e} » absent de :\n{text}");
         }
         assert!(!text.contains("Avertissements"));
+    }
+
+    #[test]
+    fn rendu_mac_apple_silicon() {
+        let raw: gram_hw::RawHardware = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/hardware/raw-m1pro-16go-macos.json"
+        ))
+        .unwrap();
+        let hw = gram_hw::build_profile(&raw, &Overrides::default());
+        let text = render(&hw, &RuntimesStatus::default(), None);
+        let expected = [
+            "CPU       Apple M1 Pro",
+            "10 cœurs / 10 threads · 3,2 GHz · ARM64",
+            "RAM       16,0 Go LPDDR5-6400 · mémoire unifiée",
+            "4 canaux (table) · ≈ 204,8 Go/s · 16,0 Go vus par le système",
+            "GPU       Apple M1 Pro (mémoire unifiée, retenu, n° 0)",
+            "11,8 Go utilisables par le GPU (limite de Metal) · ≈ 205 Go/s (table)",
+            "Backends  Metal",
+            "Disques   / 460 Go",
+        ];
+        for e in expected {
+            assert!(text.contains(e), "« {e} » absent de :\n{text}");
+        }
+        assert!(!text.contains("Avertissements"), "{text}");
     }
 
     #[test]

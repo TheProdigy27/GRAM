@@ -3,15 +3,22 @@ import type { Backends } from "./Backends";
 import type { CpuInfo } from "./CpuInfo";
 import type { DiskInfo } from "./DiskInfo";
 import type { GpuInfo } from "./GpuInfo";
+import type { Os } from "./Os";
 import type { Overrides } from "./Overrides";
 import type { RamInfo } from "./RamInfo";
 
 /**
  * Profil matériel complet de la machine.
  */
-export type HardwareProfile = { cpu: CpuInfo, ram: RamInfo, 
+export type HardwareProfile = { 
 /**
- * Le GPU retenu pour le calcul : celui qui a le plus de VRAM dédiée.
+ * Système de la machine : il décide des commandes de lancement (variables d'environnement
+ * d'Ollama) et de ce que les runtimes savent faire. Absent des anciens profils : Windows.
+ */
+os: Os, cpu: CpuInfo, ram: RamInfo, 
+/**
+ * Le GPU retenu pour le calcul : celui qui a le plus de VRAM dédiée (ou le GPU à mémoire
+ * unifiée d'un Mac Apple Silicon).
  */
 gpu: GpuInfo | null, 
 /**

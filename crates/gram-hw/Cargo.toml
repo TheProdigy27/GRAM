@@ -1,6 +1,6 @@
 [package]
 name = "gram-hw"
-description = "Détection du matériel et des runtimes installés (Windows ; stub ailleurs)."
+description = "Détection du matériel et des runtimes installés (Windows, macOS ; CPU et RAM ailleurs)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -22,3 +22,9 @@ workspace = true
 nvml-wrapper = "0.13.0"
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_Graphics_DXCore", "Win32_System_LibraryLoader", "Win32_System_SystemInformation"] }
 wmi = "0.18.4"
+
+[target."cfg(target_os = \"macos\")".dependencies]
+# GPU, limite de mémoire du GPU et mémoire unifiée, via Metal (`MTLCopyAllDevices`).
+objc2 = "0.6.5"
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSString"] }
+objc2-metal = { version = "0.3.2", default-features = false, features = ["std", "MTLDevice"] }

@@ -49,7 +49,7 @@ export const FIT_LABELS: Record<FitLevel, string> = {
 export const SOURCE_LABELS: Record<Source, string> = {
   detected: 'détectée',
   nvml: 'NVML',
-  table: 'table des GPU',
+  table: 'table de référence',
   estimated: 'estimée',
   default: 'valeur par défaut',
   manual: 'corrigée',
@@ -60,7 +60,9 @@ export const RAM_KIND_LABELS: Record<RamKind, string> = {
   ddr4: 'DDR4',
   ddr5: 'DDR5',
   lpddr4: 'LPDDR4',
+  lpddr4x: 'LPDDR4X',
   lpddr5: 'LPDDR5',
+  lpddr5x: 'LPDDR5X',
   unknown: '',
 };
 

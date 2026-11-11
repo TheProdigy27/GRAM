@@ -29,6 +29,7 @@ pub fn collect(base: impl FnOnce() -> RawHardware) -> RawHardware {
     raw.backends = RawBackends {
         nvcuda: system32.join("nvcuda.dll").is_file(),
         vulkan: system32.join("vulkan-1.dll").is_file(),
+        metal: false,
     };
 
     let wmi = wmi_thread.map_err(|e| e.to_string()).and_then(|h| {

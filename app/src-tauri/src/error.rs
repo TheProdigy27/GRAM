@@ -1,7 +1,7 @@
 //! Erreur des commandes Tauri : renvoyée au frontend sous forme de message en français.
 //!
 //! Aucun message ne contient le token Hugging Face (`gram-hub` le garantit pour ses erreurs,
-//! et le trousseau Windows ne renvoie jamais le secret dans les siennes).
+//! et le trousseau du système ne renvoie jamais le secret dans les siennes).
 
 use serde::{Serialize, Serializer};
 

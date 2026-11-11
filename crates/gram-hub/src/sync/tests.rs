@@ -382,7 +382,7 @@ async fn enrichissement_a_la_demande() {
 
 #[test]
 fn borne_haute() {
-    use gram_core::{CpuInfo, GpuInfo, Overrides, RamInfo, RamKind, Source, Vendor};
+    use gram_core::{CpuArch, CpuInfo, GpuInfo, Os, Overrides, RamInfo, RamKind, Source, Vendor};
     let gpu = |vram_gib: u64, integrated| GpuInfo {
         index: 0,
         name: "GPU".into(),
@@ -391,13 +391,16 @@ fn borne_haute() {
         vram_free: None,
         shared_mem: 0,
         integrated,
+        unified_memory: false,
         bandwidth_gbs: None,
         bandwidth_source: Source::Default,
         cuda_cc: None,
     };
     let hw = |gpu: Option<GpuInfo>, ram_gib: u64| HardwareProfile {
+        os: Os::Windows,
         cpu: CpuInfo {
             name: "CPU".into(),
+            arch: CpuArch::X86,
             cores_physical: 8,
             cores_logical: 16,
             max_clock_mhz: None,
@@ -433,6 +436,10 @@ fn borne_haute() {
     let p2 = max_params_for(&hw(Some(gpu(12, false)), 32));
     assert!((95_000_000_000..105_000_000_000).contains(&p2), "{p2}");
     assert_eq!(SizeBucket::up_to(Some(p2)).len(), 7);
+    // Mac à mémoire unifiée : la mémoire du GPU est prise sur la RAM, elle ne s'y ajoute pas.
+    let mut apple = gpu(12, true);
+    apple.unified_memory = true;
+    assert_eq!(max_params_for(&hw(Some(apple), 16)), small);
 }
 
 #[test]

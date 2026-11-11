@@ -18,7 +18,7 @@ import { RankingStore } from '../../state/ranking.store';
 /** Une valeur du bandeau, avec son origine quand elle n'est pas mesurée directement. */
 export interface BannerPart {
   text: string;
-  /** « estimée », « table des GPU »… affiché en retrait (absent : valeur détectée). */
+  /** « estimée », « table de référence »… affiché en retrait (absent : valeur détectée). */
   source?: string;
 }
 
@@ -29,7 +29,8 @@ function sourceNote(s: Source): string | undefined {
 
 export function cpuParts(p: HardwareProfile): BannerPart[] {
   const c = p.cpu;
-  const isa = c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
+  // Les drapeaux AVX n'ont de sens que sur x86 (une puce Apple est ARM).
+  const isa = c.arch === 'arm' ? 'ARM64' : c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
   return [{ text: c.name }, { text: `${c.coresPhysical}c/${c.coresLogical}t` }, { text: isa }];
 }
 
@@ -53,17 +54,22 @@ export function gpuParts(p: HardwareProfile): BannerPart[] {
   const g: GpuInfo | null = p.gpu;
   if (!g) return [{ text: 'Aucun GPU : calcul sur le CPU' }];
   const parts: BannerPart[] = [{ text: g.name }];
-  if (g.integrated) {
+  if (g.unifiedMemory) {
+    // Apple Silicon : le GPU calcule dans la RAM, jusqu'à la limite de Metal.
+    parts.push({ text: `mémoire unifiée : ${roundSize(g.vramTotal)} pour le GPU` });
+  } else if (g.integrated) {
     parts.push({ text: 'intégré : compté comme du CPU (mémoire partagée)' });
     return parts;
+  } else {
+    parts.push({ text: roundSize(g.vramTotal) });
   }
-  parts.push({ text: roundSize(g.vramTotal) });
   if (g.bandwidthGbs) {
     parts.push({ text: bandwidth(g.bandwidthGbs), source: sourceNote(g.bandwidthSource) });
   }
   const b = p.backends;
   if (b.cuda) parts.push({ text: b.cudaDriverVersion ? `CUDA ${b.cudaDriverVersion}` : 'CUDA' });
   if (b.vulkan) parts.push({ text: 'Vulkan' });
+  if (b.metal) parts.push({ text: 'Metal' });
   return parts;
 }
 
@@ -158,6 +164,7 @@ export class HardwareBanner {
   protected readonly usable = computed(() => {
     const b = this.ranking.response()?.budget;
     if (!b) return null;
+    if (b.unified) return `RAM ${gb(b.ram)}, dont GPU ${gb(b.vram)}`;
     return b.vram > 0 ? `VRAM ${gb(b.vram)} · RAM ${gb(b.ram)}` : `RAM ${gb(b.ram)}`;
   });
 

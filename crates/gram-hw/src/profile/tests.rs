@@ -1,6 +1,5 @@
 use super::*;
-use crate::raw::{RawBackends, RawMemoryModule, RawNvml};
-use gram_core::RamKind;
+use crate::raw::{RawBackends, RawMemory, RawMemoryModule, RawNvml};
 
 const GIB: u64 = 1 << 30;
 
@@ -9,6 +8,15 @@ const GIB: u64 = 1 << 30;
 fn dev_machine() -> RawHardware {
     serde_json::from_str(include_str!(
         "../../../../tests/fixtures/hardware/raw-9800x3d-rtx5080-parsec.json"
+    ))
+    .unwrap()
+}
+
+/// Dump réel (`gram-cli hw --raw`) : MacBook Pro M1 Pro 16 Go, GPU 16 cœurs, limite de Metal
+/// de 11,84 Gio.
+fn macbook_m1_pro() -> RawHardware {
+    serde_json::from_str(include_str!(
+        "../../../../tests/fixtures/hardware/raw-m1pro-16go-macos.json"
     ))
     .unwrap()
 }
@@ -23,6 +31,7 @@ fn module(mts: u32, smbios: u32, bank: &str) -> RawMemoryModule {
         speed: Some(mts),
         configured_speed: Some(mts),
         smbios_type: Some(smbios),
+        type_name: None,
         data_width: Some(64),
         device_locator: String::new(),
         bank_label: bank.into(),
@@ -58,6 +67,7 @@ fn machine(modules: Vec<RawMemoryModule>, adapters: Vec<RawAdapter>) -> RawHardw
             available: 20 * GIB,
             modules,
             slots: Some(4),
+            type_name: None,
         },
         adapters,
         ..Default::default()
@@ -68,6 +78,9 @@ fn machine(modules: Vec<RawMemoryModule>, adapters: Vec<RawAdapter>) -> RawHardw
 fn machine_de_developpement() {
     let hw = build(&dev_machine());
 
+    // Dump antérieur à la prise en charge de macOS : sans `os`.
+    assert_eq!(hw.os, Os::Windows);
+    assert_eq!(hw.cpu.arch, CpuArch::X86);
     assert_eq!(hw.cpu.name, "AMD Ryzen 7 9800X3D 8-Core Processor");
     assert_eq!((hw.cpu.cores_physical, hw.cpu.cores_logical), (8, 16));
     assert!(hw.cpu.avx2 && hw.cpu.avx512);
@@ -405,9 +418,247 @@ fn backends_sans_nvml() {
     raw.backends = RawBackends {
         nvcuda: false,
         vulkan: true,
+        metal: false,
     };
     raw.nvml = Some(RawNvml::default());
     let hw = build(&raw);
     assert!(!hw.backends.cuda && hw.backends.vulkan);
     assert_eq!(hw.backends.cuda_driver_version, None);
+}
+
+// ── macOS ───────────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn mac_apple_silicon() {
+    let raw = macbook_m1_pro();
+    let hw = build(&raw);
+    assert_eq!(hw.os, Os::MacOs);
+    assert_eq!(hw.cpu.name, "Apple M1 Pro");
+    assert_eq!(hw.cpu.arch, CpuArch::Arm);
+    assert_eq!((hw.cpu.cores_physical, hw.cpu.cores_logical), (10, 10));
+    assert!(!hw.cpu.avx2);
+
+    // Mémoire unifiée : type, débit et bus de la table des puces (bus de 256 bits).
+    assert_eq!(hw.ram.kind, RamKind::Lpddr5);
+    assert_eq!(hw.ram.speed_mts, Some(6400));
+    assert_eq!(
+        (hw.ram.channels, hw.ram.channels_source),
+        (4, Source::Table)
+    );
+    assert_eq!(hw.ram.bandwidth_gbs, Some(204.8));
+    assert_eq!(hw.ram.installed, Some(16 * GIB));
+    assert_eq!((hw.ram.modules, hw.ram.slots), (0, None));
+
+    let gpu = hw.gpu.as_ref().unwrap();
+    assert_eq!(gpu.name, "Apple M1 Pro");
+    assert_eq!(gpu.vendor, Vendor::Apple);
+    assert!(gpu.integrated && gpu.unified_memory && gpu.offload());
+    assert_eq!(gpu.vram_total, 12_713_115_648, "limite de Metal");
+    assert_eq!(gpu.vram_free, None);
+    assert_eq!(
+        (gpu.bandwidth_gbs, gpu.bandwidth_source),
+        (Some(204.8), Source::Table)
+    );
+    assert!(hw.other_gpus.is_empty());
+    assert!(hw.backends.metal && !hw.backends.cuda && !hw.backends.vulkan);
+    assert_eq!(hw.disks.len(), 1, "volumes système de macOS écartés");
+    assert!(hw.warnings.is_empty(), "{:?}", hw.warnings);
+}
+
+#[test]
+fn mac_apple_silicon_budget_et_estimation() {
+    use gram_core::{EstimateParams, MemoryBudget};
+    let raw = macbook_m1_pro();
+    let hw = build(&raw);
+    let b = MemoryBudget::from_profile(&hw, &EstimateParams::default());
+    assert!(b.unified && b.gpu_offload());
+    // 90 % de la limite de Metal (10,66 Gio), sous les 12 Gio de RAM utilisables.
+    assert_eq!(
+        b.vram,
+        (12_713_115_648f64 * (1.0 - f64::from(0.10f32))) as u64
+    );
+    assert_eq!(b.ram, raw.memory.available.min(12 * GIB));
+    assert_eq!(
+        (b.gpu_bandwidth_gbs, b.ram_bandwidth_gbs),
+        (Some(204.8), 204.8)
+    );
+}
+
+/// MacBook Pro 16 pouces 2019 : Core i9, 2 × 8 Go DDR4-2667, Radeon Pro 5500M + UHD 630.
+fn intel_mac() -> RawHardware {
+    let dimm = |bank: &str, locator: &str| RawMemoryModule {
+        capacity: 8 * GIB,
+        speed: Some(2667),
+        type_name: Some("DDR4".into()),
+        bank_label: bank.into(),
+        device_locator: locator.into(),
+        ..Default::default()
+    };
+    RawHardware {
+        os: Os::MacOs,
+        cpu: RawCpu {
+            name: "Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz".into(),
+            cores_physical: 8,
+            cores_logical: 16,
+            x86: true,
+            avx2: true,
+            fma: true,
+            f16c: true,
+            ..Default::default()
+        },
+        memory: RawMemory {
+            total: 16 * GIB,
+            available: 9 * GIB,
+            modules: vec![
+                dimm("BANK 0", "ChannelA-DIMM0"),
+                dimm("BANK 2", "ChannelB-DIMM0"),
+            ],
+            slots: Some(2),
+            type_name: None,
+        },
+        metal: vec![
+            RawMetalDevice {
+                index: 0,
+                name: "AMD Radeon Pro 5500M".into(),
+                recommended_max_working_set: 4 * GIB,
+                vram: Some(4 * GIB),
+                ..Default::default()
+            },
+            RawMetalDevice {
+                index: 1,
+                name: "Intel(R) UHD Graphics 630".into(),
+                recommended_max_working_set: 1536 << 20,
+                unified_memory: true,
+                low_power: true,
+                vram: Some(1536 << 20),
+                ..Default::default()
+            },
+        ],
+        backends: RawBackends {
+            metal: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+#[test]
+fn mac_intel_gpu_dedie_et_barrettes() {
+    let hw = build(&intel_mac());
+    assert_eq!(hw.cpu.arch, CpuArch::X86);
+    assert_eq!(hw.ram.kind, RamKind::Ddr4);
+    assert_eq!(hw.ram.speed_mts, Some(2667));
+    assert_eq!(hw.ram.channels, 2, "ChannelA / ChannelB");
+    assert_eq!(hw.ram.installed, Some(16 * GIB));
+
+    let gpu = hw.gpu.as_ref().unwrap();
+    assert_eq!((gpu.index, gpu.vendor), (0, Vendor::Amd));
+    assert!(!gpu.integrated && !gpu.unified_memory);
+    assert_eq!(gpu.vram_total, 4 * GIB);
+    // Absent de la table : valeur prudente, signalée.
+    assert_eq!(gpu.bandwidth_source, Source::Default);
+    let igpu = &hw.other_gpus[0];
+    assert_eq!(igpu.vendor, Vendor::Intel);
+    assert!(igpu.integrated && !igpu.unified_memory && !igpu.offload());
+    assert!(hw.warnings.iter().any(|w| w.contains("inconnue")));
+    assert!(!hw.warnings.iter().any(|w| w.contains("NVML")));
+}
+
+#[test]
+fn mac_intel_igpu_seul() {
+    let mut raw = intel_mac();
+    raw.metal.remove(0);
+    raw.metal[0].index = 0;
+    let hw = build(&raw);
+    let gpu = hw.gpu.unwrap();
+    assert!(gpu.integrated && !gpu.offload());
+    assert!(
+        hw.warnings
+            .iter()
+            .any(|w| w.contains("GPU intégré") && w.contains("Metal"))
+    );
+}
+
+#[test]
+fn versions_d_une_puce_par_coeurs_gpu() {
+    let mut raw = macbook_m1_pro();
+    raw.cpu.name = "Apple M3 Max".into();
+    raw.metal[0].name = "Apple M3 Max".into();
+    raw.metal[0].gpu_cores = Some(30);
+    assert_eq!(build(&raw).ram.bandwidth_gbs, Some(307.2));
+    raw.metal[0].gpu_cores = Some(40);
+    let hw = build(&raw);
+    assert_eq!(hw.ram.bandwidth_gbs, Some(409.6));
+    assert_eq!(hw.gpu.unwrap().bandwidth_gbs, Some(409.6));
+}
+
+#[test]
+fn puce_apple_inconnue() {
+    let mut raw = macbook_m1_pro();
+    raw.cpu.name = "Apple M7 Max".into();
+    raw.metal[0].name = "Apple M7 Max".into();
+    let hw = build(&raw);
+    // La dernière puce connue de la gamme, signalée comme estimée.
+    assert_eq!(hw.ram.channels_source, Source::Estimated);
+    assert_eq!(hw.ram.kind, RamKind::Lpddr5x);
+    let gpu = hw.gpu.unwrap();
+    assert_eq!(gpu.bandwidth_source, Source::Estimated);
+    assert!(gpu.bandwidth_gbs.unwrap() > 400.0);
+    assert!(hw.warnings.iter().any(|w| w.contains("Apple M5 Max")));
+
+    // Gamme inconnue : type lu par system_profiler, bande passante à corriger.
+    raw.cpu.name = "Apple Z1".into();
+    let hw = build(&raw);
+    assert_eq!(hw.ram.kind, RamKind::Lpddr5);
+    assert_eq!((hw.ram.speed_mts, hw.ram.bandwidth_gbs), (None, None));
+    assert_eq!(hw.ram.installed, Some(16 * GIB));
+    assert!(
+        hw.warnings
+            .iter()
+            .any(|w| w.contains("absente de la table"))
+    );
+    assert!(!hw.warnings.iter().any(|w| w.contains("Barrettes")));
+    assert_eq!(hw.gpu.unwrap().bandwidth_gbs, None);
+}
+
+#[test]
+fn mac_corrections_et_simulation() {
+    let raw = macbook_m1_pro();
+    // « GPU intégré : oui » ne retire pas les couches d'un GPU à mémoire unifiée.
+    let o = Overrides {
+        gpu_integrated: Some(false),
+        ..Default::default()
+    };
+    let gpu = build_profile(&raw, &o).gpu.unwrap();
+    assert!(gpu.integrated && gpu.unified_memory);
+
+    // Canaux corrigés : la bande passante du GPU suit celle de la mémoire.
+    let o = Overrides {
+        ram_channels: Some(2),
+        ..Default::default()
+    };
+    let hw = build_profile(&raw, &o);
+    assert_eq!(hw.ram.bandwidth_gbs, Some(102.4));
+    assert_eq!(
+        hw.gpu.map(|g| (g.bandwidth_gbs, g.bandwidth_source)),
+        Some((Some(102.4), Source::Estimated))
+    );
+
+    // RAM simulée : la limite de Metal suit, dans la même proportion.
+    let o = Overrides {
+        simulated_ram_total: Some(64 * GIB),
+        ..Default::default()
+    };
+    let hw = build_profile(&raw, &o);
+    assert_eq!(hw.ram.total, 64 * GIB);
+    assert_eq!(hw.gpu.unwrap().vram_total, 12_713_115_648 * 4);
+
+    // GPU simulé : un GPU dédié remplace le GPU à mémoire unifiée.
+    let o = Overrides {
+        simulated_gpu: Some("NVIDIA GeForce RTX 4090 24 Go".into()),
+        ..Default::default()
+    };
+    let gpu = build_profile(&raw, &o).gpu.unwrap();
+    assert!(!gpu.unified_memory && !gpu.integrated);
+    assert_eq!(gpu.vram_total, 24 * GIB);
 }

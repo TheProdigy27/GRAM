@@ -25,8 +25,8 @@ export const NO_OVERRIDES: Overrides = {
   simulatedRamTotal: null,
 };
 
-/** Canaux mémoire proposés (64 bits chacun). */
-export const RAM_CHANNELS = [1, 2, 3, 4, 6, 8] as const;
+/** Canaux mémoire proposés (64 bits chacun ; jusqu'à 16 pour une puce Apple Ultra). */
+export const RAM_CHANNELS = [1, 2, 3, 4, 6, 8, 12, 16] as const;
 
 /** Quantités de RAM proposées pour la simulation, en Go. */
 export const SIMULATED_RAM_GB = [8, 16, 24, 32, 48, 64, 96, 128, 192, 256] as const;
@@ -105,11 +105,15 @@ export class CorrectionsDialog {
     return (index !== null ? all.find((g) => g.index === index) : undefined) ?? all[0] ?? null;
   });
 
+  /** GPU à mémoire unifiée (Apple Silicon) : « GPU intégré » ne s'y applique pas. */
+  protected readonly unifiedGpu = computed(() => this.chosenGpu()?.unifiedMemory ?? false);
+
   protected readonly channelsHint = computed(() => {
     const r = this.detected()?.ram;
     if (!r) return '';
-    const modules = `${r.modules} barrette${r.modules > 1 ? 's' : ''}`;
-    return `Détecté : ${r.channels} (valeur ${SOURCE_LABELS[r.channelsSource]}) · ${modules}`;
+    const detected = `Détecté : ${r.channels} (valeur ${SOURCE_LABELS[r.channelsSource]})`;
+    if (r.modules === 0) return detected;
+    return `${detected} · ${r.modules} barrette${r.modules > 1 ? 's' : ''}`;
   });
 
   protected readonly bandwidthHint = computed(() => {

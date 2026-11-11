@@ -11,6 +11,7 @@ fn budget() -> MemoryBudget {
         ram: 47 * GIB,
         gpu_bandwidth_gbs: Some(960.0),
         ram_bandwidth_gbs: 96.0,
+        unified: false,
     }
 }
 
@@ -543,6 +544,7 @@ fn sans_gpu_discret_tout_passe_par_la_ram() {
         ram: 12 * GIB,
         gpu_bandwidth_gbs: None,
         ram_bandwidth_gbs: 51.2,
+        unified: false,
     };
     // Une part « VRAM » mesurée (iGPU via Vulkan) ne change rien : même bande passante.
     let x = transfer_seconds(5 * GIB, 0.8, &cpu);

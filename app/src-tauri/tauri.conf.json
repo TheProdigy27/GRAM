@@ -38,7 +38,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": ["nsis", "msi", "app", "dmg"],
     "publisher": "GRAM",
     "category": "Utility",
     "shortDescription": "Quels modèles IA tournent en local sur cette machine ?",
@@ -51,6 +51,14 @@
         "displayLanguageSelector": false
       },
       "wix": { "language": "fr-FR" }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 }
+      }
     },
     "icon": [
       "icons/32x32.png",

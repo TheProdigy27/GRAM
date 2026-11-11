@@ -1,8 +1,8 @@
 //! État partagé de l'application (`tauri::State<AppState>`) : matériel, runtimes, catalogue et
 //! paramètres.
 //!
-//! - Le matériel est détecté une fois (au démarrage), dans `spawn_blocking` : WMI a besoin d'un
-//!   thread initialisé COM. Les corrections et la simulation repartent des données brutes ; les
+//! - Le matériel est détecté une fois (au démarrage), dans `spawn_blocking` : WMI (Windows) a
+//!   besoin d'un thread initialisé COM, et `system_profiler` (macOS) prend ~0,3 s. Les corrections et la simulation repartent des données brutes ; les
 //!   corrections sont enregistrées d'un lancement à l'autre, pas la simulation.
 //! - Le catalogue est chargé hors ligne au démarrage (cache, sinon catalogue embarqué), puis
 //!   remplacé par `sync_catalog`. Les fiches enrichies à la demande y sont reportées.
@@ -54,7 +54,9 @@ pub struct Loaded {
 
 /// Où l'application range ses fichiers, et si elle a le droit d'aller sur le réseau.
 pub struct Config {
-    /// `%LOCALAPPDATA%\fr.gram.desktop` : `cache\`, `settings.json`, `corrections.json`.
+    /// Dossier de l'application (`%LOCALAPPDATA%\fr.gram.desktop` sous Windows,
+    /// `~/Library/Application Support/fr.gram.desktop` sous macOS) : `cache`, `settings.json`,
+    /// `corrections.json`.
     pub dir: PathBuf,
     /// `false` dans les tests : synchronisation hors ligne, fiches non enrichies.
     pub network: bool,
@@ -123,8 +125,8 @@ impl AppState {
         }
     }
 
-    /// `%LOCALAPPDATA%\fr.gram.desktop\` (dossier temporaire à défaut), vraie détection,
-    /// trousseau Windows.
+    /// Dossier de l'application (dossier temporaire à défaut), vraie détection, trousseau du
+    /// système.
     pub fn production() -> Self {
         let dir = gram_hub::cache::app_dir()
             .unwrap_or_else(|| std::env::temp_dir().join(gram_hub::cache::APP_ID));

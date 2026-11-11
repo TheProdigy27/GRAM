@@ -4,16 +4,20 @@
 //! [`crate::build_profile`] les transforme en [`gram_core::HardwareProfile`] sans aucune I/O.
 //! Elles sont sérialisables pour servir de fixtures (`gram-cli hw --raw`).
 
-use gram_core::DiskInfo;
+use gram_core::{DiskInfo, Os};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RawHardware {
+    /// Système de la machine (absent des anciens dumps : Windows).
+    pub os: Os,
     pub cpu: RawCpu,
     pub memory: RawMemory,
-    /// Adaptateurs DXGI, dans l'ordre d'énumération (logiciels compris).
+    /// Adaptateurs DXGI, dans l'ordre d'énumération (logiciels compris). Windows.
     pub adapters: Vec<RawAdapter>,
+    /// GPU vus par Metal (`MTLCopyAllDevices`), dans l'ordre d'énumération. macOS.
+    pub metal: Vec<RawMetalDevice>,
     /// `None` si NVML n'a pas pu être chargée (pas de pilote NVIDIA, ou échec).
     pub nvml: Option<RawNvml>,
     pub backends: RawBackends,
@@ -31,6 +35,8 @@ pub struct RawCpu {
     pub max_clock_mhz: Option<u32>,
     /// Architecture x86 / x86-64 (les drapeaux AVX n'ont de sens que là).
     pub x86: bool,
+    /// Architecture ARM (Apple Silicon, y compris sous Rosetta).
+    pub arm: bool,
     pub avx2: bool,
     pub avx512: bool,
     pub fma: bool,
@@ -40,17 +46,20 @@ pub struct RawCpu {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RawMemory {
-    /// Mémoire vue par Windows, en octets.
+    /// Mémoire vue par le système, en octets.
     pub total: u64,
     /// Octets.
     pub available: u64,
-    /// Barrettes (`Win32_PhysicalMemory`) ; vide si WMI a échoué.
+    /// Barrettes (`Win32_PhysicalMemory`, ou `system_profiler` sur un Mac Intel) ; vide si WMI
+    /// a échoué, et sur un Mac Apple Silicon (mémoire soudée à la puce).
     pub modules: Vec<RawMemoryModule>,
     /// Emplacements de la carte mère (`Win32_PhysicalMemoryArray.MemoryDevices`).
     pub slots: Option<u32>,
+    /// Type de mémoire annoncé sans barrette (`system_profiler` sur Apple Silicon : « LPDDR5 »).
+    pub type_name: Option<String>,
 }
 
-/// Une ligne de `Win32_PhysicalMemory`.
+/// Une ligne de `Win32_PhysicalMemory` (ou une barrette d'un Mac Intel).
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct RawMemoryModule {
@@ -62,6 +71,8 @@ pub struct RawMemoryModule {
     pub configured_speed: Option<u32>,
     /// `SMBIOSMemoryType` (26 = DDR4, 34 = DDR5…).
     pub smbios_type: Option<u32>,
+    /// Type en clair, sans code SMBIOS (`system_profiler` : « DDR4 », « LPDDR4X »).
+    pub type_name: Option<String>,
     /// `DataWidth`, en bits.
     pub data_width: Option<u32>,
     /// Ex. « DIMMA2 », « Controller0-ChannelA-DIMM0 ».
@@ -93,6 +104,31 @@ pub struct RawAdapter {
     pub integrated: Option<bool>,
     /// DXCore `IsHardware`.
     pub hardware: Option<bool>,
+}
+
+/// Un GPU vu par Metal (`MTLDevice`), complété par `system_profiler`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RawMetalDevice {
+    /// Position dans `MTLCopyAllDevices` ; référence de `Overrides::gpu_index`.
+    pub index: u32,
+    pub name: String,
+    pub registry_id: u64,
+    /// `recommendedMaxWorkingSetSize` : mémoire que le GPU peut utiliser sans dégrader les
+    /// performances, en octets. Sur Apple Silicon, une grande part de la RAM (11,8 Gio sur
+    /// 16 Go ; réglable avec `iogpu.wired_limit_mb`) : c'est la « VRAM » que comptent llama.cpp
+    /// et Ollama.
+    pub recommended_max_working_set: u64,
+    /// `hasUnifiedMemory` (Apple Silicon, mais aussi l'iGPU Intel d'un Mac Intel).
+    pub unified_memory: bool,
+    /// `isLowPower` : GPU intégré d'un Mac Intel à deux GPU.
+    pub low_power: bool,
+    /// `isRemovable` : GPU externe (eGPU).
+    pub removable: bool,
+    /// Cœurs du GPU (`system_profiler`, Apple Silicon).
+    pub gpu_cores: Option<u32>,
+    /// VRAM annoncée par `system_profiler` (GPU des Mac Intel), en octets.
+    pub vram: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -127,4 +163,6 @@ pub struct RawBackends {
     pub nvcuda: bool,
     /// `vulkan-1.dll` présente dans System32.
     pub vulkan: bool,
+    /// Au moins un GPU Metal (macOS).
+    pub metal: bool,
 }
