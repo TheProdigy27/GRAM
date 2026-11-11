@@ -2,6 +2,7 @@
 //! arguments en camelCase (comme les envoie le WebView), sérialisation des réponses et des
 //! erreurs, événements. Sans réseau, sans détection réelle et sans toucher au trousseau.
 
+use crate::commands::update::UpdateState;
 use crate::state::{AppState, Config};
 use crate::token::MemoryStore;
 use gram_core::{RuntimeStatus, RuntimesStatus};
@@ -9,7 +10,7 @@ use gram_ollama::OllamaClient;
 use gram_ollama::testing::FakeOllama;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
@@ -81,10 +82,36 @@ impl Harness {
 
     /// Avec l'API d'Ollama (un faux serveur, `gram_ollama::testing`).
     fn with_ollama(dir: &TempDir, ollama: Option<OllamaClient>) -> Self {
-        let app = mock_builder()
-            .manage(state_in(&dir.0, ollama))
+        Self::build(
+            dir,
+            mock_builder().manage(state_in(&dir.0, ollama)),
+            mock_context(noop_assets()),
+        )
+    }
+
+    /// Avec le plugin updater : manifeste lu à `endpoint`, paquets vérifiés avec la clé de test
+    /// (`tests/fixtures/update/test.key.pub`). `can_install` vaut `false` en développement.
+    fn with_updater(dir: &TempDir, endpoint: &str, can_install: bool) -> Self {
+        let mut context = mock_context(noop_assets());
+        context.config_mut().plugins.0.insert(
+            "updater".into(),
+            json!({ "pubkey": TEST_PUBKEY, "endpoints": [endpoint], "requireSignedVersion": true }),
+        );
+        let builder = mock_builder()
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .manage(state_in(&dir.0, None))
+            .manage(UpdateState::new(can_install));
+        Self::build(dir, builder, context)
+    }
+
+    fn build(
+        dir: &TempDir,
+        builder: tauri::Builder<MockRuntime>,
+        context: tauri::Context<MockRuntime>,
+    ) -> Self {
+        let app = builder
             .invoke_handler(crate::commands::handler())
-            .build(mock_context(noop_assets()))
+            .build(context)
             .unwrap();
         let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
@@ -710,4 +737,185 @@ fn mesures_refusees() {
         e.as_str().unwrap().starts_with("API d'Ollama inaccessible"),
         "{e}"
     );
+}
+
+// ── Mises à jour ─────────────────────────────────────────────────────────────────────────────
+
+/// Clé publique de test : elle a signé la release fictive 99.0.0 de `tests/fixtures/update/`.
+const TEST_PUBKEY: &str = include_str!("../../../tests/fixtures/update/test.key.pub");
+/// Manifeste produit par `scripts/latest-json.mjs` pour cette release fictive.
+const MANIFEST: &str = include_str!("../../../tests/fixtures/update/latest.json");
+/// Adresse des paquets dans le manifeste, remplacée par celle du faux GitHub.
+const RELEASE_URL: &str = "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0";
+
+/// Faux GitHub : le manifeste de la release fictive (sous la version `version`) et ses paquets,
+/// éventuellement modifiés après signature (`tamper`). `None` : aucune release (404).
+fn fake_github(release: Option<(&str, bool)>) -> FakeOllama {
+    let base = Arc::new(OnceLock::<String>::new());
+    let url = Arc::clone(&base);
+    let release = release.map(|(v, tamper)| (v.to_owned(), tamper));
+    let fake = FakeOllama::start(move |r| {
+        let Some((version, tamper)) = &release else {
+            return (404, "Not Found".into());
+        };
+        let base = url.get().expect("adresse du faux GitHub");
+        if r.path == "/latest.json" {
+            let manifest = MANIFEST
+                .replace(RELEASE_URL, &format!("{base}/download"))
+                .replace(
+                    r#""version": "99.0.0""#,
+                    &format!(r#""version": "{version}""#),
+                );
+            return (200, manifest);
+        }
+        match r.path.strip_prefix("/download/").map(package) {
+            Some(Some(body)) if *tamper => (200, body.replace("faux", "FAUX")),
+            Some(Some(body)) => (200, body),
+            _ => (404, "Not Found".into()),
+        }
+    });
+    base.set(fake.url().to_owned()).unwrap();
+    fake
+}
+
+/// Paquet de la release fictive, tel que signé.
+fn package(name: &str) -> Option<String> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/update/release");
+    std::fs::read_to_string(dir.join(name)).ok()
+}
+
+fn manifest_url(fake: &FakeOllama) -> String {
+    format!("{}/latest.json", fake.url())
+}
+
+/// L'application cherche les mises à jour dans les releases GitHub du dépôt, avec une vraie clé
+/// (pas celle des tests) ; seuls les builds de `scripts/release.mjs` produisent les paquets signés.
+#[test]
+fn mises_a_jour_configurees() {
+    let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    let updater = &conf["plugins"]["updater"];
+    assert_eq!(
+        updater["endpoints"],
+        json!(["https://github.com/TheProdigy27/GRAM/releases/latest/download/latest.json"])
+    );
+    assert_eq!(updater["requireSignedVersion"], true);
+    let pubkey = updater["pubkey"].as_str().unwrap();
+    assert!(pubkey.len() > 100, "clé publique : {pubkey}");
+    assert_ne!(pubkey, TEST_PUBKEY.trim());
+    assert_eq!(conf["bundle"]["createUpdaterArtifacts"], Value::Null);
+    let ci: Value = serde_json::from_str(include_str!("../tauri.updater.conf.json")).unwrap();
+    assert_eq!(ci["bundle"]["createUpdaterArtifacts"], true);
+}
+
+#[test]
+fn mise_a_jour_disponible() {
+    let github = fake_github(Some(("99.0.0", false)));
+    let dir = TempDir::new("maj-disponible");
+    let h = Harness::with_updater(&dir, &manifest_url(&github), true);
+    let current = h.app.package_info().version.to_string();
+    assert_eq!(
+        h.ok("check_update", json!({})),
+        json!({
+            "currentVersion": current,
+            "update": {
+                "version": "99.0.0",
+                "notes": "## Nouveautés\n\n- Release fictive pour les tests.",
+                "date": "2026-11-11T12:00:00Z",
+            },
+        })
+    );
+}
+
+#[test]
+fn deja_a_jour_ou_aucune_release() {
+    let dir = TempDir::new("maj-aucune");
+    let github = fake_github(Some(("0.1.0", false)));
+    let h = Harness::with_updater(&dir, &manifest_url(&github), true);
+    assert_eq!(h.app.package_info().version.to_string(), "0.1.0");
+    assert_eq!(
+        h.ok("check_update", json!({})),
+        json!({ "currentVersion": "0.1.0", "update": null })
+    );
+    assert_eq!(
+        h.invoke("install_update", json!({})).unwrap_err(),
+        "aucune mise à jour disponible"
+    );
+
+    let github = fake_github(None);
+    let h = Harness::with_updater(&dir, &manifest_url(&github), true);
+    assert_eq!(
+        h.invoke("check_update", json!({})).unwrap_err(),
+        "vérification impossible : aucune release trouvée sur GitHub"
+    );
+}
+
+/// Un paquet modifié après signature est téléchargé (progression envoyée) puis refusé, avant
+/// toute installation.
+#[test]
+fn paquet_modifie_refuse() {
+    let github = fake_github(Some(("99.0.0", true)));
+    let dir = TempDir::new("maj-modifiee");
+    let h = Harness::with_updater(&dir, &manifest_url(&github), true);
+    let progress = h.record(crate::events::UPDATE_PROGRESS);
+    h.ok("check_update", json!({}));
+    assert_eq!(
+        h.invoke("install_update", json!({})).unwrap_err(),
+        "téléchargement impossible : signature invalide, paquet refusé"
+    );
+    let progress = progress.lock().unwrap();
+    assert_eq!(progress[0], json!({ "downloaded": 0, "total": null }));
+    let last = progress.last().unwrap();
+    assert!(last["downloaded"].as_u64().unwrap() > 0, "{last}");
+    assert_eq!(last["downloaded"], last["total"]);
+    let downloads = github
+        .requests()
+        .iter()
+        .filter(|r| r.path.starts_with("/download/"))
+        .count();
+    assert_eq!(downloads, 1);
+}
+
+/// En développement, rien n'est téléchargé : le plugin remplacerait le dossier `target/debug`.
+#[test]
+fn pas_d_installation_en_developpement() {
+    let github = fake_github(Some(("99.0.0", false)));
+    let dir = TempDir::new("maj-dev");
+    let h = Harness::with_updater(&dir, &manifest_url(&github), false);
+    h.ok("check_update", json!({}));
+    let e = h.invoke("install_update", json!({})).unwrap_err();
+    assert!(e.as_str().unwrap().contains("mode développement"), "{e}");
+    assert!(
+        github
+            .requests()
+            .iter()
+            .all(|r| !r.path.starts_with("/download/"))
+    );
+}
+
+/// Le manifeste de `scripts/latest-json.mjs` et les signatures de la CLI Tauri (liées à la
+/// version, `requireSignedVersion`) sont acceptés par le plugin ; un manifeste qui annonce une
+/// autre version que celle signée est refusé (pas de retour forcé à une ancienne release).
+#[test]
+fn signature_liee_a_la_version() {
+    use tauri_plugin_updater::UpdaterExt;
+    let dir = TempDir::new("maj-signature");
+    let download = |version: &str| {
+        let github = fake_github(Some((version, false)));
+        let h = Harness::with_updater(&dir, &manifest_url(&github), true);
+        tauri::async_runtime::block_on(async {
+            let update = h.app.updater().unwrap().check().await.unwrap().unwrap();
+            update.download(|_, _| {}, || {}).await
+        })
+    };
+    let bytes = download("99.0.0").unwrap();
+    let expected = if cfg!(windows) {
+        "GRAM_99.0.0_x64-setup.exe"
+    } else {
+        "GRAM_99.0.0_universal.app.tar.gz"
+    };
+    assert_eq!(
+        String::from_utf8(bytes).unwrap(),
+        package(expected).unwrap()
+    );
+    assert!(download("99.0.1").is_err());
 }

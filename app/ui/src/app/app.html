@@ -46,6 +46,29 @@
       CSV pour Excel (.csv)
     </button>
   </mat-menu>
+  @if (updates.available(); as u) {
+    <button
+      mat-flat-button
+      type="button"
+      data-testid="open-update"
+      [matTooltip]="'Installer GRAM ' + u.version"
+      (click)="openUpdate()"
+    >
+      <mat-icon>system_update_alt</mat-icon>
+      Mise à jour {{ u.version }}
+    </button>
+  } @else {
+    <button
+      mat-icon-button
+      type="button"
+      data-testid="open-update"
+      aria-label="Rechercher une mise à jour"
+      matTooltip="Rechercher une mise à jour"
+      (click)="openUpdate()"
+    >
+      <mat-icon>system_update_alt</mat-icon>
+    </button>
+  }
   <button
     mat-icon-button
     type="button"

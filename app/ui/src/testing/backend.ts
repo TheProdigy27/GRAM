@@ -55,6 +55,8 @@ const DEFAULTS: Record<string, Handler> = {
   ollama_measure: () => MEASUREMENT,
   apply_calibration: () => ({ ...SETTINGS, estimate: { ...SETTINGS.estimate, gpuEfficiency: 0.48 } }),
   clear_measurements: () => CALIBRATION_EMPTY,
+  check_update: () => ({ currentVersion: '0.1.0', update: null }),
+  install_update: () => new Promise(() => undefined), // l'application redémarre
   'plugin:clipboard-manager|write_text': () => null,
   'plugin:opener|open_url': () => null,
 };

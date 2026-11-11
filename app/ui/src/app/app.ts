@@ -1,4 +1,4 @@
-import { Component, PendingTasks, inject, signal } from '@angular/core';
+import { Component, DestroyRef, PendingTasks, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,11 +19,13 @@ import { DetailStore } from './state/detail.store';
 import { HardwareStore } from './state/hardware.store';
 import { RankingStore } from './state/ranking.store';
 import { SettingsStore } from './state/settings.store';
+import { UPDATE_CHECK_DELAY_MS, UpdateStore } from './state/update.store';
 
 /**
  * Coquille de l'application. Au lancement : matériel, paramètres et premier classement en
  * parallèle (catalogue du cache, sinon embarqué), puis synchronisation du catalogue en arrière-
- * plan (rien n'est téléchargé si le cache a moins de 24 h).
+ * plan (rien n'est téléchargé si le cache a moins de 24 h). Quelques secondes plus tard, GRAM
+ * cherche une mise à jour dans les releases GitHub, sans rien afficher s'il n'y en a pas.
  */
 @Component({
   selector: 'app-root',
@@ -48,6 +50,7 @@ export class App {
   protected readonly catalog = inject(CatalogStore);
   protected readonly detail = inject(DetailStore);
   protected readonly ranking = inject(RankingStore);
+  protected readonly updates = inject(UpdateStore);
   private readonly tauri = inject(TauriService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -60,6 +63,19 @@ export class App {
     void this.hardware.load();
     void inject(SettingsStore).load();
     void this.catalog.sync(false);
+
+    const timer = setTimeout(() => void this.checkUpdate(), inject(UPDATE_CHECK_DELAY_MS));
+    inject(DestroyRef).onDestroy(() => clearTimeout(timer));
+  }
+
+  /** Vérification automatique : une mise à jour trouvée est signalée, un échec ignoré. */
+  private async checkUpdate(): Promise<void> {
+    const update = await this.updates.check(true);
+    if (!update) return;
+    this.snackBar
+      .open(`GRAM ${update.version} est disponible.`, 'Voir', { duration: 10000 })
+      .onAction()
+      .subscribe(() => this.openUpdate());
   }
 
   protected rescan(): void {
@@ -80,6 +96,14 @@ export class App {
     this.pendingTasks.run(async () => {
       const { SettingsDialog } = await import('./features/settings/settings-dialog');
       this.dialog.open(SettingsDialog, { width: '820px', maxWidth: '94vw', autoFocus: false });
+    });
+  }
+
+  /** Dialogue « Mise à jour », chargé à la première ouverture comme celui des paramètres. */
+  protected openUpdate(): void {
+    this.pendingTasks.run(async () => {
+      const { UpdateDialog } = await import('./features/update/update-dialog');
+      this.dialog.open(UpdateDialog, { width: '560px', maxWidth: '94vw', autoFocus: false });
     });
   }
 

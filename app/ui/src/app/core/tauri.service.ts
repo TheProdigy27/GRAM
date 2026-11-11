@@ -21,6 +21,8 @@ import type { RuntimesStatus } from './generated/RuntimesStatus';
 import type { Settings } from './generated/Settings';
 import type { SyncProgress } from './generated/SyncProgress';
 import type { SyncSummary } from './generated/SyncSummary';
+import type { UpdateCheck } from './generated/UpdateCheck';
+import type { UpdateProgress } from './generated/UpdateProgress';
 
 /** Événements émis par le backend (`app/src-tauri/src/events.rs`) et leur charge utile. */
 export interface GramEvents {
@@ -28,6 +30,7 @@ export interface GramEvents {
   'sync-progress': SyncProgress;
   'sync-done': SyncSummary;
   'rate-limit': RateLimitInfo;
+  'update-progress': UpdateProgress;
 }
 
 /** Message lisible d'une erreur : le backend rejette `invoke` avec une chaîne en français. */
@@ -152,6 +155,21 @@ export class TauriService {
     return this.call('has_hf_token');
   }
 
+  // ── Mises à jour (releases GitHub) ───────────────────────────────────────────────────────
+
+  /** Version en cours et mise à jour proposée par la dernière release (`update: null` si à jour). */
+  checkUpdate(): Promise<UpdateCheck> {
+    return this.call('check_update');
+  }
+
+  /**
+   * Télécharge la mise à jour (événements `update-progress`), vérifie sa signature, l'installe
+   * et relance l'application : la promesse ne se résout pas, sauf erreur.
+   */
+  installUpdate(): Promise<void> {
+    return this.call('install_update');
+  }
+
   // ── Plugins ──────────────────────────────────────────────────────────────────────────────
 
   /** Copie une commande dans le presse-papiers. */
@@ -159,7 +177,10 @@ export class TauriService {
     return writeText(text).catch(rethrow);
   }
 
-  /** Ouvre une page dans le navigateur par défaut (seul huggingface.co est autorisé). */
+  /**
+   * Ouvre une page dans le navigateur par défaut (seuls huggingface.co et les releases GitHub de
+   * GRAM sont autorisés).
+   */
   openUrl(url: string): Promise<void> {
     return openUrl(url).catch(rethrow);
   }

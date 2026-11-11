@@ -8,7 +8,10 @@
     "clipboard-manager:allow-write-text",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "https://huggingface.co/*" }]
+      "allow": [
+        { "url": "https://huggingface.co/*" },
+        { "url": "https://github.com/TheProdigy27/GRAM/releases*" }
+      ]
     }
   ]
 }

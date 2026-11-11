@@ -11,6 +11,7 @@ pub mod ranking;
 pub mod settings;
 pub mod system;
 pub mod token;
+pub mod update;
 
 use tauri::Runtime;
 use tauri::ipc::Invoke;
@@ -40,5 +41,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         calibration::get_calibration,
         calibration::apply_calibration,
         calibration::clear_measurements,
+        update::check_update,
+        update::install_update,
     ]
 }

@@ -1,0 +1,107 @@
+<h2 mat-dialog-title>Mise à jour de GRAM</h2>
+
+<mat-dialog-content class="content" data-testid="update-content">
+  @switch (store.status()) {
+    @case ('upToDate') {
+      <p class="state ok" data-testid="update-uptodate">
+        <mat-icon aria-hidden="true">check_circle</mat-icon>
+        GRAM {{ store.currentVersion() }} est à jour.
+      </p>
+    }
+    @case ('available') {
+      @if (store.available(); as u) {
+        <p class="state" data-testid="update-available">
+          <mat-icon aria-hidden="true">new_releases</mat-icon>
+          <span>
+            <strong>GRAM {{ u.version }}</strong> est disponible
+            <span class="muted">(version actuelle : {{ store.currentVersion() }})</span>
+          </span>
+        </p>
+        @if (date(); as d) {
+          <p class="muted date">Publiée le {{ d }}</p>
+        }
+        @if (notes().length) {
+          <div class="notes" data-testid="update-notes">
+            @for (block of notes(); track $index) {
+              @switch (block.kind) {
+                @case ('heading') {
+                  <h3>{{ block.text }}</h3>
+                }
+                @case ('item') {
+                  <p class="item">{{ block.text }}</p>
+                }
+                @default {
+                  <p>{{ block.text }}</p>
+                }
+              }
+            }
+          </div>
+        }
+        <p class="muted hint">
+          Le paquet est téléchargé depuis GitHub et sa signature vérifiée avant l’installation. GRAM
+          se ferme puis redémarre avec la nouvelle version ; vos paramètres, corrections et mesures
+          sont conservés.
+        </p>
+      }
+    }
+    @case ('installing') {
+      <div class="progress" data-testid="update-progress">
+        <span>
+          @if (store.downloaded()) {
+            Installation… GRAM va redémarrer.
+          } @else {
+            Téléchargement de GRAM {{ store.available()?.version }}
+            @if (received(); as r) {
+              : {{ r }}
+            }
+          }
+        </span>
+        <mat-progress-bar
+          [mode]="store.percent() === null || store.downloaded() ? 'indeterminate' : 'determinate'"
+          [value]="store.percent() ?? 0"
+          aria-label="Téléchargement de la mise à jour"
+        />
+      </div>
+    }
+    @case ('error') {
+      <p class="error-box" role="alert" data-testid="update-error">{{ store.error() }}</p>
+      <p class="muted">
+        La dernière version peut aussi être téléchargée et installée à la main depuis la page des
+        releases.
+      </p>
+    }
+    @default {
+      <p class="state" data-testid="update-checking">
+        <mat-spinner diameter="20" aria-label="Recherche en cours" />
+        Recherche d’une mise à jour…
+      </p>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions class="actions">
+  <button mat-button type="button" data-testid="update-releases" (click)="openReleases()">
+    <mat-icon>open_in_new</mat-icon>
+    Page des releases
+  </button>
+  <span class="spacer"></span>
+  @switch (store.status()) {
+    @case ('available') {
+      <button mat-button type="button" mat-dialog-close>Plus tard</button>
+      <button mat-flat-button type="button" data-testid="update-install" (click)="install()">
+        <mat-icon>system_update_alt</mat-icon>
+        Installer et redémarrer
+      </button>
+    }
+    @case ('error') {
+      <button mat-button type="button" mat-dialog-close>Fermer</button>
+      <button mat-flat-button type="button" data-testid="update-retry" (click)="retry()">
+        Réessayer
+      </button>
+    }
+    @case ('installing') {}
+    @default {
+      <button mat-button type="button" mat-dialog-close>Fermer</button>
+    }
+  }
+</mat-dialog-actions>

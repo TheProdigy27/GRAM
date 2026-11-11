@@ -12,11 +12,15 @@ import { argsOf, mockBackend } from '../testing/backend';
 import { HARDWARE, RANKING, SYNC_SUMMARY } from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
+import { UPDATE_CHECK_DELAY_MS } from './state/update.store';
 
-async function start() {
+async function start(updateCheckDelayMs = 60_000) {
   await TestBed.configureTestingModule({
     imports: [App],
-    providers: [{ provide: FILTER_DEBOUNCE_MS, useValue: 0 }],
+    providers: [
+      { provide: FILTER_DEBOUNCE_MS, useValue: 0 },
+      { provide: UPDATE_CHECK_DELAY_MS, useValue: updateCheckDelayMs },
+    ],
   }).compileComponents();
   const fixture = TestBed.createComponent(App);
   await fixture.whenStable();
@@ -176,6 +180,54 @@ describe('App', () => {
     ]);
     expect(el.querySelector('[data-testid="simulation"]')).toBeNull();
     expect(argsOf(calls, 'rank').length).toBe(ranks + 1);
+  });
+
+  it('signale une mise à jour trouvée au lancement et ouvre son dialogue', async () => {
+    const calls = mockBackend({
+      check_update: () => ({
+        currentVersion: '0.1.0',
+        update: { version: '0.2.0', notes: null, date: null },
+      }),
+    });
+    const fixture = await start(0);
+    await new Promise((r) => setTimeout(r, 10)); // vérification différée, hors d'Angular
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
+    expect(argsOf(calls, 'check_update')).toHaveLength(1);
+
+    const snack = await root.getHarness(MatSnackBarHarness);
+    expect(await snack.getMessage()).toBe('GRAM 0.2.0 est disponible.');
+    expect(text(el.querySelector('[data-testid="open-update"]'))).toBe(
+      'system_update_alt Mise à jour 0.2.0',
+    );
+
+    await snack.dismissWithAction();
+    await fixture.whenStable();
+    const dialog = await root.getHarness(MatDialogHarness);
+    expect(await dialog.getTitleText()).toBe('Mise à jour de GRAM');
+    expect(await dialog.getContentText()).toContain('GRAM 0.2.0 est disponible');
+    // Déjà connue : pas de nouvelle vérification.
+    expect(argsOf(calls, 'check_update')).toHaveLength(1);
+  });
+
+  it('rien n’est signalé si GRAM est à jour ; le bouton lance une vérification', async () => {
+    const calls = mockBackend();
+    const fixture = await start(0);
+    await new Promise((r) => setTimeout(r, 10));
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
+    expect(argsOf(calls, 'check_update')).toHaveLength(1);
+    expect(await root.getAllHarnesses(MatSnackBarHarness)).toHaveLength(0);
+
+    (el.querySelector('[data-testid="open-update"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    await new Promise((r) => setTimeout(r));
+    await fixture.whenStable();
+    const dialog = await root.getHarness(MatDialogHarness);
+    expect(await dialog.getContentText()).toContain('GRAM 0.1.0 est à jour.');
+    expect(argsOf(calls, 'check_update')).toHaveLength(2);
   });
 
   it('ouvre les paramètres et le dialogue « Corriger… »', async () => {

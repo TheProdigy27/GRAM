@@ -54,6 +54,7 @@
     },
     "macOS": {
       "minimumSystemVersion": "10.15",
+      "signingIdentity": "-",
       "dmg": {
         "windowSize": { "width": 660, "height": 400 },
         "appPosition": { "x": 180, "y": 170 },
@@ -67,5 +68,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwMDU0OEQyRERDMjgxRkQKUldUOWdjTGQwa2dGY0tUVUxVM0NoWWZDSkg3dnZpcDNaRHBORTIycWQxdy8zbFIyWTRJM3hDUmsK",
+      "endpoints": ["https://github.com/TheProdigy27/GRAM/releases/latest/download/latest.json"],
+      "requireSignedVersion": true,
+      "windows": { "installMode": "passive" }
+    }
   }
 }

@@ -38,6 +38,13 @@ tauri-plugin-opener = "2.7.2"
 tauri-plugin-clipboard-manager = "2.5.0"
 # Dialogue « Enregistrer sous » de l'export, ouvert depuis Rust (aucune permission côté WebView).
 tauri-plugin-dialog = "2.8.4"
+# Mises à jour depuis les releases GitHub : manifeste `latest.json`, paquets signés (clé publique
+# dans tauri.conf.json), appelé depuis Rust seulement (aucune permission côté WebView). Sans `zip` :
+# il ne sert qu'aux anciens paquets Windows zippés (Tauri 1), les installeurs sont téléchargés tels quels.
+tauri-plugin-updater = { version = "2.14.1", default-features = false, features = [
+  "rustls-tls",
+  "system-proxy",
+] }
 
 [lints]
 workspace = true

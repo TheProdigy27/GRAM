@@ -51,6 +51,7 @@ cargo run -p gram-cli -- ollama --measure Qwen3-8B --quant Q4_K_M --ctx 8192   #
 powershell -ExecutionPolicy Bypass -File scripts/check.ps1   # CI locale complète (Windows)
 powershell -ExecutionPolicy Bypass -File scripts/test-installer.ps1   # installeur testé dans Windows Sandbox
 scripts/check.sh                                             # CI locale complète (macOS, Linux)
+node scripts/release.mjs 0.2.0                               # release : sur le Mac puis sur le PC Windows (voir « Releases et mises à jour »)
 ```
 
 ## Structure
@@ -65,8 +66,8 @@ scripts/check.sh                                             # CI locale complè
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements, icônes (`icons/`, générées) |
 | `app/ui` | Frontend Angular + Angular Material : `core/` (service Tauri typé, types générés), `state/` (stores à base de signals), `features/` (bandeau matériel et dialogue « Corriger… », filtres, classement, fiche détail, paramètres, barre d'état), `shared/` (mise en forme française, libellés, badge de mode), `src/testing/` (fixtures typées et faux backend pour les tests), `public/logo.svg` (logo, source des icônes) |
 | `data` | Tables embarquées : `gpu_specs.json` (bande passante des GPU, liste du mode simulation), `apple_chips.json` (type, débit et largeur du bus de la mémoire unifiée des puces Apple Silicon), `uploaders.json` (priorité des uploaders GGUF), `quant_quality.json` (bits par poids typiques pour les modèles pas encore détaillés, et facteur de qualité selon les bits par poids), `quality_overrides.json` (bonus de qualité manuels par famille, vide au départ), `seed_catalog.json` (catalogue de démarrage, généré) |
-| `scripts` | `check.ps1` (CI locale sous Windows), `check.sh` (CI locale sous macOS et Linux), `test-installer.ps1` et `sandbox/` (installeur testé sur une Windows vierge) |
-| `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`), modèles réels du catalogue (`models/`), échantillon figé de 35 modèles pour le classement (`catalog/`) et réponses de l'API d'Ollama (`ollama/`) |
+| `scripts` | `check.ps1` (CI locale sous Windows), `check.sh` (CI locale sous macOS et Linux), `test-installer.ps1` et `sandbox/` (installeur testé sur une Windows vierge), `release.mjs` (release construite sur le Mac et le PC Windows), `latest-json.mjs` (manifeste de mise à jour) |
+| `tests/fixtures` | Données pour les tests : dumps matériels `gram-cli hw --raw`, réponses Hugging Face, profils matériels types (`profiles/`), modèles réels du catalogue (`models/`), échantillon figé de 35 modèles pour le classement (`catalog/`), réponses de l'API d'Ollama (`ollama/`) et release fictive 99.0.0 signée avec une clé de test (`update/`) |
 
 Les types Rust exposés au frontend sont convertis en TypeScript par `ts-rs` dans `app/ui/src/app/core/generated/` à chaque `cargo test`. Ne pas modifier ces fichiers à la main.
 
@@ -169,9 +170,11 @@ Toute la logique est en Rust (`app/src-tauri`). Au démarrage, le matériel, les
 | `ollama_measure` | `{ request: MeasureRequest }` | `Measurement`. Mesure réelle d'une quantification déjà installée dans Ollama (`repoId`, `label`, `useCase`, `ctx` comme la fiche), enregistrée dans `measurements.json`. Une seule à la fois ; refusée si la quantification ne tient pas d'après l'estimation |
 | `get_calibration` / `clear_measurements` | – | `Calibration` : mesures enregistrées (la plus récente d'abord) et réglages de vitesse proposés |
 | `apply_calibration` | – | `Settings`, avec les efficacités GPU et RAM (et le temps fixe par token, s'il a pu être ajusté) proposées par les mesures |
+| `check_update` | – | `UpdateCheck { currentVersion, update }` : `update` (`UpdateInfo { version, notes, date }`) est la mise à jour proposée par la dernière release GitHub, `null` si GRAM est à jour |
+| `install_update` | – | Ne revient pas : télécharge la mise à jour trouvée par `check_update` (événements `update-progress`), vérifie sa signature, l'installe et relance l'application. Refusée en mode développement |
 | `export_ranking` | `{ format: 'md' \| 'csv', path? }` | Chemin écrit, ou `null` si l'utilisateur annule. Exporte le dernier classement en entier. Sans `path`, le backend ouvre le dialogue « Enregistrer sous » (plugin dialog appelé depuis Rust : aucune permission côté WebView) ; avec `path`, chemin absolu avec l'extension du format. CSV : `;`, virgule décimale, UTF-8 avec BOM (Excel en français) |
 
-Événements : `hardware-ready` (`HardwareProfile`), `sync-progress` (`SyncProgress`), `sync-done` (`SyncSummary`), `rate-limit` (`RateLimitInfo`). Les erreurs rejettent la promesse avec un message en français.
+Événements : `hardware-ready` (`HardwareProfile`), `sync-progress` (`SyncProgress`), `sync-done` (`SyncSummary`), `rate-limit` (`RateLimitInfo`), `update-progress` (`UpdateProgress { downloaded, total }`). Les erreurs rejettent la promesse avec un message en français.
 
 Différences avec l'esquisse du §5.3 : la simulation passe par `set_hardware_overrides` (déjà gérée par `Overrides`) plutôt que par un drapeau de `RankRequest`, ainsi ce qui est affiché est toujours ce qui est classé. `get_model_detail` reçoit le cas d'usage et le contexte, dont dépendent les estimations. `export_ranking` ouvre lui-même le dialogue d'enregistrement : le WebView n'a pas à choisir un chemin d'écriture. `ollama_measure` reçoit la quantification du catalogue plutôt qu'un nom Ollama et un contexte : le backend retrouve le nom sous lequel elle est installée et mesure au contexte retenu par l'estimation, ainsi mesure et estimation portent sur la même chose.
 
@@ -189,11 +192,12 @@ Les tests de `app/src-tauri/src/tests.rs` appellent ces commandes de bout en bou
 
 ## Interface
 
-L'interface Angular (`app/ui`) affiche les données et envoie des filtres ; elle ne calcule rien et ne fait aucun appel réseau. `TauriService` est le seul point d'accès à `invoke`, `listen` et aux deux plugins utilisés : presse-papiers (bouton « Copier ») et ouverture d'URL, limitée à `https://huggingface.co/*` dans `capabilities/default.json`.
+L'interface Angular (`app/ui`) affiche les données et envoie des filtres ; elle ne calcule rien et ne fait aucun appel réseau. `TauriService` est le seul point d'accès à `invoke`, `listen` et aux deux plugins utilisés : presse-papiers (bouton « Copier ») et ouverture d'URL, limitée à `https://huggingface.co/*` et aux releases GitHub de GRAM dans `capabilities/default.json`.
 
 Disposition (fenêtre 1280×800) :
 
-- **Barre d'outils** : « Ré-analyser » (`rescan_hardware` + `detect_runtimes`), « Actualiser les modèles » (`sync_catalog` forcé), « Exporter » (Markdown ou CSV, le classement affiché avec ses filtres et toutes ses lignes) et « Paramètres ».
+- **Barre d'outils** : « Ré-analyser » (`rescan_hardware` + `detect_runtimes`), « Actualiser les modèles » (`sync_catalog` forcé), « Exporter » (Markdown ou CSV, le classement affiché avec ses filtres et toutes ses lignes), mise à jour (une icône qui lance la recherche ; « Mise à jour X.Y.Z » quand une version plus récente est publiée) et « Paramètres ».
+- **Dialogue « Mise à jour »** : recherche à l'ouverture (sauf si une mise à jour est déjà connue), version proposée, date et notes de version, « Installer et redémarrer » avec la progression du téléchargement (le dialogue ne se ferme pas pendant l'installation), message d'erreur avec « Réessayer », lien vers la page des releases pour une installation à la main.
 - **Bandeau matériel** : CPU, RAM, GPU, disques, runtimes installés, mémoire réellement utilisable. L'origine d'une valeur est affichée quand ce n'est pas une mesure directe (« estimée », « table des GPU », « corrigée »). Les GPU non retenus sont signalés sur la ligne GPU. Bouton « Corriger… » ; pendant une simulation, étiquette « Simulation » (le détail en infobulle) et bouton « Arrêter », qui garde les corrections.
 - **Dialogue « Corriger… »** (§6.6) : corrections (canaux mémoire, GPU retenu s'il y en a plusieurs, GPU intégré oui/non, bande passante du GPU), chacune avec la valeur détectée en rappel, et simulation (un GPU de la table, regroupée par constructeur ; une quantité de RAM de 8 à 256 Go). « Valeurs détectées » efface tout.
 - **Dialogue « Paramètres »** (§11.2, §12), en quatre onglets : estimation (marge VRAM, part de RAM, « je ferme tout », surcoût, cache KV, efficacités GPU et RAM, temps fixe par token, bits par poids et contexte minimum), cas d'usage (contexte par défaut, seuil « lent » et poids du score de chacun), catalogue (téléchargements minimum, durée de vie du cache, modèles détaillés à la synchronisation, lignes affichées, taille et vidage du cache), Hugging Face (token). Les réglages sont modifiés sur une copie et enregistrés avec « Enregistrer », qui recalcule le classement et la fiche ; « Valeurs par défaut » reprend celles du §12. Le champ du token est masqué, vidé après l'enregistrement, et seul l'état « configuré / non configuré » est affiché.
@@ -295,6 +299,62 @@ Pour un binaire universel (Apple Silicon et Intel) : `rustup target add x86_64-a
 
 - **Système minimal** : macOS 10.15 (`bundle.macOS.minimumSystemVersion`), pour les propriétés de Metal lues par la détection (`hasUnifiedMemory`, macOS 10.15+).
 - **Aucune dépendance à installer** : WebKit et Metal font partie de macOS ; tables et catalogue de démarrage sont compilés dans le binaire.
-- **Signature** : l'application n'est pas signée par un compte Apple Developer. Au premier lancement, Gatekeeper la bloque : clic droit → Ouvrir (ou Réglages Système → Confidentialité et sécurité → Ouvrir quand même). Pour la distribuer, configurer `bundle.macOS.signingIdentity` et la notarisation (variables `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` de la CLI Tauri).
+- **Signature** : l'application est signée *ad hoc* (`bundle.macOS.signingIdentity: "-"`), sans compte Apple Developer : macOS accepte de la lancer sur Apple Silicon, mais Gatekeeper bloque une copie téléchargée au premier lancement. Réglages Système → Confidentialité et sécurité → Ouvrir quand même, ou `xattr -dr com.apple.quarantine /Applications/GRAM.app`. Les mises à jour automatiques ne sont pas concernées (le paquet téléchargé par GRAM n'est pas mis en quarantaine). Pour une distribution sans avertissement : un certificat Developer ID dans `signingIdentity` et la notarisation (variables `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` de la CLI Tauri). Après une mise à jour, macOS peut redemander l'accès au Trousseau pour le token Hugging Face : la signature *ad hoc* change à chaque version.
 
 Données de l'application : `~/Library/Application Support/fr.gram.desktop/` (`cache/`, `settings.json`, `corrections.json`, `measurements.json`), partagé avec `gram-cli`. Le token Hugging Face est rangé dans le Trousseau d'accès (entrée « GRAM »).
+
+## Releases et mises à jour
+
+Chaque release GitHub contient les installeurs, prêts à télécharger :
+
+| Fichier | Système |
+|---|---|
+| `GRAM_X.Y.Z_x64-setup.exe` | Windows : installeur NSIS, pour l'utilisateur courant, sans droits administrateur |
+| `GRAM_X.Y.Z_x64_fr-FR.msi` | Windows : installeur MSI, pour toute la machine |
+| `GRAM_X.Y.Z_universal.dmg` | macOS 10.15+, Apple Silicon et Intel (binaire universel) |
+| `GRAM_X.Y.Z_universal.app.tar.gz`, `latest.json` | Mises à jour automatiques (paquet macOS et manifeste) |
+
+Ni l'installeur Windows ni l'application macOS ne sont signés par une autorité reconnue : SmartScreen (« Informations complémentaires » → « Exécuter quand même ») et Gatekeeper (voir « Installeur » → « macOS ») préviennent au premier lancement. La page de chaque release le rappelle.
+
+### Publier une version
+
+Les releases sont construites sur tes machines, pas par GitHub : la clé de signature des mises à jour ne quitte pas `~/.tauri`. Le `.msi` ne se construit que sous Windows, d'où une étape par système. La même commande sur les deux machines, dans n'importe quel ordre :
+
+```sh
+# Première machine (ici le Mac)
+scripts/check.sh                          # ou scripts/check.ps1 sous Windows
+node scripts/release.mjs 0.2.0            # --notes-file notes.md pour écrire les notes soi-même
+
+# Seconde machine (ici le PC Windows)
+git pull
+node scripts/release.mjs 0.2.0
+```
+
+`scripts/release.mjs` :
+
+1. **Première machine** (le tag `v0.2.0` n'existe pas encore), depuis `main` propre : écrit la version dans `Cargo.toml` (`[workspace.package]`, donc toutes les crates et l'application), `app/ui/package.json` et les fichiers de verrouillage, commite « Version 0.2.0 », crée le tag annoté `v0.2.0` (son message est le texte des notes de version : par défaut, la liste des commits depuis le tag précédent), pousse `main` et le tag et crée un **brouillon** de release GitHub, invisible du public. Sur la seconde machine, le dépôt doit être exactement sur le tag (`git pull`).
+2. **Chaque machine** : `tauri build` avec `tauri.updater.conf.json`, qui ajoute `createUpdaterArtifacts`. La CLI Tauri signe alors chaque paquet de mise à jour (`.app.tar.gz` sur le Mac, en binaire universel ; `-setup.exe` et `.msi` sous Windows) avec la clé locale. Les paquets sont copiés sous leur nom de release dans `target/release-assets/v0.2.0/`, puis envoyés dans la release avec `latest.json`, complété des plateformes de cette machine (`scripts/latest-json.mjs`).
+3. **Quand macOS et Windows y sont**, le brouillon est publié : à partir de là, les applications installées proposent la mise à jour.
+
+Un build qui échoue se relance avec la même commande (le tag existe déjà : seul le build de cette machine est refait). `--dry-run` construit et signe les paquets de la version actuelle dans `target/release-assets/`, sans commit, tag, push ni GitHub. Les builds ordinaires (`npm run tauri build`) ne produisent pas de paquets de mise à jour et n'ont pas besoin de la clé.
+
+Prérequis sur chaque machine, en plus de ceux du développement : `gh` (GitHub CLI : `brew install gh`, `winget install GitHub.cli`), connecté avec `gh auth login`, et la clé (voir ci-dessous). Sur le Mac, le script ajoute la cible Rust `x86_64-apple-darwin` si elle manque (binaire universel). Compter quelques minutes par build (LTO ; deux compilations pour le binaire universel).
+
+### Clé de signature des mises à jour
+
+L'application n'installe une mise à jour que si sa signature correspond à la clé publique de `tauri.conf.json` (`plugins.updater.pubkey`). La clé privée et son mot de passe sont dans `~/.tauri/gram.key` et `~/.tauri/gram.key.password`, sur le Mac qui les a créés ; les copier dans `%USERPROFILE%\.tauri\` sur le PC Windows (clé USB, gestionnaire de mots de passe : pas par le dépôt). Le script lit aussi `TAURI_SIGNING_PRIVATE_KEY` et `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` s'ils sont définis.
+
+**À sauvegarder** (gestionnaire de mots de passe) : sans cette clé, aucune mise à jour ne peut plus être proposée aux applications installées, qu'il faudrait réinstaller à la main avec une nouvelle clé publique.
+
+Pour signer à la main : `node scripts/tauri.mjs signer sign -f ~/.tauri/gram.key -p "$(cat ~/.tauri/gram.key.password)" --app-version X.Y.Z <fichier>` (depuis `app/ui`).
+
+### Mise à jour dans l'application
+
+Quelques secondes après le lancement, GRAM lit `https://github.com/TheProdigy27/GRAM/releases/latest/download/latest.json` (`check_update`). Si une version plus récente est publiée, un message le signale et la barre d'outils affiche « Mise à jour X.Y.Z » ; sinon, rien n'est affiché, même hors ligne. Le bouton de mise à jour lance aussi la recherche à la demande. « Installer et redémarrer » (`install_update`) télécharge le paquet et vérifie sa signature (un paquet modifié est refusé avant toute installation), puis :
+
+- **Windows** : l'installeur de la nouvelle version se lance en mode passif (une barre de progression, aucune question), GRAM se ferme et l'installeur le relance. Une installation faite avec le MSI se met à jour avec le MSI (entrée `windows-x86_64-msi` du manifeste ; droits administrateur), les autres avec l'installeur NSIS ;
+- **macOS** : `GRAM.app` est remplacée sur place (macOS demande un mot de passe administrateur si le dossier n'est pas modifiable), puis GRAM redémarre.
+
+Les paramètres, corrections, mesures et le cache restent dans le dossier de l'application. Le plugin updater de Tauri n'est appelé que depuis Rust (`commands/update.rs`) : le WebView n'a aucune permission sur lui. La signature porte aussi la version (`requireSignedVersion`) : un manifeste modifié ne peut pas faire réinstaller une ancienne release sous un numéro plus récent. En développement (`npm run tauri dev`), la recherche fonctionne mais l'installation est refusée : le plugin remplacerait le dossier `target/debug`.
+
+Tests (`app/src-tauri/src/tests.rs`) : un faux GitHub sert la release fictive 99.0.0 de `tests/fixtures/update/` (manifeste produit par `scripts/latest-json.mjs`, paquets signés avec une clé de test, `test.key.pub`) : mise à jour proposée ou non, aucune release, paquet modifié refusé après téléchargement (progression comprise), installation refusée en développement, signature liée à la version. Pour régénérer cette release : `signer generate` d'une clé de test, `signer sign --app-version 99.0.0` de chaque paquet, puis `scripts/latest-json.mjs` avec `--pub-date 2026-11-11T12:00:00Z`.

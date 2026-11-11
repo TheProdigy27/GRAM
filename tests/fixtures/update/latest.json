@@ -1,0 +1,27 @@
+{
+  "version": "99.0.0",
+  "notes": "## Nouveautés\n\n- Release fictive pour les tests.",
+  "pub_date": "2026-11-11T12:00:00Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUV1hJMVE1T0szaWhMUlB1TkpXeUJJVHdIV2JNazdvMVNEZDl6bUZFeklVeW9vUzA5OTdvL0M0SFZ6NzZGOWt2dnVpM0ZoR3Q3Sk5YN2ZLWHZNTDlUWFVUbWp1THZzc3dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Mzk2NzA2CWZpbGU6R1JBTV85OS4wLjBfdW5pdmVyc2FsLmFwcC50YXIuZ3oJdmVyc2lvbjo5OS4wLjAKQU4wUHVrKzE2VEhxOVBWaW51b3lpTW01Z2tBWFEzMmI5dFMvNHIzOVFyblAyQjFDNnFhRnFBSEZSUHBDUXMwS0VOTzBJZzJSMmdwQjRqYnZjL3dWQVE9PQo=",
+      "url": "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0/GRAM_99.0.0_universal.app.tar.gz"
+    },
+    "darwin-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUV1hJMVE1T0szaWhMUlB1TkpXeUJJVHdIV2JNazdvMVNEZDl6bUZFeklVeW9vUzA5OTdvL0M0SFZ6NzZGOWt2dnVpM0ZoR3Q3Sk5YN2ZLWHZNTDlUWFVUbWp1THZzc3dnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Mzk2NzA2CWZpbGU6R1JBTV85OS4wLjBfdW5pdmVyc2FsLmFwcC50YXIuZ3oJdmVyc2lvbjo5OS4wLjAKQU4wUHVrKzE2VEhxOVBWaW51b3lpTW01Z2tBWFEzMmI5dFMvNHIzOVFyblAyQjFDNnFhRnFBSEZSUHBDUXMwS0VOTzBJZzJSMmdwQjRqYnZjL3dWQVE9PQo=",
+      "url": "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0/GRAM_99.0.0_universal.app.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUV1hJMVE1T0szaWpOVG5SaS9WVDRKcWM5S2ROb2ZsZWgxQjVwZzVaZ2lLVVhzTkJ6RExYbkYwRW5Qek9JTFU3Vnp2TmRQWHRJeC9WSlNBY1dpSUp1TkJlYzYreTdIMFFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Mzk2NzA2CWZpbGU6R1JBTV85OS4wLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjk5LjAuMApYaitvSkc4em5IWDNLeDdobmY3c3JhRzNOMVVOdDduZ3E1ZnpoYWZQeHlCRHhhclJLblhyYmdrTldIaUdpZmY5c1pNNnhhOTlKbWtsQ2g5aSt2Q2FDQT09Cg==",
+      "url": "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0/GRAM_99.0.0_x64-setup.exe"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUV1hJMVE1T0szaWpOVG5SaS9WVDRKcWM5S2ROb2ZsZWgxQjVwZzVaZ2lLVVhzTkJ6RExYbkYwRW5Qek9JTFU3Vnp2TmRQWHRJeC9WSlNBY1dpSUp1TkJlYzYreTdIMFFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Mzk2NzA2CWZpbGU6R1JBTV85OS4wLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjk5LjAuMApYaitvSkc4em5IWDNLeDdobmY3c3JhRzNOMVVOdDduZ3E1ZnpoYWZQeHlCRHhhclJLblhyYmdrTldIaUdpZmY5c1pNNnhhOTlKbWtsQ2g5aSt2Q2FDQT09Cg==",
+      "url": "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0/GRAM_99.0.0_x64-setup.exe"
+    },
+    "windows-x86_64-msi": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUV1hJMVE1T0szaWljWHFBYVNQV2VURDJ4Zmh5cmljT1Jjem5tdDhCRDlPV2FQem4reWF4eGVqOHJCUkhTWlFaZkk2S3N0dXNGcjJndEhmRU9LNFRmSGVDRmZrSzhIMFFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0Mzk2NzA2CWZpbGU6R1JBTV85OS4wLjBfeDY0X2ZyLUZSLm1zaQl2ZXJzaW9uOjk5LjAuMAppNXF6UkQxQkdIdWUvYUN3NDgyd3NOUHFOMVNXOFJ4WWsrLzNsV0ZkSHIvbjNScFVLRkw2UkMyNU5PUDBlY2hRYXFVYXpranFGTnArUG1QUnV5ZXNCUT09Cg==",
+      "url": "https://github.com/TheProdigy27/GRAM/releases/download/v99.0.0/GRAM_99.0.0_x64_fr-FR.msi"
+    }
+  }
+}
