@@ -14,6 +14,8 @@ import { NO_SORT, type SortState } from './sort';
     [budget]="budget"
     [selected]="selected()"
     [active]="active()"
+    [grouped]="grouped()"
+    [search]="search()"
     [(sort)]="sort"
     (openModel)="opened.push($event)"
     (activeChange)="active.set($event)"
@@ -35,6 +37,8 @@ class Host {
   readonly budget = BUDGET;
   readonly selected = signal<string | null>('org/Vision-GGUF');
   readonly active = signal<string | null>(null);
+  readonly grouped = signal(false);
+  readonly search = signal<string | null>(null);
   readonly sort = signal<SortState>(NO_SORT);
   readonly opened: string[] = [];
   readonly table = viewChild.required(RankingTable);
@@ -183,5 +187,158 @@ describe('RankingTable', () => {
     host.items.set([]);
     await fixture.whenStable();
     expect(host.table().move(1)).toBe(false);
+  });
+
+  describe('variantes regroupées', () => {
+    const QWEN = 'org/Qwen3-8B-GGUF';
+
+    /** Qwen3-8B, une variante mieux classée que lui et quatre autres plus bas. */
+    function family(): RankItem[] {
+      return [
+        makeItem('Qwen3-8B-abliterated', { rank: 1, score: 91, family: QWEN, tokS: 60 }),
+        makeItem('Gemma', { rank: 2, score: 88, tokS: 40 }),
+        makeItem('Qwen3-8B', { rank: 3, score: 86, repoId: QWEN, tokS: 95 }),
+        ...[4, 5, 6, 7].map((rank) =>
+          makeItem(`Qwen3-8B-V${rank}`, { rank, score: 90 - rank, family: QWEN, tokS: rank }),
+        ),
+      ];
+    }
+
+    async function renderGrouped() {
+      const r = await render();
+      r.host.items.set(family());
+      r.host.grouped.set(true);
+      r.host.selected.set(null);
+      await r.fixture.whenStable();
+      const row = (name: string) => r.rows().find((x) => text(byTestId('model-name', x)) === name)!;
+      const more = () => r.el.querySelector<HTMLElement>('[data-testid="more-variants"]');
+      return { ...r, row, more };
+    }
+
+    it('grille arborescente : la famille à la place du modèle officiel, repliée', async () => {
+      const { el, rows, row } = await renderGrouped();
+      expect(el.querySelector('[role="treegrid"]')).not.toBeNull();
+      expect(names(el)).toEqual(['Gemma', 'Qwen3-8B']);
+      expect(rows().map((r) => cell(r, 'rank'))).toEqual(['2', '3']);
+
+      const qwen = row('Qwen3-8B');
+      expect(qwen.getAttribute('aria-level')).toBe('1');
+      expect(qwen.getAttribute('aria-expanded')).toBe('false');
+      expect(text(byTestId('variant-count', qwen))).toBe('5 variantes');
+      const toggle = byTestId('family-toggle', qwen);
+      expect(toggle.getAttribute('aria-label')).toBe('Déplier les variantes de Qwen3-8B');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+      // Un modèle sans variante : pas de chevron, nom aligné sur ceux des familles.
+      const gemma = row('Gemma');
+      expect(gemma.hasAttribute('aria-expanded')).toBe(false);
+      expect(gemma.querySelector('.lead')).not.toBeNull();
+    });
+
+    it('chevron : 3 variantes, « Voir les 2 autres », « mieux noté que l’officiel », sans ouvrir la fiche', async () => {
+      const { fixture, el, host, rows, row, more } = await renderGrouped();
+      await click(fixture, byTestId('family-toggle', row('Qwen3-8B')));
+      expect(host.opened).toEqual([]);
+      expect(host.active()).toBe(QWEN);
+      expect(document.activeElement).toBe(row('Qwen3-8B'));
+      expect(row('Qwen3-8B').getAttribute('aria-expanded')).toBe('true');
+      expect(names(el)).toEqual([
+        'Gemma',
+        'Qwen3-8B',
+        'Qwen3-8B-abliterated',
+        'Qwen3-8B-V4',
+        'Qwen3-8B-V5',
+      ]);
+      const child = row('Qwen3-8B-abliterated');
+      expect(child.getAttribute('aria-level')).toBe('2');
+      expect(cell(child, 'rank')).toBe('');
+      expect(text(byTestId('better-than-official', child))).toBe('▲ mieux noté que l’officiel');
+      expect(allByTestId('better-than-official', el)).toHaveLength(1);
+      expect(text(more())).toBe('Voir les 2 autres variantes');
+      expect(rows()).toHaveLength(5);
+
+      await click(fixture, more()!);
+      expect(more()).toBeNull();
+      expect(names(el)).toHaveLength(7);
+      expect(document.activeElement).toBe(row('Qwen3-8B-V6'));
+
+      // Replier puis rouvrir : de nouveau 3 variantes.
+      await click(fixture, byTestId('family-toggle', row('Qwen3-8B')));
+      expect(names(el)).toEqual(['Gemma', 'Qwen3-8B']);
+      await click(fixture, byTestId('family-toggle', row('Qwen3-8B')));
+      expect(names(el)).toHaveLength(5);
+      expect(host.opened).toEqual([]);
+    });
+
+    it('clavier : → déplie puis descend, ← remonte puis replie, Entrée sur « Voir les autres »', async () => {
+      const { fixture, el, row, more } = await renderGrouped();
+      const qwen = () => row('Qwen3-8B');
+      qwen().focus();
+
+      let event = await press(fixture, qwen(), 'ArrowRight');
+      expect(event.defaultPrevented).toBe(true);
+      expect(qwen().getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(qwen());
+
+      await press(fixture, qwen(), 'ArrowRight');
+      expect(document.activeElement).toBe(row('Qwen3-8B-abliterated'));
+      await press(fixture, row('Qwen3-8B-abliterated'), 'ArrowLeft');
+      expect(document.activeElement).toBe(qwen());
+
+      // La ligne « Voir les N autres » se parcourt comme les autres.
+      await press(fixture, qwen(), 'End');
+      expect(document.activeElement).toBe(more());
+      expect(more()!.tabIndex).toBe(0);
+      await press(fixture, more()!, 'Enter');
+      expect(document.activeElement).toBe(row('Qwen3-8B-V6'));
+
+      await press(fixture, qwen(), 'ArrowLeft');
+      expect(qwen().getAttribute('aria-expanded')).toBe('false');
+      expect(names(el)).toEqual(['Gemma', 'Qwen3-8B']);
+      // Rien à replier ni à déplier : la touche passe.
+      event = await press(fixture, qwen(), 'ArrowLeft');
+      expect(event.defaultPrevented).toBe(false);
+      event = await press(fixture, row('Gemma'), 'ArrowRight');
+      expect(event.defaultPrevented).toBe(false);
+    });
+
+    it('expand() depuis l’extérieur agit sur la ligne active, sinon la première', async () => {
+      const { fixture, host, row } = await renderGrouped();
+      expect(host.table().expand(true)).toBe(false); // Gemma n'a pas de variante
+      host.active.set(QWEN);
+      await fixture.whenStable();
+      expect(host.table().expand(true)).toBe(true);
+      await fixture.whenStable();
+      expect(row('Qwen3-8B').getAttribute('aria-expanded')).toBe('true');
+      expect(document.activeElement).toBe(row('Qwen3-8B'));
+      expect(host.table().expand(false)).toBe(true);
+      await fixture.whenStable();
+      expect(row('Qwen3-8B').getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('recherche : les familles sont dépliées avec toutes leurs variantes trouvées', async () => {
+      const { fixture, el, host, row, more } = await renderGrouped();
+      host.search.set('qwen');
+      await fixture.whenStable();
+      expect(names(el)).toHaveLength(7);
+      expect(more()).toBeNull();
+
+      await click(fixture, byTestId('family-toggle', row('Qwen3-8B')));
+      expect(names(el)).toEqual(['Gemma', 'Qwen3-8B']);
+
+      // Nouvelle recherche : les familles se déplient de nouveau ; sans recherche, repliées.
+      host.search.set('qwen3');
+      await fixture.whenStable();
+      expect(names(el)).toHaveLength(7);
+      host.search.set(null);
+      await fixture.whenStable();
+      expect(names(el)).toEqual(['Gemma', 'Qwen3-8B']);
+    });
+
+    it('tri : les familles d’après leur ligne de famille', async () => {
+      const { fixture, el } = await renderGrouped();
+      await click(fixture, 'sort-tokS');
+      expect(names(el)).toEqual(['Qwen3-8B', 'Gemma']);
+    });
   });
 });

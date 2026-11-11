@@ -77,17 +77,24 @@ export class DetailStore {
   readonly loading = this.query.isLoading;
   readonly error = computed(() => this.query.error()?.message ?? null);
 
+  /** Quantification demandée à l'ouverture (conseil « Le plus rapide »…), si elle existe. */
+  private wanted: { repoId: string; label: string } | null = null;
+
   /**
    * Quantification sélectionnée (par libellé, unique dans un modèle) : la meilleure à
-   * l'ouverture, puis celle choisie tant qu'elle existe pour ce modèle.
+   * l'ouverture (ou celle demandée), puis celle choisie tant qu'elle existe pour ce modèle.
    */
   readonly selectedLabel = linkedSignal<ModelDetail | undefined, string | null>({
     source: this.detail,
     computation: (d, previous) => {
       if (!d) return null;
-      const kept = previous?.value;
+      const has = (label: string | undefined) =>
+        !!label && d.variants.some((v) => v.variant.label === label);
+      const kept = previous?.value ?? undefined;
       const sameModel = previous?.source?.model.repoId === d.model.repoId;
-      if (sameModel && kept && d.variants.some((v) => v.variant.label === kept)) return kept;
+      if (sameModel && has(kept)) return kept!;
+      const wanted = this.wanted?.repoId === d.model.repoId ? this.wanted.label : undefined;
+      if (has(wanted)) return wanted!;
       const best = d.best ?? 0;
       return d.variants[best]?.variant.label ?? null;
     },
@@ -110,8 +117,15 @@ export class DetailStore {
     });
   }
 
-  open(repoId: string): void {
+  /** Ouvre la fiche d'un modèle, sur sa meilleure quantification ou sur `label`. */
+  open(repoId: string, label: string | null = null): void {
+    this.wanted = label ? { repoId, label } : null;
     this.repoId.set(repoId);
+    // Fiche déjà affichée pour ce modèle : la sélection ne se recalcule pas d'elle-même.
+    const d = this.detail();
+    if (label && d?.model.repoId === repoId && d.variants.some((v) => v.variant.label === label)) {
+      this.selectedLabel.set(label);
+    }
   }
 
   close(): void {

@@ -1,0 +1,152 @@
+:host {
+  display: block;
+  flex: none;
+}
+
+// Dans la colonne du classement, qui fournit les marges ; un peu d'air avant les onglets.
+.picks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 6px;
+}
+
+.picks__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.picks__title {
+  flex: none;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--g-fg);
+}
+
+.picks__summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--g-muted);
+}
+
+.spacer {
+  flex: 1 1 0;
+}
+
+.picks__head > .picks__toggle {
+  flex: none;
+  color: var(--g-muted);
+}
+
+// --- Cartes --------------------------------------------------------------------------------------
+
+.picks__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.pick {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--g-line);
+  border-radius: var(--g-radius-card);
+  background: var(--g-surface);
+  box-shadow: var(--g-shadow);
+}
+
+.pick--best {
+  border-color: var(--g-accent-line);
+  background: var(--g-accent-weak);
+}
+
+.pick__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.pick__label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--g-muted);
+
+  .pick--best & {
+    color: var(--g-accent-ink);
+  }
+}
+
+.pick__score {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--g-fg);
+}
+
+.pick__rank {
+  font-size: 12px;
+  color: var(--g-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pick__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pick__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--g-fg);
+}
+
+.pick__quant {
+  flex: none;
+  font-size: 12px;
+  color: var(--g-muted);
+}
+
+.pick__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--g-muted);
+
+  strong {
+    font-weight: 600;
+    color: var(--g-fg);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Boutons en bas : les cartes d'une même rangée gardent leurs actions alignées.
+.pick__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 2px;
+}

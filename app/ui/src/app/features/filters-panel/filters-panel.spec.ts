@@ -13,13 +13,17 @@ import {
 } from '../../../testing/dom';
 import { RUNTIMES } from '../../../testing/fixtures';
 import type { RankRequest } from '../../core/generated/RankRequest';
+import { DISPLAY_PREFS_KEY, DisplayStore } from '../../state/display.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { FILTER_DEBOUNCE_MS } from '../../state/ranking.store';
 import { SettingsStore } from '../../state/settings.store';
 import { FiltersPanel } from './filters-panel';
 
 describe('FiltersPanel', () => {
-  afterEach(() => clearMocks());
+  afterEach(() => {
+    clearMocks();
+    localStorage.clear();
+  });
 
   async function render(handlers: Parameters<typeof mockBackend>[0] = {}) {
     const calls = mockBackend(handlers);
@@ -146,12 +150,20 @@ describe('FiltersPanel', () => {
     expect(last()).not.toHaveProperty('maxSize');
   });
 
-  it('interrupteurs : regroupement à venir, trop gros', async () => {
-    const { fixture, el, last } = await render();
-    const group = byTestId('filter-group', el).querySelector(
-      '[role="switch"]',
-    ) as HTMLButtonElement;
-    expect(group.disabled).toBe(true);
+  it('interrupteurs : regroupement des variantes (préférence gardée), trop gros', async () => {
+    const { fixture, el, last, calls } = await render();
+    const group = byTestId('filter-group', el).querySelector('[role="switch"]')!;
+    expect(group.getAttribute('aria-checked')).toBe('true');
+    const requests = argsOf(calls, 'rank').length;
+    await click(fixture, group);
+    expect(group.getAttribute('aria-checked')).toBe('false');
+    expect(TestBed.inject(DisplayStore).groupVariants()).toBe(false);
+    expect(JSON.parse(localStorage.getItem(DISPLAY_PREFS_KEY)!)).toMatchObject({
+      groupVariants: false,
+    });
+    // Le regroupement se fait à l'affichage : pas de nouveau calcul.
+    expect(argsOf(calls, 'rank')).toHaveLength(requests);
+
     const tooBig = byTestId('filter-too-big', el).querySelector('[role="switch"]')!;
     expect(text(tooBig)).toBe('Afficher les trop gros');
     await click(fixture, tooBig);

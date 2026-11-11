@@ -104,12 +104,13 @@
   </div>
 
   <div class="group group--switches">
-    <div>
-      <g-switch labelPosition="before" data-testid="filter-group" disabled
-        >Regrouper les variantes</g-switch
-      >
-      <p class="group__hint">Bientôt : les variantes sous leur modèle officiel.</p>
-    </div>
+    <g-switch
+      labelPosition="before"
+      data-testid="filter-group"
+      [checked]="display.groupVariants()"
+      (checkedChange)="display.setGroupVariants($event)"
+      >Regrouper les variantes</g-switch
+    >
     <g-switch
       labelPosition="before"
       data-testid="filter-too-big"

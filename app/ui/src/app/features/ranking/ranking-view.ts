@@ -14,7 +14,9 @@ import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { type TabItem, Tabs } from '../../shared/ui/tabs/tabs';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { DetailStore } from '../../state/detail.store';
+import { DisplayStore } from '../../state/display.store';
 import { RankingStore } from '../../state/ranking.store';
+import { PicksBanner } from '../picks/picks-banner';
 import { RankingTable } from './ranking-table';
 import { NATURAL_DIR, NO_SORT, SORT_LABELS, type SortKey, type SortState } from './sort';
 
@@ -52,9 +54,12 @@ const SORT_MENU: readonly (SortKey | '')[] = [
 const plural = (n: number, word: string) => `${int(n)} ${word}${n > 1 ? 's' : ''}`;
 
 /**
- * Zone principale : onglets Exécutables / Lents / Trop gros avec leurs compteurs, résumé des
- * filtres, tri, remarques du runtime, tableau et « Afficher 25 de plus ». ↑ ↓ (hors des champs)
- * passent d'une ligne à l'autre depuis n'importe où, sauf dans la fiche.
+ * Zone principale : trois conseils (ils défilent avec la liste : la fenêtre peut ne faire que
+ * 640 px de haut), onglets Exécutables / Lents / Trop gros avec leurs compteurs, résumé des
+ * filtres, tri, remarques du runtime, tableau (variantes regroupées par famille selon
+ * l'interrupteur des filtres) et « Afficher 25 de plus ». ↑ ↓ (hors des champs) passent d'une
+ * ligne à l'autre depuis n'importe où, ← → replient et déplient la famille de la ligne active,
+ * sauf dans la fiche.
  */
 @Component({
   selector: 'app-ranking-view',
@@ -64,6 +69,7 @@ const plural = (n: number, word: string) => `${int(n)} ${word}${n > 1 ? 's' : ''
     EmptyState,
     Icon,
     MENU,
+    PicksBanner,
     Progress,
     RankingTable,
     Skeleton,
@@ -76,6 +82,7 @@ const plural = (n: number, word: string) => `${int(n)} ${word}${n > 1 ? 's' : ''
 export class RankingView {
   protected readonly ranking = inject(RankingStore);
   protected readonly detail = inject(DetailStore);
+  protected readonly display = inject(DisplayStore);
 
   protected readonly response = this.ranking.response;
   private readonly table = viewChild(RankingTable);
@@ -91,6 +98,8 @@ export class RankingView {
     const off = inject(ShortcutsService).register([
       { key: 'ArrowDown', run: (e) => this.moveFrom(e, 1) },
       { key: 'ArrowUp', run: (e) => this.moveFrom(e, -1) },
+      { key: 'ArrowRight', run: (e) => this.expandFrom(e, true) },
+      { key: 'ArrowLeft', run: (e) => this.expandFrom(e, false) },
     ]);
     inject(DestroyRef).onDestroy(off);
   }
@@ -136,9 +145,10 @@ export class RankingView {
     if (!r) return '';
     const base = `${useCaseLabel(r.useCase)} · contexte ${ctxK(r.ctx)} · ${runtimeLabel(r.runtime)}`;
     const section = this.section();
-    if (section === 'slow') return `${base} · sous ${decimal(r.slowTokS, 1)} tok/s`;
-    if (section === 'tooBig') return `${base} · du plus proche de tenir au plus éloigné`;
-    return base;
+    const grouped = this.display.groupVariants() ? ' · variantes regroupées' : '';
+    if (section === 'slow') return `${base} · sous ${decimal(r.slowTokS, 1)} tok/s${grouped}`;
+    if (section === 'tooBig') return `${base} · du plus proche de tenir au plus éloigné${grouped}`;
+    return base + grouped;
   });
 
   /** « 7 trop gros · Afficher » quand l'onglet Trop gros est masqué. */
@@ -301,10 +311,20 @@ export class RankingView {
 
   /** ↑ ↓ hors du tableau : pas dans la fiche, qui défile. */
   private moveFrom(event: KeyboardEvent, step: 1 | -1): boolean {
-    const target = event.target;
-    if (target instanceof Element && target.closest('app-model-detail')) return false;
+    if (inside(event, 'app-model-detail')) return false;
     return this.table()?.move(step) ?? false;
   }
+
+  /** ← → hors du tableau (ses lignes les traitent elles-mêmes) et de la fiche. */
+  private expandFrom(event: KeyboardEvent, open: boolean): boolean {
+    if (inside(event, 'app-model-detail, app-ranking-table')) return false;
+    return this.table()?.expand(open) ?? false;
+  }
+}
+
+function inside(event: Event, selector: string): boolean {
+  const target = event.target;
+  return target instanceof Element && target.closest(selector) !== null;
 }
 
 function capitalize(s: string): string {

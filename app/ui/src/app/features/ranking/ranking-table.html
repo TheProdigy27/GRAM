@@ -1,4 +1,9 @@
-<div class="grid" role="grid" [attr.aria-label]="label()" [attr.aria-rowcount]="rowCount()">
+<div
+  class="grid"
+  [attr.role]="grouped() ? 'treegrid' : 'grid'"
+  [attr.aria-label]="label()"
+  [attr.aria-rowcount]="rowCount()"
+>
   <div class="head" role="rowgroup">
     <div class="row row--head" role="row" aria-rowindex="1">
       @for (c of columns; track c.key) {
@@ -33,100 +38,167 @@
   </div>
 
   <div class="body" role="rowgroup">
-    @for (row of rows(); track row.item.repoId; let i = $index) {
-      <div
-        class="row"
-        role="row"
-        data-testid="rank-row"
-        [attr.aria-rowindex]="i + 2"
-        [attr.aria-selected]="row.item.repoId === selected()"
-        [attr.data-repo]="row.item.repoId"
-        [tabIndex]="i === tabbable() ? 0 : -1"
-        (click)="open(row)"
-        (focus)="activeChange.emit(row.item.repoId)"
-        (keydown)="onKeydown($event, i)"
-      >
-        <div class="td td--num td--rank mono" role="gridcell" data-col="rank">{{ row.rank }}</div>
-
-        <div class="td td--model" role="gridcell" data-col="model">
-          <div class="model__line">
-            <span
-              class="model__name"
-              data-testid="model-name"
-              gTooltipIfTruncated
-              [gTooltip]="row.item.displayName"
-              >{{ row.item.displayName }}</span
-            >
-            @if (row.item.pipeline === 'image-text-to-text') {
-              <g-icon
-                class="flag"
-                name="eye"
-                label="Vision"
-                data-testid="flag-vision"
-                gTooltip="Vision : comprend les images"
-                [size]="14"
-              />
-            }
-            @if (row.item.gated) {
-              <g-icon
-                class="flag"
-                name="lock"
-                label="Dépôt protégé"
-                data-testid="flag-gated"
-                gTooltip="Dépôt protégé : conditions à accepter sur Hugging Face"
-                [size]="14"
-              />
-            }
-            @if (row.item.installed.length > 0) {
-              <g-tag
-                tone="ok"
-                size="sm"
-                data-testid="installed"
-                [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
-                >Installé</g-tag
-              >
-            }
-            @if (row.item.best.estimate.approximate) {
-              <span
-                class="approx"
-                role="img"
-                aria-label="Estimation approximative"
-                data-testid="flag-approx"
-                gTooltip="Estimation approximative : tailles réelles ou architecture inconnues"
-                >≈</span
-              >
-            }
-          </div>
-          <div class="model__sub">
-            <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
-            >{{ row.item.paramsTotal | params: row.item.paramsActive }} · {{ row.item.repoId }}
+    @for (row of rows(); track row.id; let i = $index) {
+      @if (row.kind === 'more') {
+        <div
+          class="row row--more"
+          role="row"
+          data-testid="more-variants"
+          aria-level="2"
+          [attr.aria-rowindex]="i + 2"
+          [tabIndex]="i === tabbable() ? 0 : -1"
+          (click)="activate(i)"
+          (focus)="onFocus(row)"
+          (keydown)="onKeydown($event, i)"
+        >
+          <div class="td" role="gridcell" data-col="rank"></div>
+          <div class="td td--more" role="gridcell" aria-colspan="7">
+            <span class="branch" aria-hidden="true"></span>
+            <span class="more__label">{{ moreLabel(row.hidden) }}</span>
           </div>
         </div>
+      } @else {
+        <div
+          class="row"
+          role="row"
+          data-testid="rank-row"
+          [class.row--child]="row.level === 2"
+          [attr.aria-level]="grouped() ? row.level : null"
+          [attr.aria-expanded]="row.expanded"
+          [attr.aria-rowindex]="i + 2"
+          [attr.aria-selected]="row.id === selected()"
+          [attr.data-repo]="row.id"
+          [tabIndex]="i === tabbable() ? 0 : -1"
+          (click)="activate(i)"
+          (focus)="onFocus(row)"
+          (keydown)="onKeydown($event, i)"
+        >
+          <div class="td td--num td--rank mono" role="gridcell" data-col="rank">
+            {{ row.level === 1 ? row.item.rank : '' }}
+          </div>
 
-        <div class="td td--quant mono" role="gridcell" data-col="quant">
-          {{ row.item.best.variant.label }}
-        </div>
+          <div class="td td--model" role="gridcell" data-col="model">
+            @if (row.expanded !== null) {
+              <button
+                type="button"
+                class="toggle"
+                tabindex="-1"
+                data-testid="family-toggle"
+                [attr.aria-expanded]="row.expanded"
+                [attr.aria-label]="
+                  (row.expanded ? 'Replier' : 'Déplier') +
+                  ' les variantes de ' +
+                  row.item.displayName
+                "
+                (click)="toggle($event, i)"
+              >
+                <g-icon name="chevron-right" [size]="14" />
+              </button>
+            } @else if (row.level === 2) {
+              <span class="branch" aria-hidden="true"></span>
+            } @else if (tree()) {
+              <span class="lead" aria-hidden="true"></span>
+            }
+            <div class="model">
+              <div class="model__line">
+                <span
+                  class="model__name"
+                  data-testid="model-name"
+                  gTooltipIfTruncated
+                  [gTooltip]="row.item.displayName"
+                  >{{ row.item.displayName }}</span
+                >
+                @if (row.expanded !== null) {
+                  <span class="variants" data-testid="variant-count"
+                    >{{ row.family.variants.length
+                    }}<span class="variants__word">{{
+                      variantWord(row.family.variants.length)
+                    }}</span></span
+                  >
+                }
+                @if (row.item.pipeline === 'image-text-to-text') {
+                  <g-icon
+                    class="flag"
+                    name="eye"
+                    label="Vision"
+                    data-testid="flag-vision"
+                    gTooltip="Vision : comprend les images"
+                    [size]="14"
+                  />
+                }
+                @if (row.item.gated) {
+                  <g-icon
+                    class="flag"
+                    name="lock"
+                    label="Dépôt protégé"
+                    data-testid="flag-gated"
+                    gTooltip="Dépôt protégé : conditions à accepter sur Hugging Face"
+                    [size]="14"
+                  />
+                }
+                @if (row.item.installed.length > 0) {
+                  <g-tag
+                    tone="ok"
+                    size="sm"
+                    data-testid="installed"
+                    [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
+                    >Installé</g-tag
+                  >
+                }
+                @if (row.better) {
+                  <g-tag
+                    tone="accent"
+                    size="sm"
+                    data-testid="better-than-official"
+                    [gTooltip]="betterHint(row)"
+                    ><span aria-hidden="true">▲ </span>mieux noté<span class="better__long">
+                      que l’officiel</span
+                    ></g-tag
+                  >
+                }
+                @if (row.item.best.estimate.approximate) {
+                  <span
+                    class="approx"
+                    role="img"
+                    aria-label="Estimation approximative"
+                    data-testid="flag-approx"
+                    gTooltip="Estimation approximative : tailles réelles ou architecture inconnues"
+                    >≈</span
+                  >
+                }
+              </div>
+              <div class="model__sub">
+                <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
+                >{{ row.item.paramsTotal | params: row.item.paramsActive }} · {{ row.item.repoId }}
+              </div>
+            </div>
+          </div>
 
-        <div class="td" role="gridcell" data-col="size">
-          <app-footprint-cell [best]="row.item.best" [budget]="budget()" />
-        </div>
+          <div class="td td--quant mono" role="gridcell" data-col="quant">
+            {{ row.item.best.variant.label }}
+          </div>
 
-        <div class="td" role="gridcell" data-col="mode">
-          <app-mode-badge [mode]="row.item.best.estimate.mode" [tooltip]="row.item.explanation" />
-        </div>
+          <div class="td" role="gridcell" data-col="size">
+            <app-footprint-cell [best]="row.item.best" [budget]="budget()" />
+          </div>
 
-        <div class="td td--num td--speed mono" role="gridcell" data-col="tokS">
-          {{ row.item.best.estimate.tokS | tokS }}
-        </div>
+          <div class="td" role="gridcell" data-col="mode">
+            <app-mode-badge [mode]="row.item.best.estimate.mode" [tooltip]="row.item.explanation" />
+          </div>
 
-        <div class="td td--num td--ctx mono" role="gridcell" data-col="ctxMax">
-          {{ row.item.best.estimate.ctxMax | ctx }}
-        </div>
+          <div class="td td--num td--speed mono" role="gridcell" data-col="tokS">
+            {{ row.item.best.estimate.tokS | tokS }}
+          </div>
 
-        <div class="td" role="gridcell" data-col="score">
-          <app-score-cell [score]="row.item.score" />
+          <div class="td td--num td--ctx mono" role="gridcell" data-col="ctxMax">
+            {{ row.item.best.estimate.ctxMax | ctx }}
+          </div>
+
+          <div class="td" role="gridcell" data-col="score">
+            <app-score-cell [score]="row.item.score" />
+          </div>
         </div>
-      </div>
+      }
     }
   </div>
 </div>

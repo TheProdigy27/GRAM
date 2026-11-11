@@ -13,6 +13,7 @@ import type { IconName } from '../../shared/ui/icon/icons';
 import { Switch } from '../../shared/ui/switch/switch';
 import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
+import { DisplayStore } from '../../state/display.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import { SettingsStore } from '../../state/settings.store';
@@ -40,6 +41,7 @@ const USE_CASE_ICONS: Record<UseCase, IconName> = {
 })
 export class FiltersPanel {
   protected readonly ranking = inject(RankingStore);
+  protected readonly display = inject(DisplayStore);
   private readonly settings = inject(SettingsStore);
   private readonly hardware = inject(HardwareStore);
   private readonly snackBar = inject(MatSnackBar);

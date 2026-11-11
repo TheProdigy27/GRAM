@@ -2,6 +2,7 @@
 
 import type { DataSourceKind } from '../core/generated/DataSourceKind';
 import type { FitLevel } from '../core/generated/FitLevel';
+import type { PickKind } from '../core/generated/PickKind';
 import type { RamKind } from '../core/generated/RamKind';
 import type { RunMode } from '../core/generated/RunMode';
 import type { Runtime } from '../core/generated/Runtime';
@@ -80,3 +81,22 @@ export const SYNC_PHASE_LABELS: Record<SyncPhase, string> = {
 
 /** Ordre des modes pour le tri : du plus confortable au moins confortable. */
 export const MODE_ORDER: Record<RunMode['kind'], number> = { gpu: 0, hybrid: 1, cpu: 2, tooBig: 3 };
+
+/** Nom des trois conseils, dans leur ordre d'affichage. */
+export const PICK_LABELS: Record<PickKind, string> = {
+  best: 'Meilleur choix',
+  fastest: 'Le plus rapide',
+  longestContext: 'Le plus long contexte',
+};
+
+/**
+ * Ressenti d'une vitesse de génération : « instantané » dès 80 tok/s, « très fluide » dès 30,
+ * « fluide » dès 15, « correct » jusqu'au seuil de lenteur du cas d'usage, « lent » en dessous.
+ */
+export function speedWord(tokS: number, slowTokS: number): string {
+  if (tokS >= 80) return 'instantané';
+  if (tokS >= 30) return 'très fluide';
+  if (tokS >= 15) return 'fluide';
+  if (tokS >= slowTokS) return 'correct';
+  return 'lent';
+}

@@ -28,6 +28,7 @@ export class StatusBar {
     { keys: [this.shortcuts.modShortcut('K')], label: 'chercher' },
     { keys: ['↑', '↓'], label: 'naviguer' },
     { keys: ['Entrée'], label: 'fiche' },
+    { keys: ['←', '→'], label: 'replier, déplier' },
     { keys: ['R'], label: 'ré-analyser' },
     { keys: ['E'], label: 'exporter' },
   ];

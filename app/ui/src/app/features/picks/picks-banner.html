@@ -1,0 +1,103 @@
+@if (cards().length > 0) {
+  <section class="picks" aria-labelledby="picks-title" data-testid="picks">
+    <div class="picks__head">
+      <h2 id="picks-title" class="picks__title">{{ title() }}</h2>
+      <span class="picks__summary" data-testid="picks-summary">{{ summary() }}</span>
+      <span class="spacer"></span>
+      <button
+        gButton
+        variant="ghost"
+        size="sm"
+        class="picks__toggle"
+        data-testid="picks-toggle"
+        [attr.aria-expanded]="!display.picksCollapsed()"
+        (click)="toggle()"
+      >
+        {{ display.picksCollapsed() ? 'Afficher' : 'Masquer' }}
+        <g-icon [name]="display.picksCollapsed() ? 'chevron-down' : 'chevron-up'" [size]="14" />
+      </button>
+    </div>
+
+    @if (!display.picksCollapsed()) {
+      <div class="picks__cards">
+        @for (c of cards(); track c.kind) {
+          <article
+            class="pick"
+            data-testid="pick"
+            [class.pick--best]="c.kind === 'best'"
+            [attr.data-kind]="c.kind"
+            [attr.aria-labelledby]="'pick-label-' + c.kind + ' pick-name-' + c.kind"
+            [attr.aria-describedby]="'pick-reason-' + c.kind"
+          >
+            <div class="pick__top">
+              <span class="pick__label" [id]="'pick-label-' + c.kind" [gTooltip]="c.reason">{{
+                c.label
+              }}</span>
+              <span class="spacer"></span>
+              @if (c.score !== null) {
+                <span class="pick__score mono" data-testid="pick-score"
+                  ><span class="g-sr-only">Score </span>{{ c.score }}</span
+                >
+              } @else {
+                <span class="pick__rank" data-testid="pick-rank">n° {{ c.rank }}</span>
+              }
+            </div>
+
+            <div class="pick__title">
+              <h3
+                class="pick__name"
+                data-testid="pick-name"
+                gTooltipIfTruncated
+                [id]="'pick-name-' + c.kind"
+                [gTooltip]="c.name"
+              >
+                {{ c.name }}
+              </h3>
+              <span class="pick__quant mono" data-testid="pick-quant"
+                >{{ c.quant }} · {{ c.size }}</span
+              >
+            </div>
+
+            <ul class="pick__metrics" data-testid="pick-metrics">
+              @for (m of c.metrics; track $index) {
+                <li>
+                  <strong>{{ m.value }}</strong> {{ m.text }}
+                </li>
+              }
+            </ul>
+            <p class="g-sr-only" [id]="'pick-reason-' + c.kind">{{ c.reason }}</p>
+
+            <div class="pick__actions">
+              @if (c.command; as command) {
+                <button
+                  gButton
+                  size="sm"
+                  data-testid="pick-command"
+                  [gTooltip]="command"
+                  (click)="copy(command)"
+                >
+                  <g-icon name="copy" />
+                  Commande {{ c.runtime }}
+                </button>
+              } @else if (c.openUrl; as url) {
+                <button gButton size="sm" data-testid="pick-open" (click)="openUrl(url)">
+                  <g-icon name="external" />
+                  Page du dépôt
+                </button>
+              }
+              <button
+                gButton
+                variant="ghost"
+                size="sm"
+                data-testid="pick-detail"
+                (click)="openDetail(c)"
+              >
+                Fiche
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </section>
+}

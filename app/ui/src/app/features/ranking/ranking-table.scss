@@ -5,10 +5,14 @@
   display: block;
   --cols: 32px minmax(180px, 1fr) 88px 132px 124px 52px 56px 80px;
   --row-height: 56px;
+  --child-height: 48px;
+  --more-height: 40px;
 }
 
 :host([data-density='compact']) {
   --row-height: 46px;
+  --child-height: 40px;
+  --more-height: 34px;
 }
 
 .row {
@@ -140,23 +144,35 @@
   color: var(--g-fg-2);
 }
 
-// --- Modèle --------------------------------------------------------------------------------------
+// --- Modèle ---------------------------------------------------------------------------------------
 
+// Chevron (ou trait de rattachement d'une variante), puis nom et sous-ligne.
 .td--model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
+// Les repères (variantes, Installé, mieux noté…) ne cachent jamais tout le nom : ce qui déborde
+// est coupé.
 .model__line {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .model__name {
-  min-width: 0;
+  min-width: 4em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -167,6 +183,22 @@
 
 .flag {
   color: var(--g-muted);
+}
+
+// Nombre de variantes d'une famille.
+.variants {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: var(--g-track);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--g-muted);
+  white-space: nowrap;
 }
 
 g-tag {
@@ -192,6 +224,91 @@ g-tag {
   font-size: 11px;
 }
 
+// --- Familles -------------------------------------------------------------------------------------
+
+.toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--g-line);
+  border-radius: 6px;
+  background: var(--g-surface);
+  color: var(--g-fg-2);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--g-input);
+    color: var(--g-fg);
+  }
+
+  g-icon {
+    transition: transform 0.12s ease;
+  }
+
+  &[aria-expanded='true'] g-icon {
+    transform: rotate(90deg);
+  }
+}
+
+// Place du chevron : les noms restent alignés quand des familles ont des variantes.
+.lead {
+  flex: none;
+  width: 24px;
+}
+
+// Trait de rattachement d'une variante, sous le nom de sa famille.
+.branch {
+  flex: none;
+  align-self: flex-start;
+  width: 12px;
+  height: 50%;
+  margin-left: 32px;
+  border-bottom: 1.5px solid var(--g-line);
+  border-left: 1.5px solid var(--g-line);
+  border-bottom-left-radius: 6px;
+}
+
+// La cellule va du haut de la ligne au milieu, pour que le trait parte de la ligne du dessus.
+.row--child .td--model,
+.td--more {
+  align-self: stretch;
+}
+
+.body .row--child {
+  height: var(--child-height);
+  background: var(--g-surface-2);
+
+  .model__name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+.body .row--more {
+  height: var(--more-height);
+  background: var(--g-surface-2);
+}
+
+.td--more {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.more__label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--g-accent-ink);
+
+  .row--more:hover & {
+    text-decoration: underline;
+  }
+}
+
 // --- Fenêtre étroite -----------------------------------------------------------------------------
 
 @media (max-width: 1160px) {
@@ -205,5 +322,19 @@ g-tag {
 
   .model__quant {
     display: inline;
+  }
+
+  .better__long {
+    display: none;
+  }
+
+  // « 5 variantes » devient « 5 » (le mot reste pour les lecteurs d'écran).
+  .variants__word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

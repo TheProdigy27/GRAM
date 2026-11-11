@@ -24,6 +24,8 @@
     </g-callout>
   }
 
+  <app-picks-banner />
+
   @if (response(); as r) {
     <div class="list-head">
       <g-tabs
@@ -138,6 +140,8 @@
               [budget]="r.budget"
               [selected]="detail.repoId()"
               [active]="ranking.active()"
+              [grouped]="display.groupVariants()"
+              [search]="r.search"
               [(sort)]="sort"
               (openModel)="open($event)"
               (activeChange)="ranking.setActive($event)"

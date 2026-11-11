@@ -17,7 +17,15 @@ import {
   toggleSwitch,
   typeInto,
 } from '../testing/dom';
-import { GIB, HARDWARE, RANKING, SYNC_SUMMARY, makeItem, makeResponse } from '../testing/fixtures';
+import {
+  GIB,
+  HARDWARE,
+  RANKING,
+  SYNC_SUMMARY,
+  makeItem,
+  makePick,
+  makeResponse,
+} from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
 import { DetailStore } from './state/detail.store';
@@ -64,7 +72,10 @@ const SECTIONS = makeResponse(RANKING.items, {
 });
 
 describe('App', () => {
-  afterEach(() => clearMocks());
+  afterEach(() => {
+    clearMocks();
+    localStorage.clear();
+  });
 
   it('au lancement : matériel, classement et source des données, puis synchronisation sans forcer', async () => {
     const calls = mockBackend();
@@ -412,7 +423,9 @@ describe('App', () => {
 
     expect(tabs().map(text)).toEqual(['Exécutables 40', 'Lents 1']);
     expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
-    expect(text(byTestId('list-summary', el))).toBe('Polyvalent · contexte 8k · Ollama');
+    expect(text(byTestId('list-summary', el))).toBe(
+      'Polyvalent · contexte 8k · Ollama · variantes regroupées',
+    );
     const panel = el.querySelector('[role="tabpanel"]')!;
     expect(panel.getAttribute('aria-labelledby')).toBe(tabs()[0].id);
     expect(text(byTestId('shown-count', el))).toBe('3 sur 40');
@@ -544,5 +557,52 @@ describe('App', () => {
     expect(byTestId<HTMLInputElement>('filter-max-size', el).value).toBe('');
     await click(fixture, byTestId('empty-showSlow', el));
     expect(namesOf(el, 'table-slow')).toEqual(['Llama-70B']);
+  });
+
+  it('variantes regroupées sous leur famille : ← → depuis la page, interrupteur ; conseils en tête', async () => {
+    const qwen = RANKING.items[0];
+    const variant = makeItem('Qwen3-8B-abliterated', {
+      rank: 4,
+      score: 70,
+      family: qwen.repoId,
+    });
+    const calls = mockBackend({
+      rank: () => makeResponse([...RANKING.items, variant], { picks: [makePick('best', qwen)] }),
+    });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    // Bandeau des conseils entre la bande machine et le classement.
+    const picks = byTestId('picks', el);
+    expect(text(picks.querySelector('.pick__label'))).toBe('Meilleur choix');
+    expect(text(byTestId('pick-name', picks))).toBe('Qwen3-8B');
+
+    expect(namesOf(el)).toEqual(['Qwen3-8B', 'Gemma-3-12B', 'Mistral-Small-24B']);
+    expect(text(byTestId('variant-count', rowsOf(el)[0]))).toBe('1 variante');
+
+    // ← → hors du tableau : sur la ligne active, sinon la première.
+    await press(fixture, document.body, 'ArrowRight');
+    expect(namesOf(el)).toEqual([
+      'Qwen3-8B',
+      'Qwen3-8B-abliterated',
+      'Gemma-3-12B',
+      'Mistral-Small-24B',
+    ]);
+    expect(document.activeElement).toBe(rowsOf(el)[0]);
+    (document.activeElement as HTMLElement).blur();
+    await press(fixture, document.body, 'ArrowLeft');
+    expect(namesOf(el)).toHaveLength(3);
+
+    // Le regroupement se fait à l'affichage : l'interrupteur ne relance pas le calcul.
+    const requests = argsOf(calls, 'rank').length;
+    await toggleSwitch(fixture, 'filter-group');
+    expect(namesOf(el)).toEqual([
+      'Qwen3-8B',
+      'Gemma-3-12B',
+      'Mistral-Small-24B',
+      'Qwen3-8B-abliterated',
+    ]);
+    expect(queryTestId('variant-count', el)).toBeNull();
+    expect(argsOf(calls, 'rank')).toHaveLength(requests);
   });
 });

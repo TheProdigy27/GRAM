@@ -12,7 +12,9 @@ import type { Measurement } from '../app/core/generated/Measurement';
 import type { MemoryBudget } from '../app/core/generated/MemoryBudget';
 import type { ModelDetail } from '../app/core/generated/ModelDetail';
 import type { ModelEntry } from '../app/core/generated/ModelEntry';
+import type { PickKind } from '../app/core/generated/PickKind';
 import type { RankItem } from '../app/core/generated/RankItem';
+import type { RankPick } from '../app/core/generated/RankPick';
 import type { RankResponse } from '../app/core/generated/RankResponse';
 import type { RunMode } from '../app/core/generated/RunMode';
 import type { RuntimesStatus } from '../app/core/generated/RuntimesStatus';
@@ -343,6 +345,26 @@ export function makeResponse(items: RankItem[], o: Partial<RankResponse> = {}): 
     notes: [
       'Sans réglage, Ollama choisit le contexte selon la VRAM (4 096 tokens sur cette machine) : régler num_ctx sur le contexte indiqué, sinon la mémoire utilisée diffère de l’estimation.',
     ],
+    ...o,
+  };
+}
+
+const PICK_REASONS: Record<PickKind, string> = {
+  best: 'Meilleur score (86/100) : ~95 tok/s, tout en VRAM',
+  fastest: '~140 tok/s, tout en VRAM : 1,5× plus rapide que le meilleur choix',
+  longestContext: 'Contexte jusqu’à 128k, contre 40k pour le meilleur choix',
+};
+
+/**
+ * Un conseil : `item` dans la quantification retenue par le conseil, avec la commande Ollama de
+ * cette quantification.
+ */
+export function makePick(kind: PickKind, item: RankItem, o: Partial<RankPick> = {}): RankPick {
+  return {
+    kind,
+    item,
+    reason: PICK_REASONS[kind],
+    launch: ollamaPlan(item.repoId, item.best.variant.label, item.best.estimate.ctxUsed),
     ...o,
   };
 }
