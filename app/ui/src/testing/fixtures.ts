@@ -283,6 +283,8 @@ export interface ItemOptions extends EstimateOptions {
   gated?: boolean;
   /** Quantifications installées dans Ollama. */
   installed?: string[];
+  /** Dépôt du modèle officiel, pour une variante. */
+  family?: string | null;
 }
 
 export function makeItem(name: string, o: ItemOptions = {}): RankItem {
@@ -293,6 +295,7 @@ export function makeItem(name: string, o: ItemOptions = {}): RankItem {
     repoId,
     displayName: name,
     baseModel: `org/${name}`,
+    family: o.family ?? null,
     paramsTotal: 8.2e9,
     paramsActive: null,
     pipeline: o.vision ? 'image-text-to-text' : 'text-generation',
@@ -328,6 +331,7 @@ export function makeResponse(items: RankItem[], o: Partial<RankResponse> = {}): 
     runtime: 'ollama',
     budget: BUDGET,
     slowTokS: 5,
+    picks: [],
     items,
     totalItems: items.length,
     slow: [],

@@ -43,3 +43,11 @@ Trop gros (12)
 10 llama-3-firefunction-v2              Q2_K          *   26,3 Go trop gros         0.0 tok/s ctx     0 score  32.7 (Q  73.8 V   0.0 F   0.0 C   0.0) trop juste
 11 Ornith-1.5-122B                      UD-IQ1_M          37,6 Go trop gros         0.0 tok/s ctx     0 score  37.1 (Q  75.0 V   0.0 F   0.0 C   0.0) trop juste
 12 DeepSeek-V4.1-Flash-1017-GSQ-RCO     IQ4_NL        *  103,0 Go trop gros         0.0 tok/s ctx     0 score  45.3 (Q  99.9 V   0.0 F   0.0 C   0.0) trop juste
+
+Conseils (3)
+Meilleur choix        #1  Mellum2.1-12B-A2.5B-Thinking         Q2_K             18.5 tok/s ctx   42k score  77.6 (Q  65.8) — Meilleur score (78/100) : ~19 tok/s, sur le CPU
+Le plus rapide        #2  LFM3-1.7B-Uncensored                 Q4_K_M           27.4 tok/s ctx  256k score  75.2 (Q  53.1) — ~27 tok/s, sur le CPU : 1,5× plus rapide que le meilleur choix
+Le plus long contexte #6  Qwen3.5-4B                           Q3_K_S           14.9 tok/s ctx  177k score  73.1 (Q  59.2) — Contexte jusqu'à 177k, contre 42k pour le meilleur choix
+
+Familles
+Qwen3.8-27B-Ultimate-Heretic-Uncensored-Turbo-Brilliance-50x-AGI-NEO → bartowski/Qwen3.8-27B-GGUF

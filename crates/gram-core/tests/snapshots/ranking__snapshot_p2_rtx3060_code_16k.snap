@@ -43,3 +43,11 @@ Exécutable mais lent (2)
 Trop gros (2)
  1 Ornith-1.5-122B                      UD-IQ1_M          37,6 Go trop gros         0.0 tok/s ctx     0 score  37.4 (Q  75.0 V   0.0 F   0.0 C   0.0) trop juste
  2 DeepSeek-V4.1-Flash-1017-GSQ-RCO     IQ4_NL        *  103,0 Go trop gros         0.0 tok/s ctx     0 score  45.8 (Q  99.9 V   0.0 F   0.0 C   0.0) trop juste
+
+Conseils (3)
+Meilleur choix        #1  Qwen3.5-9B-The-Defiant-Fable-Uncenso Q4_K_M           40.4 tok/s ctx  121k score  91.4 (Q  82.0) — Meilleur score (91/100) : ~40 tok/s, tout en VRAM
+Le plus rapide        #3  TwIL-8B                              Q4_0             55.1 tok/s ctx   35k score  88.2 (Q  79.0) — ~55 tok/s, tout en VRAM : 1,4× plus rapide que le meilleur choix
+Le plus long contexte #4  Sage-A1.5                            IQ4_XS           24.0 tok/s ctx  256k score  88.3 (Q  82.2) — Contexte jusqu'à 256k, contre 121k pour le meilleur choix
+
+Familles
+Qwen3.8-27B-Ultimate-Heretic-Uncensored-Turbo-Brilliance-50x-AGI-NEO → bartowski/Qwen3.8-27B-GGUF

@@ -40,7 +40,7 @@ cargo run -p gram-cli -- snapshot    # régénère data/seed_catalog.json (catal
 cargo run -p gram-cli -- estimate Qwen3-8B             # chaque quantification estimée pour cette machine
 cargo run -p gram-cli -- estimate Qwen3-8B --ctx 32768 --kv q8_0 --vision
 cargo run -p gram-cli -- estimate Llama-3.3-70B --profile tests/fixtures/profiles/p3-rtx4090-24go-64go-ddr5.json
-cargo run -p gram-cli -- rank                          # classement polyvalent (contexte 8k) pour cette machine
+cargo run -p gram-cli -- rank                          # classement polyvalent (contexte 8k) pour cette machine, avec les trois conseils
 cargo run -p gram-cli -- rank --usage code --ctx 16384 --json
 cargo run -p gram-cli -- rank --usage vision --runtime llama-cpp --max-size-gb 12 --show-too-big --limit 0
 cargo run -p gram-cli -- rank --search "qwen3 8b" --show-too-big   # recherche par nom, rang du classement complet
@@ -59,7 +59,7 @@ node scripts/release.mjs 0.2.0                               # release : sur le 
 
 | Dossier | Rôle |
 |---|---|
-| `crates/gram-core` | Types, moteur d'estimation, scoring (pur, sans I/O) |
+| `crates/gram-core` | Types, moteur d'estimation, scoring, familles de modèles et conseils (pur, sans I/O) |
 | `crates/gram-hw` | Détection matériel et runtimes installés (Windows, macOS ; CPU et RAM seulement ailleurs) |
 | `crates/gram-hub` | Client Hugging Face, cache, parseur GGUF, dédoublonnage, catalogue embarqué |
 | `crates/gram-ollama` | API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles |
@@ -90,7 +90,7 @@ Pour ajouter un cas de test matériel (portable, GPU AMD, machine sans GPU, autr
 
 `gram-hub` ne parcourt jamais tout le Hub. Une synchronisation liste les modèles GGUF par tranche de taille (jusqu'au plus gros modèle plausible sur la machine) et par pipeline (texte, vision), puis :
 
-1. elle les regroupe par modèle de base, d'après les tags `base_model:quantized:…` : un fine-tune reste à part ;
+1. elle les regroupe par modèle de base, d'après les tags `base_model:quantized:…` : un fine-tune reste à part (le classement le rattache ensuite à la famille de son modèle officiel, d'après les noms, voir « Classement ») ;
 2. elle choisit le dépôt canonique (organisation officielle, puis `data/uploaders.json`, puis le plus téléchargé) ;
 3. elle charge les tailles réelles des fichiers pour les 150 premiers groupes, et réunit les quantifications de tous les dépôts du groupe. Si le dépôt canonique en propose peu (un dépôt officiel limité à Q4_K_M et au-dessus, par exemple), elle charge jusqu'à 2 dépôts alternatifs. Pour un même libellé, le dépôt prioritaire l'emporte ;
 4. elle lit l'architecture dans les 64 premiers Kio de l'en-tête GGUF, et à défaut dans le `config.json` du modèle de base.
@@ -130,7 +130,7 @@ Sur Mac, les efficacités par défaut (mesurées sur une RTX 5080 et de la DDR5)
 
 ## Classement
 
-`gram-core::rank` classe les modèles du catalogue pour la machine (§9 du plan). C'est du calcul pur : environ 15 ms pour 1 165 modèles en build debug.
+`gram-core::rank` classe les modèles du catalogue pour la machine (§9 du plan). C'est du calcul pur : environ 20 ms pour 1 050 modèles en build debug, 6 ms en release (familles comprises).
 
 1. **Quatre axes de 0 à 100** pour chaque quantification candidate :
    - qualité : `f_taille × f_quant + récence + curation`, avec `f_taille = 40 + 12 × log2(milliards de paramètres)` (`√(total × actifs)` pour un MoE) et `f_quant` interpolé sur les bits par poids réels (`data/quant_quality.json`) ; +5 sous 6 mois, −10 au-delà de 18 mois ;
@@ -141,6 +141,8 @@ Sur Mac, les efficacités par défaut (mesurées sur une RTX 5080 et de la DDR5)
 3. **Meilleure quantification** : le score maximal parmi celles qui tiennent (et sous la taille maximale demandée), en préférant celles qui atteignent le seuil de lenteur du cas d'usage. À score égal, la plus petite l'emporte.
 4. **Sections** : exécutables, « Exécutable mais lent » (aucune quantification au-dessus du seuil : 5 tok/s, 8 pour le raisonnement, 10 pour le chat rapide), trop gros (du plus proche de tenir au plus éloigné). Le filtre Vision ne garde que les modèles vision. Un modèle dont toutes les quantifications sont sous 2,5 bits par poids n'est pas proposé.
 5. **Explication** générée pour chaque ligne, par exemple « Tient entièrement en VRAM (9,9 / 14,3 Go) en Q8_0 · ~51 tok/s estimés · contexte 158k possible ».
+6. **Famille** (`family`, `crates/gram-core/src/family.rs`) : une variante (fine-tune, version « abliterated », distillation) porte le dépôt canonique du modèle officiel dont elle dérive ; un modèle officiel, ou sans parent trouvé, n'en a pas. Le `base_model` d'une variante désigne en général la variante elle-même : le rattachement se fait sur les noms, découpés en mots. La variante contient le nom du parent mot pour mot et d'un seul tenant (« Huihui-Qwen3.8-27B-abliterated » → Qwen3.8-27B ; « Qwen3-VL-8B-Instruct » n'est pas un Qwen3-8B). Le parent vient d'une autre organisation (« Qwen2.5-14B-Instruct » et « Qwen2.5-14B », tous deux de Qwen, sont deux modèles officiels) et son nom n'est pas suivi d'une taille (« Qwen3.8-35B-A3B-Distill » n'est pas un Qwen3.8-35B dense). Un nom en « -it », « -Instruct » ou « -Chat » est aussi trouvé sans ce suffixe (« Gemma-4-31B-Humanlike » → gemma-4-31B-it). Le nom le plus long l'emporte, et une variante de variante remonte au modèle de tête. Les familles sont calculées sur tout le catalogue, à chaque classement (pas de nouveau champ dans le cache) : 397 variantes rattachées sur les 1 050 modèles du cache de novembre 2026. Le frontend regroupe les lignes par `family`, sinon `repoId`. À ne pas confondre avec `variantCount`, le nombre de quantifications.
+7. **Conseils** (`picks`, `crates/gram-core/src/rank/picks.rs`) : au plus trois, un par modèle, choisis parmi tous les exécutables avant la recherche et `limit` (chercher ne les change pas). « Meilleur choix » est le premier du classement. Pour « Le plus rapide » et « Le plus long contexte », les candidats sont les quantifications des modèles à moins de 6 points de score du meilleur choix, à moins de 3 points de **qualité** de la quantification du classement du même modèle, et à moins de 15 points de qualité du meilleur choix. On retient la plus rapide, ou celle au plus grand contexte maximal, si elle fait au moins 1,25 fois mieux que le meilleur choix ; sinon le conseil est omis. Le seuil porte sur l'axe qualité, pas sur le total : sur une machine puissante, vitesse (plafonnée à 40 tok/s), marge et contexte sont au maximum pour les petits modèles, qui restent à quelques points du meilleur score avec une qualité bien moindre. Un conseil peut retenir une autre quantification que le classement, par exemple gemma-4-12B-it en IQ4_NL (~106 tok/s, tout en VRAM) plutôt qu'en UD-Q5_K_XL (~57 tok/s, hybride). Chaque conseil donne une raison courte (« ~118 tok/s, tout en VRAM : 2,7× plus rapide que le meilleur choix ») et les commandes de lancement de sa quantification avec le runtime choisi (`launch`). `gram-cli rank` les affiche, et `--json` les inclut ; l'export les ignore.
 
 Pourquoi ce calcul plutôt qu'une somme simple : avec des bonus ajoutés puis un écrêtage à 100, des dizaines de modèles finissaient ex æquo à 100 et les téléchargements décidaient seuls. Sans le facteur de confiance, des fine-tunes jamais détaillés (taille estimée, « Q2_K* ») occupaient la moitié du haut du classement.
 
@@ -150,7 +152,7 @@ Chaque ligne indique aussi les quantifications du modèle déjà installées dan
 
 La fiche détail (`model_detail`) évalue de la même façon toutes les quantifications d'un modèle et génère les commandes du runtime choisi (§10.3) : `ollama run hf.co/{dépôt}:{QUANT}` puis `/set parameter num_ctx`, `llama-server -hf … -c … -ngl …` (999 si tout tient en VRAM), ou la page Hugging Face pour LM Studio. Les variables d'environnement d'Ollama dépendent du système du profil (`HardwareProfile::os`) : `setx` sous Windows, `launchctl setenv` sous macOS (ce que lit l'application Ollama, jusqu'au redémarrage), `export` sous Linux. Sur un Mac, des notes signalent la limite de Metal ; sur un Mac Intel, qu'Ollama n'y utilise pas le GPU et que LM Studio n'y fonctionne pas. Les règles propres aux runtimes (contexte par défaut d'Ollama, GPU intégré, cache KV quantifié, dépôt protégé, fichier découpé) sont toutes dans `crates/gram-core/src/launch.rs`.
 
-Le snapshot du classement (`crates/gram-core/tests/snapshots/`) porte sur un échantillon figé de 35 modèles réels et les 4 profils types. Il a été relu à la main. Après un changement volontaire du scoring, relire les différences avec `cargo insta review`, ou `INSTA_UPDATE=always cargo test -p gram-core` puis `git diff`.
+Le snapshot du classement (`crates/gram-core/tests/snapshots/`) porte sur un échantillon figé de 35 modèles réels et les 4 profils types, conseils et familles compris. Il a été relu à la main. Après un changement volontaire du scoring, relire les différences avec `cargo insta review`, ou `INSTA_UPDATE=always cargo test -p gram-core` puis `git diff`.
 
 ## Application : commandes IPC
 
@@ -164,7 +166,7 @@ Toute la logique est en Rust (`app/src-tauri`). Au démarrage, le matériel, les
 | `hardware_options` | – | `HardwareOptions` : le matériel tel que détecté (sans corrections) et les GPU simulables de `data/gpu_specs.json` (dialogue « Corriger… ») |
 | `detect_runtimes` | – | `RuntimesStatus`, avec les modèles installés dans Ollama (`ollamaModels`) s'il tourne |
 | `sync_catalog` | `{ force: boolean }` | `SyncSummary`, plus les événements `sync-progress`, `rate-limit` et `sync-done` |
-| `rank` | `{ request: RankRequest }` | `RankResponse` (`useCase`, `ctx`, `runtime`, `maxSize` en octets, `search`, `showTooBig`, `limit` ; tout est optionnel) |
+| `rank` | `{ request: RankRequest }` | `RankResponse`, avec les conseils (`picks`) et la famille de chaque ligne (`family`). Requête : `useCase`, `ctx`, `runtime`, `maxSize` en octets, `search`, `showTooBig`, `limit` ; tout est optionnel |
 | `get_model_detail` | `{ request: DetailRequest }` | `ModelDetail`. À la première ouverture, les quantifications de tous les dépôts du modèle sont chargées (cache, sinon réseau) |
 | `get_settings` / `save_settings` | – / `{ settings: Settings }` | `Settings`, enregistrés dans `%LOCALAPPDATA%\fr.gram.desktop\settings.json` et ramenés dans leurs bornes |
 | `get_default_settings` | – | `Settings` du §12 (bouton « Valeurs par défaut », rappels « défaut : … ») |

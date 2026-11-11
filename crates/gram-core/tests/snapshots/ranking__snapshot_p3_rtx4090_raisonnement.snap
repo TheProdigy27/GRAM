@@ -43,3 +43,9 @@ Exécutable mais lent (2)
 
 Trop gros (1)
  1 DeepSeek-V4.1-Flash-1017-GSQ-RCO     IQ4_NL        *  103,0 Go trop gros         0.0 tok/s ctx     0 score  50.0 (Q  99.9 V   0.0 F   0.0 C   0.0) trop juste
+
+Conseils (1)
+Meilleur choix        #1  Qwen3.8-27B-Ultimate-Heretic-Uncenso Q4_K_M           46.8 tok/s ctx   81k score  97.3 (Q  98.7) — Meilleur score (97/100) : ~47 tok/s, tout en VRAM
+
+Familles
+Qwen3.8-27B-Ultimate-Heretic-Uncensored-Turbo-Brilliance-50x-AGI-NEO → bartowski/Qwen3.8-27B-GGUF

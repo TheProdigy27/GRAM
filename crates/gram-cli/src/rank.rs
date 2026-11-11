@@ -142,6 +142,21 @@ pub fn render(hw: &HardwareProfile, r: &RankResponse) -> String {
         line(&mut out, "Recherche", &format!("« {search} »"));
     }
     line(&mut out, "Données", &source_label(&r.data_source));
+    for (i, p) in r.picks.iter().enumerate() {
+        let it = &p.item;
+        line(
+            &mut out,
+            if i == 0 { "Conseils" } else { "" },
+            &format!(
+                "{} : {} en {} (#{}) — {}",
+                p.kind.label(),
+                it.display_name,
+                it.best.variant.label,
+                it.rank,
+                p.reason
+            ),
+        );
+    }
 
     out.push('\n');
     if r.items.is_empty() {
@@ -237,6 +252,10 @@ mod tests {
             "{out}"
         );
         assert!(out.contains("Code · contexte 16 384 tokens · runtime Ollama · lent sous 5 tok/s"));
+        assert!(
+            out.contains("Conseils   Meilleur choix : Qwen3-8B en "),
+            "{out}"
+        );
         let first = out.lines().find(|l| l.starts_with("  1  ")).unwrap();
         assert!(
             first.contains("Qwen3-8B") && first.contains("GPU"),

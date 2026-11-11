@@ -16,12 +16,20 @@
 //!
 //! La recherche par nom s'applique après le tri : chaque ligne garde son rang dans le classement
 //! complet (colonne « # »), et les totaux ne comptent que les modèles trouvés.
+//!
+//! Chaque ligne porte sa famille (`family`, voir [`crate::family`]) et la réponse trois
+//! conseils au plus (`picks`, voir [`picks`]), calculés avant la recherche.
+
+mod picks;
+
+pub use picks::{MIN_GAIN, PickKind, QUALITY_GAP, QUANT_GAP, RankPick, SCORE_GAP};
 
 use crate::catalog::DataSource;
 use crate::estimate::{
     Estimate, EstimateParams, MemoryBudget, QuantTable, RunMode, VariantEstimate, Workload,
     estimate_variants,
 };
+use crate::family;
 use crate::fmt::{ctx_k, gb, gb_value, tok_s};
 use crate::hardware::HardwareProfile;
 use crate::launch::{LaunchPlan, Runtime, hf_url, launch_plan, ollama_pull_command, runtime_notes};
@@ -79,6 +87,10 @@ pub struct RankItem {
     pub repo_id: String,
     pub display_name: String,
     pub base_model: Option<String>,
+    /// Famille d'une variante (fine-tune, version « abliterated »…) : dépôt canonique du modèle
+    /// officiel dont elle dérive, présent dans le catalogue. Absente pour un modèle officiel ou
+    /// sans parent trouvé. L'interface regroupe les lignes par `family`, sinon `repoId`.
+    pub family: Option<String>,
     pub params_total: u64,
     pub params_active: Option<u64>,
     pub pipeline: Pipeline,
@@ -89,7 +101,7 @@ pub struct RankItem {
     pub created_at: Option<DateTime<Utc>>,
     /// Tailles réelles connues (sinon, échelle de repli estimée).
     pub detailed: bool,
-    /// Quantifications évaluées.
+    /// Quantifications évaluées (à ne pas confondre avec les variantes d'une famille).
     pub variant_count: u32,
     /// Meilleure quantification (la plus petite si le modèle est trop gros).
     pub best: VariantEstimate,
@@ -115,6 +127,9 @@ pub struct RankResponse {
     pub budget: MemoryBudget,
     /// Seuil de lenteur du cas d'usage, en tok/s.
     pub slow_tok_s: f32,
+    /// Conseils, dans l'ordre meilleur choix, le plus rapide, le plus long contexte : trois au
+    /// plus, un par modèle, choisis parmi tous les exécutables (sans la recherche ni `limit`).
+    pub picks: Vec<RankPick>,
     /// Modèles exécutables, du meilleur score au moins bon.
     pub items: Vec<RankItem>,
     /// Nombre de modèles exécutables avant `limit` (trouvés par la recherche, s'il y en a une).
@@ -271,6 +286,13 @@ struct Evaluation {
     best: Option<usize>,
 }
 
+/// Un modèle exécutable, avec toutes ses quantifications pour les conseils.
+struct Ranked<'m> {
+    model: &'m ModelEntry,
+    ev: Evaluation,
+    item: RankItem,
+}
+
 impl Evaluation {
     /// Quantification affichée pour un modèle trop gros : la plus petite sous la taille
     /// maximale (aucune : le modèle est écarté par le filtre de taille).
@@ -415,13 +437,14 @@ fn installed_labels(m: &ModelEntry, rows: &[Row], installed: &[OllamaModel]) -> 
     labels
 }
 
-fn item(m: &ModelEntry, ev: &Evaluation, i: usize, s: &Setup) -> RankItem {
+fn item(m: &ModelEntry, ev: &Evaluation, i: usize, s: &Setup, family: Option<String>) -> RankItem {
     let row = &ev.rows[i];
     RankItem {
         rank: 0, // numéroté après le tri (`finish`)
         repo_id: m.repo_id.clone(),
         display_name: m.display_name.clone(),
         base_model: m.base_model.clone(),
+        family,
         params_total: m.params_total,
         params_active: m.params_active,
         pipeline: m.pipeline,
@@ -540,24 +563,35 @@ pub fn rank(
     let s = Setup::new(cx, req.use_case, req.ctx, req.max_size);
     let runtime = req.runtime.unwrap_or(cx.settings.runtime);
     let search = Search::new(req.search.as_deref());
-    let (mut items, mut slow, mut too_big) = (Vec::new(), Vec::new(), Vec::new());
+    // Sur tout le catalogue : le modèle officiel d'une variante peut être filtré.
+    let families = family::families(models);
+    let (mut runnable, mut slow, mut too_big) = (Vec::new(), Vec::new(), Vec::new());
 
     for m in models {
         if req.use_case == UseCase::Vision && !m.use_cases.contains(&UseCase::Vision) {
             continue;
         }
         let ev = evaluate(m, &s);
+        let family = families.get(m.repo_id.as_str()).map(|f| (*f).to_owned());
         if let Some(i) = ev.best {
-            let it = item(m, &ev, i, &s);
-            if it.slow {
-                slow.push(it);
+            let item = item(m, &ev, i, &s, family);
+            if item.slow {
+                slow.push(item);
             } else {
-                items.push(it);
+                runnable.push(Ranked { model: m, ev, item });
             }
         } else if let Some(i) = ev.smallest_within_size() {
-            too_big.push(item(m, &ev, i, &s));
+            too_big.push(item(m, &ev, i, &s, family));
         }
     }
+
+    // Les conseils portent sur tous les exécutables, avant la recherche et `limit`.
+    runnable.sort_by(|a, b| by_score(&a.item, &b.item));
+    for (i, r) in runnable.iter_mut().enumerate() {
+        r.item.rank = i as u32 + 1;
+    }
+    let picks = picks::picks(&runnable, &s, runtime);
+    let items = runnable.into_iter().map(|r| r.item).collect();
 
     let search = search.as_ref();
     let (items, total_items) = finish(items, by_score, search, req.limit);
@@ -574,6 +608,7 @@ pub fn rank(
         notes: runtime_notes(runtime, cx.hardware, &s.budget, cx.runtimes),
         budget: s.budget,
         slow_tok_s: s.profile.slow_tok_s,
+        picks,
         items,
         total_items,
         slow,

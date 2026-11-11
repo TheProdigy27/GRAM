@@ -12,13 +12,19 @@ export type RankItem = {
  * Position dans sa liste (exécutables, lents ou trop gros) avant la recherche : la colonne
  * « # » garde le rang du classement complet.
  */
-rank: number, repoId: string, displayName: string, baseModel: string | null, paramsTotal: number, paramsActive: number | null, pipeline: Pipeline, useCases: Array<UseCase>, downloads: number, likes: number, gated: boolean, createdAt: string | null, 
+rank: number, repoId: string, displayName: string, baseModel: string | null, 
+/**
+ * Famille d'une variante (fine-tune, version « abliterated »…) : dépôt canonique du modèle
+ * officiel dont elle dérive, présent dans le catalogue. Absente pour un modèle officiel ou
+ * sans parent trouvé. L'interface regroupe les lignes par `family`, sinon `repoId`.
+ */
+family: string | null, paramsTotal: number, paramsActive: number | null, pipeline: Pipeline, useCases: Array<UseCase>, downloads: number, likes: number, gated: boolean, createdAt: string | null, 
 /**
  * Tailles réelles connues (sinon, échelle de repli estimée).
  */
 detailed: boolean, 
 /**
- * Quantifications évaluées.
+ * Quantifications évaluées (à ne pas confondre avec les variantes d'une famille).
  */
 variantCount: number, 
 /**

@@ -9,10 +9,11 @@ use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use gram_core::export::{to_csv, to_markdown};
 use gram_core::fmt::{ctx_k, gb_value};
 use gram_core::launch::Runtime;
+use gram_core::rank::{MIN_GAIN, QUALITY_GAP, QUANT_GAP, SCORE_GAP};
 use gram_core::{
     DataSource, DataSourceKind, DetailRequest, FitLevel, HardwareProfile, ModelEntry, OllamaModel,
-    RankContext, RankItem, RankRequest, RankResponse, RunMode, RuntimeStatus, RuntimesStatus,
-    Settings, UseCase, model_detail, rank,
+    PickKind, RankContext, RankItem, RankRequest, RankResponse, RunMode, RuntimeStatus,
+    RuntimesStatus, Settings, UseCase, model_detail, rank,
 };
 use std::fmt::Write as _;
 
@@ -36,6 +37,10 @@ fn p3() -> HardwareProfile {
 }
 fn p4() -> HardwareProfile {
     fixture!("profiles/p4-rx7800xt-16go-32go-ddr5.json")
+}
+/// Mac Apple Silicon, mémoire unifiée.
+fn p5() -> HardwareProfile {
+    fixture!("profiles/p5-m1pro-16go-macos.json")
 }
 
 /// Date de référence de la récence : les snapshots ne dépendent pas du jour du test.
@@ -107,6 +112,32 @@ fn snapshot_text(r: &RankResponse) -> String {
     table(&mut out, "Exécutable mais lent", &r.slow);
     out.push('\n');
     table(&mut out, "Trop gros", &r.too_big);
+
+    let _ = writeln!(out, "\nConseils ({})", r.picks.len());
+    for p in &r.picks {
+        let (it, e) = (&p.item, &p.item.best.estimate);
+        let name: String = it.display_name.chars().take(36).collect();
+        let _ = writeln!(
+            out,
+            "{:<21} #{:<2} {:<36} {:<14} {:>6.1} tok/s ctx {:>5} score {:>5.1} (Q {:>5.1}) — {}",
+            p.kind.label(),
+            it.rank,
+            name,
+            it.best.variant.label,
+            e.tok_s,
+            ctx_k(e.ctx_max),
+            it.score.total,
+            it.score.quality,
+            p.reason
+        );
+    }
+
+    out.push_str("\nFamilles\n");
+    for it in r.items.iter().chain(&r.slow).chain(&r.too_big) {
+        if let Some(family) = &it.family {
+            let _ = writeln!(out, "{} → {family}", it.display_name);
+        }
+    }
     out
 }
 
@@ -466,6 +497,210 @@ fn contexte_et_runtime_par_defaut() {
         (r.ctx, r.slow_tok_s, r.runtime),
         (4096, 10.0, Runtime::LlamaCpp)
     );
+}
+
+// ── Conseils et familles ───────────────────────────────────────────────────────────────────
+
+#[test]
+fn conseils_sur_tous_les_profils_et_usages() {
+    let models = sample();
+    let mut other_quant = 0;
+    for hw in [p1(), p2(), p3(), p4(), p5()] {
+        for use_case in UseCase::ALL {
+            let r = run(&models, &hw, &request(use_case, None));
+            let ctx = format!("{} · {use_case:?}", hw.cpu.name);
+            let Some(best) = r.items.first() else {
+                assert!(r.picks.is_empty(), "{ctx}");
+                continue;
+            };
+            assert!(r.picks.len() <= 3, "{ctx}");
+            // Meilleur choix d'abord, puis le plus rapide, puis le plus long contexte.
+            assert_eq!(r.picks[0].kind, PickKind::Best, "{ctx}");
+            assert_eq!(&r.picks[0].item, best, "{ctx}");
+            let order = |k: PickKind| {
+                [PickKind::Best, PickKind::Fastest, PickKind::LongestContext]
+                    .iter()
+                    .position(|&o| o == k)
+            };
+            assert!(
+                r.picks
+                    .windows(2)
+                    .all(|w| order(w[0].kind) < order(w[1].kind)),
+                "{ctx}"
+            );
+            let mut ids: Vec<&str> = r.picks.iter().map(|p| p.item.repo_id.as_str()).collect();
+            ids.sort_unstable();
+            ids.dedup();
+            assert_eq!(ids.len(), r.picks.len(), "un conseil par modèle ({ctx})");
+            // Commande de lancement de la quantification du conseil, avec le runtime demandé.
+            for p in &r.picks {
+                assert_eq!(p.launch.runtime, r.runtime);
+                let run = format!(
+                    "ollama run hf.co/{}:{}",
+                    p.item.best.variant.repo_id, p.item.best.variant.label
+                );
+                assert_eq!(p.launch.commands[0].command, run, "{ctx}");
+            }
+
+            let (b, bq) = (&best.best.estimate, best.score.quality);
+            for p in &r.picks[1..] {
+                let (it, e) = (&p.item, &p.item.best.estimate);
+                // Le modèle est proche du meilleur score ; sa quantification ne perd pas
+                // beaucoup en qualité, ni par rapport au classement, ni par rapport au meilleur.
+                let ranked = &r.items[it.rank as usize - 1];
+                assert_eq!(ranked.repo_id, it.repo_id, "{ctx}");
+                assert!(ranked.score.total >= best.score.total - SCORE_GAP, "{ctx}");
+                assert!(
+                    it.score.quality >= ranked.score.quality - QUANT_GAP,
+                    "{ctx}"
+                );
+                assert!(it.score.quality >= bq - QUALITY_GAP, "{ctx}");
+                assert!(e.mode != RunMode::TooBig && !it.slow && e.tok_s >= r.slow_tok_s);
+                assert!(it.explanation.contains(&it.best.variant.label), "{ctx}");
+                assert!(!p.reason.is_empty());
+                if it.best.variant.label != ranked.best.variant.label {
+                    other_quant += 1;
+                }
+                // Aucun candidat dans sa quantification du classement ne fait mieux.
+                let candidates = r.items.iter().filter(|c| {
+                    c.score.total >= best.score.total - SCORE_GAP
+                        && c.score.quality >= bq - QUALITY_GAP
+                        && r.picks.iter().all(|q| q.item.repo_id != c.repo_id)
+                });
+                match p.kind {
+                    PickKind::Fastest => {
+                        assert!(e.tok_s >= MIN_GAIN * b.tok_s, "{ctx}");
+                        assert!(p.reason.contains("plus rapide que le meilleur choix"));
+                        for c in candidates {
+                            assert!(c.best.estimate.tok_s <= e.tok_s, "{ctx} : {}", c.repo_id);
+                        }
+                    }
+                    PickKind::LongestContext => {
+                        assert!(e.ctx_max as f32 >= MIN_GAIN * b.ctx_max as f32, "{ctx}");
+                        assert!(p.reason.starts_with("Contexte jusqu'à"));
+                        for c in candidates {
+                            assert!(
+                                c.best.estimate.ctx_max <= e.ctx_max,
+                                "{ctx} : {}",
+                                c.repo_id
+                            );
+                        }
+                    }
+                    PickKind::Best => panic!("un seul meilleur choix ({ctx})"),
+                }
+            }
+        }
+    }
+    // Un conseil retient parfois une autre quantification que le classement (plus rapide, ou
+    // au contexte plus long, pour un peu de qualité en moins).
+    assert!(other_quant > 0);
+}
+
+#[test]
+fn conseils_independants_de_la_recherche_et_de_limit() {
+    let models = sample();
+    let all = run(&models, &p2(), &request(UseCase::General, None));
+    assert_eq!(all.picks.len(), 3, "{:#?}", all.picks);
+    let kinds: Vec<PickKind> = all.picks.iter().map(|p| p.kind).collect();
+    assert_eq!(
+        kinds,
+        [PickKind::Best, PickKind::Fastest, PickKind::LongestContext]
+    );
+    for req in [
+        RankRequest {
+            search: Some("llama".into()),
+            ..request(UseCase::General, None)
+        },
+        RankRequest {
+            search: Some("aucun-modele-de-ce-nom".into()),
+            ..request(UseCase::General, None)
+        },
+        RankRequest {
+            limit: Some(1),
+            show_too_big: false,
+            ..request(UseCase::General, None)
+        },
+    ] {
+        assert_eq!(run(&models, &p2(), &req).picks, all.picks, "{req:?}");
+    }
+    // La taille maximale est un filtre : elle change les conseils.
+    let small = run(
+        &models,
+        &p2(),
+        &RankRequest {
+            max_size: Some(4 << 30),
+            ..request(UseCase::General, None)
+        },
+    );
+    assert!(
+        small
+            .picks
+            .iter()
+            .all(|p| p.item.best.variant.size_bytes <= 4 << 30)
+    );
+
+    // Aucun exécutable assez rapide : aucun conseil.
+    assert!(
+        run(&[], &p2(), &request(UseCase::General, None))
+            .picks
+            .is_empty()
+    );
+    let llama: Vec<ModelEntry> = models
+        .into_iter()
+        .filter(|m| m.display_name == "Llama-3.3-70B-Instruct")
+        .collect();
+    let slow = run(&llama, &p2(), &request(UseCase::General, None));
+    assert!(slow.items.is_empty() && slow.picks.is_empty());
+}
+
+#[test]
+fn conseils_en_memoire_unifiee() {
+    let r = run(&sample(), &p5(), &request(UseCase::General, None));
+    assert!(!r.picks.is_empty());
+    assert!(
+        r.picks.iter().all(|p| !p.reason.contains("VRAM")),
+        "{:#?}",
+        r.picks
+    );
+    assert!(r.picks.iter().any(|p| p.reason.contains("sur le GPU")));
+}
+
+#[test]
+fn familles_de_l_echantillon() {
+    let models = sample();
+    for use_case in UseCase::ALL {
+        let r = run(&models, &p3(), &request(use_case, None));
+        for it in r.items.iter().chain(&r.slow).chain(&r.too_big) {
+            if let Some(family) = &it.family {
+                // La famille est un autre modèle du catalogue, sans famille lui-même.
+                assert_ne!(family, &it.repo_id);
+                assert!(models.iter().any(|m| &m.repo_id == family), "{family}");
+            }
+        }
+    }
+    let r = run(&models, &p3(), &request(UseCase::General, None));
+    let family = |name: &str| {
+        r.items
+            .iter()
+            .chain(&r.slow)
+            .chain(&r.too_big)
+            .find(|i| i.display_name == name)
+            .unwrap_or_else(|| panic!("{name} absent"))
+            .family
+            .clone()
+    };
+    assert_eq!(
+        family("Qwen3.8-27B-Ultimate-Heretic-Uncensored-Turbo-Brilliance-50x-AGI-NEO").as_deref(),
+        Some("bartowski/Qwen3.8-27B-GGUF")
+    );
+    assert_eq!(family("Qwen3.8-27B"), None);
+    // Qwen3-VL-8B n'est pas une variante de Qwen3-8B ; Qwen3.5-9B n'est pas dans l'échantillon.
+    assert_eq!(family("Qwen3-VL-8B-Instruct"), None);
+    assert_eq!(
+        family("Qwen3.5-9B-The-Defiant-Fable-Uncensored-Heretic-NEO-IMATRIX-MAX-MTP"),
+        None
+    );
+    assert_eq!(family("MiMo-V2.6-Distill-Qwen-9B"), None);
 }
 
 // ── Avertissements par runtime (§10.2) ─────────────────────────────────────────────────────

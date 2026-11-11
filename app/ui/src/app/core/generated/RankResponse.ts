@@ -2,6 +2,7 @@
 import type { DataSource } from "./DataSource";
 import type { MemoryBudget } from "./MemoryBudget";
 import type { RankItem } from "./RankItem";
+import type { RankPick } from "./RankPick";
 import type { Runtime } from "./Runtime";
 import type { UseCase } from "./UseCase";
 
@@ -21,6 +22,11 @@ budget: MemoryBudget,
  * Seuil de lenteur du cas d'usage, en tok/s.
  */
 slowTokS: number, 
+/**
+ * Conseils, dans l'ordre meilleur choix, le plus rapide, le plus long contexte : trois au
+ * plus, un par modèle, choisis parmi tous les exécutables (sans la recherche ni `limit`).
+ */
+picks: Array<RankPick>, 
 /**
  * Modèles exécutables, du meilleur score au moins bon.
  */

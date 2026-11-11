@@ -11,6 +11,7 @@ pub mod calibration;
 pub mod catalog;
 pub mod estimate;
 pub mod export;
+pub mod family;
 pub mod fmt;
 pub mod hardware;
 pub mod launch;
@@ -36,8 +37,8 @@ pub use hardware::{
 pub use launch::{CommandLine, LaunchPlan, Runtime};
 pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};
 pub use rank::{
-    DetailRequest, ModelDetail, RankContext, RankItem, RankRequest, RankResponse, VariantDetail,
-    model_detail, rank,
+    DetailRequest, ModelDetail, PickKind, RankContext, RankItem, RankPick, RankRequest,
+    RankResponse, VariantDetail, model_detail, rank,
 };
 pub use runtime::{OllamaModel, RuntimeStatus, RuntimesStatus};
 pub use score::{Curation, Score, ScoreWeights};
