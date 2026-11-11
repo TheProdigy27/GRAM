@@ -50,7 +50,7 @@ describe('RankingTable', () => {
     expect(rows).toHaveLength(3);
     const cells = [...rows[1].querySelectorAll('td')].map(text);
     expect(cells[0]).toBe('2');
-    expect(cells.slice(2)).toEqual(['Q4_K_M', '14,0 Go', 'Hybride', '~7,4', '40k', '70']);
+    expect(cells.slice(2)).toEqual(['Q4_K_M', '14,0 Go', 'Hybride 30/40', '~7,4', '40k', '70']);
     expect(rows[1].querySelector('.mode-badge')?.classList).toContain('mode-hybrid');
     expect(rows[0].querySelector('.mode-badge')?.classList).toContain('mode-gpu');
     expect(rows[1].querySelector('.approx')).not.toBeNull();

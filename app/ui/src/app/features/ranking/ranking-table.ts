@@ -4,7 +4,7 @@ import { MatSortModule, type Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import type { RankItem } from '../../core/generated/RankItem';
-import { ModeBadge } from '../../shared/mode-badge';
+import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
 import { CtxPipe, GbPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
 import { scoreTooltip } from '../../shared/score';
 import { type RankedRow, type SortDir, rankedRows, sortRows } from './sort';

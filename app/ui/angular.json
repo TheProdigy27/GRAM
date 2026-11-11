@@ -32,6 +32,8 @@
             ],
             "styles": [
               "node_modules/material-symbols/outlined.css",
+              "node_modules/@fontsource-variable/inter/index.css",
+              "node_modules/@fontsource-variable/jetbrains-mono/index.css",
               "src/styles.scss"
             ]
           },

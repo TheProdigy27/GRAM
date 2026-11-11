@@ -8,7 +8,7 @@ import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { TauriService, errorMessage } from '../../core/tauri.service';
 import { decimal, relativeTime } from '../../shared/format';
 import { FIT_LABELS, runtimeLabel, useCaseLabel } from '../../shared/labels';
-import { ModeBadge } from '../../shared/mode-badge';
+import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
 import { CountPipe, CtxPipe, GbPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
 import { scoreTooltip } from '../../shared/score';
 import { DetailStore } from '../../state/detail.store';
