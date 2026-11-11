@@ -23,12 +23,10 @@ export class StatusBar {
   private readonly ranking = inject(RankingStore);
   private readonly shortcuts = inject(ShortcutsService);
 
-  /**
-   * Raccourcis rappelés : seulement ceux qui marchent déjà (↑ ↓ arrivent avec le classement au
-   * clavier, ? avec l'aide des raccourcis).
-   */
+  /** Raccourcis rappelés : seulement ceux qui marchent déjà (? arrive avec l'aide, phase 8). */
   protected readonly hints: readonly { keys: string[]; label: string }[] = [
     { keys: [this.shortcuts.modShortcut('K')], label: 'chercher' },
+    { keys: ['↑', '↓'], label: 'naviguer' },
     { keys: ['Entrée'], label: 'fiche' },
     { keys: ['R'], label: 'ré-analyser' },
     { keys: ['E'], label: 'exporter' },

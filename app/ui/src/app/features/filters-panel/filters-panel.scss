@@ -1,43 +1,207 @@
+:host {
+  display: block;
+}
+
 .filters {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  box-sizing: border-box;
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  border-right: 1px solid var(--mat-sys-outline-variant);
+  gap: 20px;
+  padding: 18px 8px 24px 20px;
 }
 
-mat-form-field {
-  width: 100%;
-}
-
-.field {
+.group {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
-.field-label {
+.group--ctx,
+.group--size {
+  gap: 8px;
+}
+
+.group__head {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font: var(--mat-sys-body-medium);
 }
 
-.scale {
+// Étiquette de groupe : 11 px / 600, majuscules.
+.group__label {
+  margin: 0;
+  padding: 0 2px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--g-muted);
+}
+
+.group__value {
+  padding-right: 2px;
+  font-size: 12px;
+  color: var(--g-muted);
+
+  strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--g-fg);
+  }
+}
+
+.group__hint {
+  margin: 2px 2px 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--g-muted);
+}
+
+// --- Options en liste (usage, runtime) -----------------------------------------------------------
+
+.opt {
   display: flex;
-  justify-content: space-between;
-  font: var(--mat-sys-label-small);
-  color: var(--mat-sys-on-surface-variant);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--g-radius);
+  background: transparent;
+  color: var(--g-fg-2);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--g-hover);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--g-accent-line);
+    background: var(--g-accent-weak);
+    color: var(--g-fg);
+
+    .opt__label {
+      font-weight: 600;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: -1px;
+  }
 }
 
-.reset {
+.opt__label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.opt__kbd {
+  height: 18px;
+  min-width: 18px;
+}
+
+// Point plein : en cours (vert) ou installé (gris) ; cercle vide : absent ou inconnu.
+.opt__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin: 0 4px;
+  border: 1.5px solid var(--g-control);
+  border-radius: 50%;
+
+  [data-state='running'] > & {
+    border-color: var(--g-ok);
+    background: var(--g-ok);
+  }
+
+  [data-state='installed'] > & {
+    background: var(--g-control);
+  }
+}
+
+.opt__state {
+  font-size: 11.5px;
+  color: var(--g-muted);
+
+  [data-state='running'] > & {
+    font-weight: 500;
+    color: var(--g-ok);
+  }
+}
+
+// --- Commandes secondaires -----------------------------------------------------------------------
+
+.chip {
   align-self: flex-start;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--g-input);
+  border-radius: var(--g-radius);
+  background: var(--g-surface);
+  color: var(--g-fg-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--g-hover);
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--g-chip-on);
+    background: var(--g-chip-on);
+    color: var(--g-chip-on-fg);
+  }
 }
 
-.option-hint {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.9em;
+.link {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--g-accent-ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.group--switches {
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--g-line);
+
+  .group__hint {
+    margin-top: -2px;
+  }
+}
+
+// --- Fenêtre étroite : les filtres passent au-dessus du tableau, en grille -----------------------
+
+@media (max-width: 900px) {
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    align-items: start;
+    padding: 18px 20px 0;
+  }
+
+  .group--switches {
+    padding-top: 0;
+    border-top: 0;
+  }
 }

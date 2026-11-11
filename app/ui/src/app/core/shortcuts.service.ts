@@ -6,6 +6,11 @@ import { DestroyRef, Injectable, inject } from '@angular/core';
 export interface Shortcut {
   /** `KeyboardEvent.key` : « r », « Escape »… (insensible à la casse pour les lettres). */
   key: string;
+  /**
+   * Touche physique acceptée en plus de `key` (`KeyboardEvent.code`) : « Digit1 » pour la
+   * touche 1 de l'AZERTY, qui donne « & » sans Maj.
+   */
+  code?: string;
   /** Avec Ctrl (⌘ sur Mac). Sans : la touche seule, sans aucun modificateur. */
   mod?: boolean;
   /** Actif aussi dans un champ de saisie (Ctrl K, Échap). */
@@ -90,7 +95,7 @@ export class ShortcutsService {
       const s = this.shortcuts[i];
       const sKey = s.key.length === 1 ? s.key.toLowerCase() : s.key;
       // Maj n'est pas regardée : « R » vaut « r », et les chiffres de l'AZERTY la demandent.
-      if (sKey !== key || !!s.mod !== mod) continue;
+      if ((sKey !== key && (!s.code || s.code !== event.code)) || !!s.mod !== mod) continue;
       if (editable && !s.inInputs) continue;
       if (!s.mod && event.repeat) {
         event.preventDefault();

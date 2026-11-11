@@ -1,108 +1,132 @@
-<table
-  mat-table
-  matSort
-  class="ranking-table"
-  [dataSource]="rows()"
-  [trackBy]="trackRow"
-  [attr.aria-label]="label()"
-  (matSortChange)="sort.set($event)"
->
-  <ng-container matColumnDef="rank">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-rank">#</th>
-    <td mat-cell *matCellDef="let row" class="col-rank">{{ row.rank }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="model">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>Modèle</th>
-    <td mat-cell *matCellDef="let row" class="col-model">
-      <div class="model-name">
-        <span class="name" data-testid="model-name">{{ row.item.displayName }}</span>
-        @if (row.item.pipeline === 'image-text-to-text') {
-          <mat-icon class="flag" matTooltip="Vision : comprend les images">image</mat-icon>
-        }
-        @if (row.item.gated) {
-          <mat-icon class="flag" matTooltip="Dépôt protégé : conditions à accepter sur Hugging Face"
-            >lock</mat-icon
+<div class="grid" role="grid" [attr.aria-label]="label()" [attr.aria-rowcount]="rowCount()">
+  <div class="head" role="rowgroup">
+    <div class="row row--head" role="row" aria-rowindex="1">
+      @for (c of columns; track c.key) {
+        <div
+          class="th"
+          role="columnheader"
+          [class.th--num]="c.num"
+          [attr.data-col]="c.key"
+          [attr.aria-sort]="ariaSort(sort(), c.key)"
+        >
+          <button
+            type="button"
+            class="th__button"
+            [attr.data-testid]="'sort-' + c.key"
+            [class.th__button--active]="arrow(c.key) !== null"
+            (click)="sortBy(c.key)"
           >
-        }
-        @if (row.item.installed.length > 0) {
-          <mat-icon
-            class="installed"
-            data-testid="installed"
-            [matTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
-            >download_done</mat-icon
-          >
-        }
-        @if (row.item.best.estimate.approximate) {
-          <span
-            class="approx"
-            matTooltip="Estimation approximative : tailles réelles ou architecture inconnues"
-            >≈</span
-          >
-        }
-      </div>
-      <div class="model-sub">
-        {{ row.item.paramsTotal | params: row.item.paramsActive }} · {{ row.item.repoId }}
-      </div>
-    </td>
-  </ng-container>
+            @if (c.num && arrow(c.key); as a) {
+              <g-icon [name]="a" [size]="12" />
+            }
+            {{ c.label }}
+            @if (c.key === 'size') {
+              <span class="th__scale">· {{ scale() }}</span>
+            }
+            @if (!c.num && arrow(c.key); as a) {
+              <g-icon [name]="a" [size]="12" />
+            }
+          </button>
+        </div>
+      }
+    </div>
+  </div>
 
-  <ng-container matColumnDef="quant">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>Quant</th>
-    <td mat-cell *matCellDef="let row" class="mono">{{ row.item.best.variant.label }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="size">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="num">
-      Taille
-    </th>
-    <td mat-cell *matCellDef="let row" class="num">{{ row.item.best.variant.sizeBytes | gb }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="mode">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>Mode</th>
-    <td mat-cell *matCellDef="let row">
-      <app-mode-badge [mode]="row.item.best.estimate.mode" [tooltip]="row.item.explanation" />
-    </td>
-  </ng-container>
-
-  <ng-container matColumnDef="tokS">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="num">
-      tok/s
-    </th>
-    <td mat-cell *matCellDef="let row" class="num">{{ row.item.best.estimate.tokS | tokS }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="ctxMax">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="num">
-      Ctx max
-    </th>
-    <td mat-cell *matCellDef="let row" class="num">{{ row.item.best.estimate.ctxMax | ctx }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="score">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="num">
-      Score
-    </th>
-    <td mat-cell *matCellDef="let row" class="num">
-      <span
-        class="score"
-        data-testid="score"
-        matTooltipClass="gram-multiline-tooltip"
-        [matTooltip]="scoreTooltip(row.item.score)"
-        >{{ row.item.score.total.toFixed(0) }}</span
+  <div class="body" role="rowgroup">
+    @for (row of rows(); track row.item.repoId; let i = $index) {
+      <div
+        class="row"
+        role="row"
+        data-testid="rank-row"
+        [attr.aria-rowindex]="i + 2"
+        [attr.aria-selected]="row.item.repoId === selected()"
+        [attr.data-repo]="row.item.repoId"
+        [tabIndex]="i === tabbable() ? 0 : -1"
+        (click)="open(row)"
+        (focus)="activeChange.emit(row.item.repoId)"
+        (keydown)="onKeydown($event, i)"
       >
-    </td>
-  </ng-container>
+        <div class="td td--num td--rank mono" role="gridcell" data-col="rank">{{ row.rank }}</div>
 
-  <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
-  <tr
-    mat-row
-    *matRowDef="let row; columns: columns"
-    tabindex="0"
-    [class.selected]="row.item.repoId === selected()"
-    [attr.aria-selected]="row.item.repoId === selected()"
-    (click)="open(row)"
-    (keydown.enter)="open(row)"
-  ></tr>
-</table>
+        <div class="td td--model" role="gridcell" data-col="model">
+          <div class="model__line">
+            <span
+              class="model__name"
+              data-testid="model-name"
+              gTooltipIfTruncated
+              [gTooltip]="row.item.displayName"
+              >{{ row.item.displayName }}</span
+            >
+            @if (row.item.pipeline === 'image-text-to-text') {
+              <g-icon
+                class="flag"
+                name="eye"
+                label="Vision"
+                data-testid="flag-vision"
+                gTooltip="Vision : comprend les images"
+                [size]="14"
+              />
+            }
+            @if (row.item.gated) {
+              <g-icon
+                class="flag"
+                name="lock"
+                label="Dépôt protégé"
+                data-testid="flag-gated"
+                gTooltip="Dépôt protégé : conditions à accepter sur Hugging Face"
+                [size]="14"
+              />
+            }
+            @if (row.item.installed.length > 0) {
+              <g-tag
+                tone="ok"
+                size="sm"
+                data-testid="installed"
+                [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
+                >Installé</g-tag
+              >
+            }
+            @if (row.item.best.estimate.approximate) {
+              <span
+                class="approx"
+                role="img"
+                aria-label="Estimation approximative"
+                data-testid="flag-approx"
+                gTooltip="Estimation approximative : tailles réelles ou architecture inconnues"
+                >≈</span
+              >
+            }
+          </div>
+          <div class="model__sub">
+            <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
+            >{{ row.item.paramsTotal | params: row.item.paramsActive }} · {{ row.item.repoId }}
+          </div>
+        </div>
+
+        <div class="td td--quant mono" role="gridcell" data-col="quant">
+          {{ row.item.best.variant.label }}
+        </div>
+
+        <div class="td" role="gridcell" data-col="size">
+          <app-footprint-cell [best]="row.item.best" [budget]="budget()" />
+        </div>
+
+        <div class="td" role="gridcell" data-col="mode">
+          <app-mode-badge [mode]="row.item.best.estimate.mode" [tooltip]="row.item.explanation" />
+        </div>
+
+        <div class="td td--num td--speed mono" role="gridcell" data-col="tokS">
+          {{ row.item.best.estimate.tokS | tokS }}
+        </div>
+
+        <div class="td td--num td--ctx mono" role="gridcell" data-col="ctxMax">
+          {{ row.item.best.estimate.ctxMax | ctx }}
+        </div>
+
+        <div class="td" role="gridcell" data-col="score">
+          <app-score-cell [score]="row.item.score" />
+        </div>
+      </div>
+    }
+  </div>
+</div>

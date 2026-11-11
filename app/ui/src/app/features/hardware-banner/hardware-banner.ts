@@ -7,7 +7,8 @@ import type { Source } from '../../core/generated/Source';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
 import { bandwidth, roundSize } from '../../shared/format';
-import { RUNTIMES, SOURCE_LABELS } from '../../shared/labels';
+import { SOURCE_LABELS } from '../../shared/labels';
+import { runtimeRows } from '../../shared/runtimes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
 import { Icon } from '../../shared/ui/icon/icon';
@@ -152,7 +153,10 @@ export class HardwareBanner {
     inject(DestroyRef).onDestroy(off);
   }
 
-  /** Modèle ouvert dans la fiche (quantification choisie), sinon le premier du classement. */
+  /**
+   * Modèle ouvert dans la fiche (quantification choisie), sinon ligne active du classement
+   * (clavier), sinon le premier du classement.
+   */
   private readonly selection = computed<MemorySelection | null>(() => {
     const d = this.detail.detail();
     const v = this.detail.selected();
@@ -160,8 +164,9 @@ export class HardwareBanner {
       const { memGpu, memCpu } = v.estimate;
       return { name: d.model.displayName, quant: v.variant.label, memGpu, memCpu, opened: true };
     }
-    const open = this.detail.repoId();
-    const item = open ? this.ranking.findItem(open) : this.ranking.response()?.items[0];
+    const id = this.detail.repoId() ?? this.ranking.active();
+    const found = id ? this.ranking.findItem(id) : undefined;
+    const item = found ?? this.ranking.response()?.items[0];
     if (!item) return null;
     const { memGpu, memCpu } = item.best.estimate;
     return {
@@ -169,7 +174,7 @@ export class HardwareBanner {
       quant: item.best.variant.label,
       memGpu,
       memCpu,
-      opened: !!open,
+      opened: !!found,
     };
   });
 
@@ -206,24 +211,7 @@ export class HardwareBanner {
 
   protected readonly runtimes = computed(() => {
     const status = this.hardware.runtimes();
-    if (!status) return null;
-    return RUNTIMES.map(({ value, label }) => {
-      const s = status[value];
-      const state = s.running ? 'running' : s.installed ? 'installed' : 'absent';
-      const models = value === 'ollama' ? status.ollamaModels.length : 0;
-      return {
-        label,
-        state,
-        stateLabel: { running: 'en cours', installed: 'installé', absent: 'absent' }[state],
-        tooltip: [
-          s.version && `version ${s.version}`,
-          models > 0 && `${models} modèle${models > 1 ? 's' : ''} installé${models > 1 ? 's' : ''}`,
-          s.path,
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      };
-    });
+    return status ? runtimeRows(status) : null;
   });
 
   protected readonly warnings = computed(() => this.profile()?.warnings ?? []);

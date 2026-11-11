@@ -8,6 +8,7 @@ import {
   createOverlayRef,
 } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { NgTemplateOutlet } from '@angular/common';
 import {
   Component,
   type ComponentRef,
@@ -16,6 +17,7 @@ import {
   ElementRef,
   InjectionToken,
   Injector,
+  type TemplateRef,
   booleanAttribute,
   effect,
   inject,
@@ -61,11 +63,16 @@ const FALLBACKS: Record<TooltipPosition, TooltipPosition[]> = {
 /** Bulle affichée (visuelle seulement : la description accessible passe par `AriaDescriber`). */
 @Component({
   selector: 'g-tooltip-panel',
-  template: `{{ message() }}
+  imports: [NgTemplateOutlet],
+  template: `@if (template(); as t) {
+      <ng-container [ngTemplateOutlet]="t" />
+    } @else {
+      {{ message() }}
+    }
     @if (shortcut()) {
       <kbd class="g-kbd">{{ shortcut() }}</kbd>
     }`,
-  host: { class: 'g-tooltip', 'aria-hidden': 'true' },
+  host: { class: 'g-tooltip', 'aria-hidden': 'true', '[class.g-tooltip--rich]': '!!template()' },
   styles: `
     :host {
       display: block;
@@ -77,6 +84,15 @@ const FALLBACKS: Record<TooltipPosition, TooltipPosition[]> = {
       font: 12px/1.4 var(--g-font-sans);
       white-space: pre-line;
       box-shadow: var(--g-shadow-pop);
+    }
+    :host(.g-tooltip--rich) {
+      max-width: 360px;
+      padding: 10px 12px;
+      border: 1px solid var(--g-line);
+      border-radius: 10px;
+      background: var(--g-surface);
+      color: var(--g-fg);
+      white-space: normal;
     }
     .g-kbd {
       margin-left: 6px;
@@ -90,12 +106,18 @@ const FALLBACKS: Record<TooltipPosition, TooltipPosition[]> = {
 export class TooltipPanel {
   readonly message = input('');
   readonly shortcut = input('');
+  readonly template = input<TemplateRef<unknown> | null>(null);
 }
 
 /**
  * Infobulle : `<button gTooltip="Ré-analyser le matériel" gTooltipShortcut="R">`.
  * Apparaît après 400 ms au survol ou au focus clavier, se ferme en sortant, au clic ou avec
  * Échap. Le texte est relié à l'élément par `aria-describedby` ; les sauts de ligne sont gardés.
+ *
+ * - `[gTooltipTemplate]` : contenu riche (barres, tableau) dans une bulle aux couleurs de la
+ *   surface ; le texte de `gTooltip` reste la description accessible.
+ * - `gTooltipIfTruncated` : seulement si le texte de l'élément est coupé (points de suspension).
+ *   Rien n'est ajouté à `aria-describedby` : le texte complet est déjà celui de l'élément.
  */
 @Directive({
   selector: '[gTooltip]',
@@ -112,6 +134,15 @@ export class Tooltip {
   readonly disabled = input(false, { alias: 'gTooltipDisabled', transform: booleanAttribute });
   /** Raccourci clavier affiché dans la bulle et annoncé (`aria-keyshortcuts`). */
   readonly shortcut = input('', { alias: 'gTooltipShortcut' });
+  /** Contenu riche de la bulle, à la place du texte (qui reste la description accessible). */
+  readonly template = input<TemplateRef<unknown> | null | undefined>(null, {
+    alias: 'gTooltipTemplate',
+  });
+  /** N'apparaît que si le texte de l'élément est coupé. */
+  readonly ifTruncated = input(false, {
+    alias: 'gTooltipIfTruncated',
+    transform: booleanAttribute,
+  });
 
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -121,16 +152,21 @@ export class Tooltip {
   private panel: ComponentRef<TooltipPanel> | null = null;
   private keydown: Subscription | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Texte de la bulle ; vide : pas de bulle. */
+  private text = '';
   private described = '';
 
   constructor() {
     effect(() => {
       const text = this.disabled() ? '' : (this.message() ?? '').trim();
-      const shortcut = this.shortcut();
+      const ifTruncated = this.ifTruncated();
+      this.shortcut();
+      this.template();
       untracked(() => {
-        this.describe(text);
+        this.text = text;
+        this.describe(ifTruncated ? '' : text);
         if (!text) this.hide();
-        else if (this.panel) this.render(text, shortcut);
+        else if (this.panel) this.render();
       });
     });
 
@@ -157,14 +193,15 @@ export class Tooltip {
   }
 
   protected scheduleShow(): void {
-    if (this.panel || this.timer !== null || !this.described) return;
+    if (this.panel || this.timer !== null || !this.text) return;
     if (this.delay <= 0) this.show();
     else this.timer = setTimeout(() => this.show(), this.delay);
   }
 
   show(): void {
     this.clearTimer();
-    if (this.panel || !this.described) return;
+    if (this.panel || !this.text) return;
+    if (this.ifTruncated() && !this.truncated()) return;
     const position = createFlexibleConnectedPositionStrategy(this.injector, this.host)
       .withPositions(FALLBACKS[this.position()].map((p) => POSITIONS[p]))
       .withFlexibleDimensions(false)
@@ -181,7 +218,7 @@ export class Tooltip {
       this.overlayRef.detachments().subscribe(() => this.cleanUp());
     }
     this.panel = this.overlayRef.attach(new ComponentPortal(TooltipPanel));
-    this.render(this.described, this.shortcut());
+    this.render();
     this.keydown = this.overlayRef.keydownEvents().subscribe((event) => {
       if (event.keyCode === ESCAPE && !hasModifierKey(event)) {
         event.preventDefault();
@@ -196,10 +233,11 @@ export class Tooltip {
     if (this.overlayRef?.hasAttached()) this.overlayRef.detach();
   }
 
-  private render(message: string, shortcut: string): void {
+  private render(): void {
     if (!this.panel) return;
-    this.panel.setInput('message', message);
-    this.panel.setInput('shortcut', shortcut);
+    this.panel.setInput('message', this.text);
+    this.panel.setInput('shortcut', this.shortcut());
+    this.panel.setInput('template', this.template() ?? null);
     this.panel.changeDetectorRef.detectChanges();
     this.overlayRef?.updatePosition();
   }
@@ -208,6 +246,12 @@ export class Tooltip {
     this.panel = null;
     this.keydown?.unsubscribe();
     this.keydown = null;
+  }
+
+  /** Le texte de l'élément dépasse-t-il sa boîte ? */
+  private truncated(): boolean {
+    const el = this.host;
+    return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
   }
 
   private describe(text: string): void {

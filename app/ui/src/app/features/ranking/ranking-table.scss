@@ -1,90 +1,209 @@
-.ranking-table {
-  width: 100%;
-  --mat-table-row-item-container-height: 48px;
-  --mat-table-header-container-height: 40px;
+// Grille du classement : les lignes partagent le même gabarit de colonnes (pas de subgrid sous
+// Safari 15). Sous 1160 px de fenêtre, la colonne Quant passe dans la sous-ligne du modèle.
+
+:host {
+  display: block;
+  --cols: 32px minmax(180px, 1fr) 88px 132px 124px 52px 56px 80px;
+  --row-height: 56px;
 }
 
-.mat-mdc-row {
-  cursor: pointer;
-
-  &:hover {
-    background: var(--mat-sys-surface-container);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: -2px;
-  }
-
-  &.selected {
-    background: var(--mat-sys-secondary-container);
-  }
+:host([data-density='compact']) {
+  --row-height: 46px;
 }
 
-.mat-mdc-cell,
-.mat-mdc-header-cell {
-  padding: 0 8px;
-}
-
-.col-rank {
-  width: 36px;
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.col-model {
-  max-width: 0;
-  width: 40%;
-}
-
-.model-name {
-  display: flex;
+.row {
+  display: grid;
+  grid-template-columns: var(--cols);
   align-items: center;
-  gap: 4px;
+  column-gap: 10px;
+  padding: 0 12px;
+}
+
+// --- En-tête -------------------------------------------------------------------------------------
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.row--head {
+  height: 40px;
+  border-radius: 11px 11px 0 0;
+  background: var(--g-surface-2);
+  box-shadow: inset 0 -1px 0 var(--g-line-2);
+}
+
+.th {
+  display: flex;
   min-width: 0;
 }
 
-.name {
+.th--num {
+  justify-content: flex-end;
+}
+
+.th__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 32px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--g-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--g-hover);
+    color: var(--g-fg);
+  }
+}
+
+.th__button--active {
+  color: var(--g-accent-ink);
+}
+
+.th__scale {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: 500;
 }
 
-.model-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+// --- Lignes --------------------------------------------------------------------------------------
+
+.body .row {
+  height: var(--row-height);
+  border-top: 1px solid var(--g-line-2);
+  cursor: pointer;
+  // L'en-tête collant ne doit pas cacher la ligne qui prend le focus.
+  scroll-margin-top: 44px;
+
+  &:first-child {
+    border-top: 0;
+  }
+
+  &:last-child {
+    border-radius: 0 0 11px 11px;
+  }
+
+  &:hover {
+    background: var(--g-hover);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--g-accent-weak);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: -2px;
+  }
 }
 
-.flag {
-  flex: none;
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  color: var(--mat-sys-on-surface-variant);
+.td {
+  min-width: 0;
 }
 
-.installed {
-  flex: none;
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
-  color: var(--gram-ok);
-}
-
-.approx {
-  flex: none;
-  color: var(--gram-warn);
-  font-weight: 600;
-}
-
-.num {
+.td--num {
   text-align: right;
   white-space: nowrap;
 }
 
-.score {
+.td--rank {
+  font-size: 12px;
+  color: var(--g-muted);
+}
+
+.td--quant {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--g-fg-2);
+}
+
+.td--speed {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.td--ctx {
+  font-size: 12.5px;
+  color: var(--g-fg-2);
+}
+
+// --- Modèle --------------------------------------------------------------------------------------
+
+.td--model {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model__line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.model__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
   font-weight: 600;
+  color: var(--g-fg);
+}
+
+.flag {
+  color: var(--g-muted);
+}
+
+g-tag {
+  flex: none;
+}
+
+.approx {
+  flex: none;
+  font-weight: 700;
+  color: var(--g-warn);
+}
+
+.model__sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--g-muted);
+}
+
+.model__quant {
+  display: none;
+  font-size: 11px;
+}
+
+// --- Fenêtre étroite -----------------------------------------------------------------------------
+
+@media (max-width: 1160px) {
+  :host {
+    --cols: 28px minmax(160px, 1fr) 120px 124px 52px 56px 80px;
+  }
+
+  [data-col='quant'] {
+    display: none;
+  }
+
+  .model__quant {
+    display: inline;
+  }
 }

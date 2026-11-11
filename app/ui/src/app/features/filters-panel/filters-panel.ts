@@ -1,36 +1,40 @@
-import { Component, computed, inject } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSliderModule } from '@angular/material/slider';
+import { Component, DestroyRef, computed, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Runtime } from '../../core/generated/Runtime';
 import type { UseCase } from '../../core/generated/UseCase';
+import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
-import { CTX_STEPS, ctxK, ctxToStep, stepToCtx } from '../../shared/format';
-import { RUNTIMES, USE_CASES, runtimeLabel, useCaseLabel } from '../../shared/labels';
+import { CTX_STEPS, ctxK, decimal } from '../../shared/format';
+import { RUNTIMES, USE_CASES } from '../../shared/labels';
+import { type RuntimeRow, runtimeRows } from '../../shared/runtimes';
+import { FIELD } from '../../shared/ui/field/field';
+import { Icon } from '../../shared/ui/icon/icon';
+import type { IconName } from '../../shared/ui/icon/icons';
+import { Switch } from '../../shared/ui/switch/switch';
+import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
+import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import { SettingsStore } from '../../state/settings.store';
 
+const GIB = 2 ** 30;
+
+const USE_CASE_ICONS: Record<UseCase, IconName> = {
+  general: 'grid',
+  code: 'code',
+  reasoning: 'bulb',
+  fastChat: 'bolt',
+  vision: 'eye',
+};
+
 /**
- * Panneau de gauche : cas d'usage, contexte, runtime, taille maximale, modèles trop gros. La
- * recherche par nom est dans l'en-tête.
+ * Colonne de gauche, réglable en un clic : usage (touches 1 à 5), contexte en pastilles,
+ * runtime avec son état, taille maximale (« Tient en VRAM »), interrupteurs. La recherche par
+ * nom est dans l'en-tête.
  */
 @Component({
   selector: 'app-filters-panel',
-  imports: [
-    MatButtonModule,
-    MatCheckboxModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSliderModule,
-  ],
+  imports: [FIELD, Icon, Switch, ToggleGroup, Tooltip],
   templateUrl: './filters-panel.html',
   styleUrl: './filters-panel.scss',
 })
@@ -40,45 +44,97 @@ export class FiltersPanel {
   private readonly hardware = inject(HardwareStore);
   private readonly snackBar = inject(MatSnackBar);
 
-  protected readonly useCases = USE_CASES;
-  protected readonly maxStep = CTX_STEPS.length - 1;
-  protected readonly stepLabel = (step: number) => ctxK(stepToCtx(step));
+  protected readonly useCases = USE_CASES.map((u, i) => ({
+    ...u,
+    icon: USE_CASE_ICONS[u.value],
+    key: String(i + 1),
+  }));
 
-  protected readonly ctxStep = computed(() => {
+  constructor() {
+    const off = inject(ShortcutsService).register(
+      this.useCases.map((u) => ({
+        key: u.key,
+        code: `Digit${u.key}`,
+        run: () => this.onUseCase(u.value),
+      })),
+    );
+    inject(DestroyRef).onDestroy(off);
+  }
+
+  // ── Contexte ──────────────────────────────────────────────────────────────────────────────
+
+  protected readonly ctxOptions: ToggleOption<number>[] = CTX_STEPS.map((c) => ({
+    value: c,
+    label: ctxK(c),
+  }));
+
+  /** Pastille enfoncée : le contexte affiché s'il en est une (un défaut de 12k n'en est pas). */
+  protected readonly ctxValue = computed(() => {
     const ctx = this.ranking.effectiveCtx();
-    return ctx === null ? ctxToStep(8192) : ctxToStep(ctx);
+    return ctx !== null && (CTX_STEPS as readonly number[]).includes(ctx) ? ctx : null;
   });
 
   protected readonly ctxLabel = computed(() => {
     const ctx = this.ranking.effectiveCtx();
-    if (ctx === null) return '…';
-    const label = ctxK(ctx);
-    return this.ranking.ctx() === null
-      ? `${label} (défaut ${useCaseLabel(this.ranking.useCase())})`
-      : label;
+    return ctx === null ? '…' : ctxK(ctx);
   });
 
-  /** Runtimes, avec leur état d'installation quand il est connu. */
-  protected readonly runtimes = computed(() => {
+  // ── Runtime ───────────────────────────────────────────────────────────────────────────────
+
+  /** Les trois runtimes ; état vide tant que la détection n'a pas répondu. */
+  protected readonly runtimes = computed<RuntimeRow[]>(() => {
     const status = this.hardware.runtimes();
-    return RUNTIMES.map((r) => ({
-      ...r,
-      hint: status ? (status[r.value].installed ? 'installé' : 'non installé') : '',
-    }));
+    return status
+      ? runtimeRows(status)
+      : RUNTIMES.map((r): RuntimeRow => ({ ...r, state: 'absent', stateLabel: '', tooltip: '' }));
   });
 
-  protected readonly runtimeName = computed(() => runtimeLabel(this.ranking.effectiveRuntime()));
+  protected readonly runtimesKnown = computed(() => this.hardware.runtimes() !== null);
 
-  protected readonly runtimeHint = computed(
-    () => this.runtimes().find((r) => r.value === this.ranking.effectiveRuntime())?.hint ?? '',
-  );
+  /** Aide sous la liste : le runtime choisi n'est pas détecté. */
+  protected readonly runtimeHint = computed(() => {
+    if (!this.runtimesKnown()) return '';
+    const r = this.runtimes().find((x) => x.value === this.ranking.effectiveRuntime());
+    return r && r.state === 'absent'
+      ? `${r.label} n’est pas détecté : le classement et les commandes restent valables.`
+      : '';
+  });
+
+  // ── Taille max ────────────────────────────────────────────────────────────────────────────
+
+  /** Taille max telle qu'affichée (« 14,3 ») ; suit la saisie et « Tient en VRAM ». */
+  protected readonly maxSizeText = computed(() => {
+    const gb = this.ranking.maxSizeGb();
+    return gb === null ? '' : decimal(gb, 1);
+  });
+
+  /** VRAM utilisable, en Go arrondis au dixième inférieur ; `null` sans VRAM. */
+  protected readonly vramGb = computed(() => {
+    const vram = this.ranking.response()?.budget.vram ?? 0;
+    const gb = Math.floor((vram / GIB) * 10) / 10;
+    return gb > 0 ? gb : null;
+  });
+
+  protected readonly fitsVram = computed(() => {
+    const v = this.vramGb();
+    return v !== null && this.ranking.maxSizeGb() === v;
+  });
+
+  protected readonly vramTooltip = computed(() => {
+    const v = this.vramGb();
+    return v === null
+      ? ''
+      : `Taille max réglée sur la VRAM utilisable (${decimal(v, 1)} Go). Le cache et le contexte peuvent encore déborder en RAM.`;
+  });
+
+  // ── Actions ───────────────────────────────────────────────────────────────────────────────
 
   protected onUseCase(useCase: UseCase): void {
     this.ranking.setUseCase(useCase);
   }
 
-  protected onCtxStep(step: number): void {
-    this.ranking.setCtx(stepToCtx(step));
+  protected onCtx(ctx: number | null): void {
+    if (ctx !== null) this.ranking.setCtx(ctx);
   }
 
   /** Le runtime choisi est aussi enregistré dans les paramètres (§10.3). */
@@ -91,7 +147,32 @@ export class FiltersPanel {
   }
 
   protected onMaxSize(value: string): void {
-    const gb = value.trim() === '' ? null : Number(value.replace(',', '.'));
+    const gb = value.trim() === '' ? null : Number(value.trim().replace(',', '.'));
     this.ranking.setMaxSizeGb(gb);
+  }
+
+  protected toggleFitVram(): void {
+    this.ranking.setMaxSizeGb(this.fitsVram() ? null : this.vramGb());
+  }
+
+  /** ↑ ↓ (Début, Fin) d'une option à l'autre dans une liste verticale. */
+  protected onListKeydown(event: KeyboardEvent): void {
+    const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+    if (!keys.includes(event.key) || event.altKey || event.ctrlKey || event.metaKey) return;
+    const button = event.target as HTMLElement;
+    const options = [...(button.parentElement?.querySelectorAll<HTMLElement>('.opt') ?? [])];
+    const i = options.indexOf(button);
+    if (i < 0) return;
+    event.preventDefault();
+    const last = options.length - 1;
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? last
+          : event.key === 'ArrowDown'
+            ? Math.min(i + 1, last)
+            : Math.max(i - 1, 0);
+    options[next].focus();
   }
 }

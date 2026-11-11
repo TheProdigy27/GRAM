@@ -10,6 +10,14 @@ export interface RankedRow {
 export type SortKey = 'rank' | 'model' | 'quant' | 'size' | 'mode' | 'tokS' | 'ctxMax' | 'score';
 export type SortDir = 'asc' | 'desc' | '';
 
+/** Tri choisi ; `active: ''` : l'ordre reçu du backend (score, ou proximité pour les trop gros). */
+export interface SortState {
+  active: SortKey | '';
+  direction: SortDir;
+}
+
+export const NO_SORT: SortState = { active: '', direction: '' };
+
 const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 
 const KEYS: Record<SortKey, (r: RankedRow) => number | string> = {
@@ -23,6 +31,49 @@ const KEYS: Record<SortKey, (r: RankedRow) => number | string> = {
   score: (r) => r.item.score.total,
 };
 
+/** Sens du premier clic : le meilleur d'abord (plus rapide, plus long contexte, plus petit…). */
+export const NATURAL_DIR: Record<SortKey, 'asc' | 'desc'> = {
+  rank: 'asc',
+  model: 'asc',
+  quant: 'asc',
+  size: 'asc',
+  mode: 'asc',
+  tokS: 'desc',
+  ctxMax: 'desc',
+  score: 'desc',
+};
+
+/** Libellés du bouton « Trier : … » et de son menu. */
+export const SORT_LABELS: Record<SortKey, string> = {
+  rank: 'rang',
+  model: 'nom',
+  quant: 'quantification',
+  size: 'taille',
+  mode: 'mode',
+  tokS: 'vitesse',
+  ctxMax: 'contexte max',
+  score: 'score',
+};
+
+/**
+ * Clic sur un en-tête : sens naturel, puis sens inverse, puis retour à l'ordre du classement.
+ */
+export function nextSort(current: SortState, key: SortKey): SortState {
+  const natural = NATURAL_DIR[key];
+  if (current.active !== key || current.direction === '')
+    return { active: key, direction: natural };
+  if (current.direction === natural) {
+    return { active: key, direction: natural === 'asc' ? 'desc' : 'asc' };
+  }
+  return NO_SORT;
+}
+
+/** `aria-sort` d'un en-tête. */
+export function ariaSort(current: SortState, key: SortKey): 'ascending' | 'descending' | null {
+  if (current.active !== key || current.direction === '') return null;
+  return current.direction === 'asc' ? 'ascending' : 'descending';
+}
+
 /**
  * Lignes dans l'ordre reçu (du meilleur score au moins bon), avec le rang calculé par le backend :
  * pendant une recherche, il reste celui du classement complet.
@@ -31,7 +82,7 @@ export function rankedRows(items: readonly RankItem[]): RankedRow[] {
   return items.map((item) => ({ rank: item.rank, item }));
 }
 
-/** Tri par colonne ; sans tri actif, l'ordre du score. À égalité, l'ordre du score. */
+/** Tri par colonne ; sans tri actif, l'ordre reçu. À égalité, l'ordre du rang. */
 export function sortRows(rows: readonly RankedRow[], active: string, dir: SortDir): RankedRow[] {
   const key = KEYS[active as SortKey];
   if (!key || dir === '') return [...rows];

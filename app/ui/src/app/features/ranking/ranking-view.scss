@@ -2,79 +2,130 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 0 16px 24px;
+  gap: 12px;
+  padding: 18px 20px 24px;
 }
 
+// Barre de calcul collée en haut de la zone qui défile, sans décaler le contenu.
 .progress-slot {
   position: sticky;
   top: 0;
-  z-index: 2;
-  height: 4px;
-  margin: 0 -16px;
+  z-index: 3;
+  height: 0;
+  margin: -18px -20px 18px;
 }
 
-.notes {
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
-  background: var(--mat-sys-surface-container-low);
-  border-radius: 8px;
-  padding: 6px 10px;
-
-  summary {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    list-style: none;
-  }
-
-  mat-icon {
-    flex: none;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-  }
-
-  ul {
-    margin: 6px 0 0;
-    padding-left: 32px;
-  }
+.progress {
+  position: absolute;
+  inset: 0 0 auto;
+  border-radius: 0;
 }
 
-.more {
-  flex: none;
-  margin-left: auto;
-  font-weight: 600;
-}
+// --- En-tête de liste ----------------------------------------------------------------------------
 
-.section-head {
+// Une seule ligne : le résumé se tronque (texte complet en infobulle) plutôt que de faire
+// passer le tri à la ligne.
+.list-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
 
-  h2 {
-    margin: 8px 0 0;
-    font: var(--mat-sys-title-medium);
+  > * {
+    flex: none;
   }
 }
 
-.more-button {
-  align-self: center;
-  margin-top: 8px;
+.summary,
+.too-big-hint {
+  font-size: 12.5px;
+  color: var(--g-muted);
+  white-space: nowrap;
 }
 
-.section-panel {
-  margin-top: 8px;
-}
-
-.empty {
-  padding: 24px 0;
-  color: var(--mat-sys-on-surface-variant);
+.list-head > .summary {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .too-big-hint {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+
+  button {
+    color: var(--g-accent-ink);
+  }
+}
+
+.list-head > .spacer {
+  flex: 1 1 0;
+}
+
+// --- Remarques -----------------------------------------------------------------------------------
+
+.notes__first,
+.notes__more {
+  margin: 0;
+}
+
+.notes__more {
+  margin-top: 6px;
+  padding-left: 18px;
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.notes__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: -4px -6px -4px 0;
+
+  button {
+    color: inherit;
+  }
+}
+
+// --- Tableau -------------------------------------------------------------------------------------
+
+.card {
+  border: 1px solid var(--g-line);
+  border-radius: var(--g-radius-card);
+  background: var(--g-surface);
+}
+
+.card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--g-line-2);
+}
+
+.card__count {
+  font-size: 12px;
+  color: var(--g-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.card--loading {
+  padding: 6px 0;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 0.4fr 0.3fr;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 16px;
+
+  & + & {
+    border-top: 1px solid var(--g-line-2);
+  }
 }

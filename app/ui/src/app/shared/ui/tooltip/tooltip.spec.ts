@@ -20,6 +20,18 @@ class Host {
   readonly disabled = signal(false);
 }
 
+@Component({
+  imports: [Tooltip],
+  template: `<span data-testid="score" gTooltip="Score 86 sur 100" [gTooltipTemplate]="detail"
+      >86</span
+    >
+    <ng-template #detail><strong class="rich">Qualité 82</strong></ng-template>
+    <span data-testid="name" gTooltipIfTruncated [gTooltip]="name">{{ name }}</span>`,
+})
+class RichHost {
+  readonly name = 'Qwen3.8-27B-TURBO-Fable-Cold-Fusion';
+}
+
 const bubble = () => document.querySelector<HTMLElement>('g-tooltip-panel');
 const noDelay = () =>
   TestBed.configureTestingModule({ providers: [{ provide: TOOLTIP_DELAY_MS, useValue: 0 }] });
@@ -102,5 +114,39 @@ describe('Tooltip', () => {
     host.message.set('');
     await fixture.whenStable();
     expect(bubble()).toBeNull();
+  });
+
+  it('contenu riche : le gabarit dans une bulle claire, le texte reste la description', async () => {
+    noDelay();
+    const fixture = TestBed.createComponent(RichHost);
+    await fixture.whenStable();
+    const score = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="score"]')!;
+    const id = score.getAttribute('aria-describedby')!;
+    expect(document.getElementById(id)?.textContent).toBe('Score 86 sur 100');
+    score.dispatchEvent(new MouseEvent('mouseenter'));
+    const panel = bubble()!;
+    expect(panel.classList).toContain('g-tooltip--rich');
+    expect(panel.querySelector('.rich')?.textContent).toBe('Qualité 82');
+    expect(panel.textContent).not.toContain('Score 86');
+    score.dispatchEvent(new MouseEvent('mouseleave'));
+  });
+
+  it('gTooltipIfTruncated : seulement si le texte est coupé, sans aria-describedby', async () => {
+    noDelay();
+    const fixture = TestBed.createComponent(RichHost);
+    await fixture.whenStable();
+    const name = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '[data-testid="name"]',
+    )!;
+    expect(name.hasAttribute('aria-describedby')).toBe(false);
+    name.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(bubble()).toBeNull();
+    name.dispatchEvent(new MouseEvent('mouseleave'));
+
+    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 320 });
+    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 180 });
+    name.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(bubble()?.textContent).toContain('Qwen3.8-27B-TURBO-Fable-Cold-Fusion');
+    name.dispatchEvent(new MouseEvent('mouseleave'));
   });
 });

@@ -62,13 +62,16 @@
   background: var(--g-line);
 }
 
-// --- Classement et fiche (Material jusqu'aux phases 3 et 6) -----------------------------------
+// --- Classement et fiche (Material jusqu'à la phase 6) ----------------------------------------
 
 .body {
   flex: 1;
   min-height: 0;
+  --mat-sidenav-content-background-color: var(--g-bg);
+  --mat-sidenav-content-text-color: var(--g-fg);
 }
 
+// Filtres et classement défilent chacun de leur côté : les filtres restent visibles.
 .workspace {
   display: flex;
   height: 100%;
@@ -76,13 +79,28 @@
 }
 
 .filters {
-  flex: 0 0 260px;
+  flex: 0 0 clamp(236px, 20vw, 248px);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .main {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+}
+
+// Fenêtre étroite : les filtres passent au-dessus du tableau, tout défile ensemble.
+@media (max-width: 900px) {
+  .workspace {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .filters,
+  .main {
+    overflow: visible;
+  }
 }
 
 .detail-drawer {

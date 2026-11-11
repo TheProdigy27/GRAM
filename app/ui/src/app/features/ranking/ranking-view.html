@@ -1,135 +1,185 @@
-<section class="ranking" aria-label="Classement des modèles">
+<section
+  class="ranking"
+  aria-label="Classement des modèles"
+  [attr.aria-busy]="ranking.loading() || null"
+>
   <div class="progress-slot">
     @if (ranking.loading()) {
-      <mat-progress-bar mode="indeterminate" aria-label="Calcul du classement" />
+      <g-progress class="progress" size="sm" label="Calcul du classement" />
     }
   </div>
 
   @if (ranking.error(); as message) {
-    <div class="error-box" role="alert">
-      <mat-icon aria-hidden="true">error</mat-icon>
-      <span>Classement impossible : {{ message }}</span>
-      <button mat-button type="button" (click)="ranking.reload()">Réessayer</button>
-    </div>
+    <g-callout kind="error" role="alert" data-testid="ranking-error">
+      Classement impossible : {{ message }}
+      <button
+        gCalloutAction
+        gButton
+        size="sm"
+        data-testid="retry-ranking"
+        (click)="ranking.reload()"
+      >
+        Réessayer
+      </button>
+    </g-callout>
   }
 
   @if (response(); as r) {
-    @if (r.notes.length > 0) {
-      <details class="notes">
-        <summary>
-          <mat-icon aria-hidden="true">info</mat-icon>
-          <span>{{ r.notes[0] }}</span>
-          @if (r.notes.length > 1) {
-            <span class="more">+{{ r.notes.length - 1 }}</span>
-          }
-        </summary>
-        <ul>
-          @for (note of r.notes.slice(1); track $index) {
-            <li>{{ note }}</li>
-          }
-        </ul>
-      </details>
-    }
-
-    <header class="section-head">
-      <h2>Exécutables</h2>
-      <span class="muted" data-testid="count-items"
-        >{{ r.totalItems }} modèle{{ r.totalItems > 1 ? 's' : '' }} · runtime
-        {{ runtimeName() }}</span
-      >
-    </header>
-    @if (r.items.length > 0) {
-      <app-ranking-table
-        data-testid="table-items"
-        label="Modèles exécutables"
-        [items]="r.items"
-        [selected]="detail.repoId()"
-        (openModel)="open($event)"
+    <div class="list-head">
+      <g-tabs
+        #sections
+        label="Sections du classement"
+        idPrefix="ranking"
+        data-testid="count-items"
+        [tabs]="tabs()"
+        [selected]="section()"
+        (selectedChange)="select($event)"
       />
-      @if (moreItems() > 0) {
-        <button mat-stroked-button class="more-button" type="button" (click)="ranking.showMore()">
-          Voir plus ({{ moreItems() }} restants)
-        </button>
+      @if (hiddenTooBig(); as n) {
+        <span class="too-big-hint" data-testid="too-big-hint">
+          {{ n }} trop gros ·
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            data-testid="show-too-big"
+            (click)="showTooBig()"
+          >
+            Afficher
+          </button>
+        </span>
       }
-    } @else if (r.search !== null) {
-      <p class="empty" data-testid="search-empty">
-        @if (r.totalSlow + r.tooBigCount === 0) {
-          Aucun modèle ne correspond à « {{ r.search }} ».
-        } @else {
-          Aucun modèle exécutable assez rapide ne correspond à « {{ r.search }} » : voir plus bas.
-        }
-        <button mat-button type="button" (click)="ranking.setSearch('')">
-          Effacer la recherche
-        </button>
-      </p>
-    } @else {
-      <p class="empty">
-        Aucun modèle ne tient en mémoire assez vite avec ces filtres. Essayer un contexte plus
-        court, ou regarder la section « Exécutable mais lent ».
-      </p>
-    }
-
-    @if (r.totalSlow > 0) {
-      <mat-expansion-panel class="section-panel" data-testid="slow-panel">
-        <mat-expansion-panel-header>
-          <mat-panel-title>Exécutable mais lent ({{ r.totalSlow }})</mat-panel-title>
-          <mat-panel-description>sous {{ slowThreshold() }} tok/s estimés</mat-panel-description>
-        </mat-expansion-panel-header>
-        <ng-template matExpansionPanelContent>
-          <app-ranking-table
-            label="Modèles exécutables mais lents"
-            [items]="r.slow"
-            [selected]="detail.repoId()"
-            (openModel)="open($event)"
-          />
-          @if (moreSlow() > 0) {
+      <span class="summary" data-testid="list-summary" gTooltipIfTruncated [gTooltip]="summary()">{{
+        summary()
+      }}</span>
+      <span class="spacer"></span>
+      <button
+        gButton
+        variant="ghost"
+        size="sm"
+        data-testid="sort-menu"
+        [cdkMenuTriggerFor]="sortMenuTpl"
+      >
+        <g-icon [name]="sortIcon()" />
+        Trier : {{ sortLabel() }}
+      </button>
+      <ng-template #sortMenuTpl>
+        <g-menu aria-label="Trier le classement">
+          @for (s of sortMenu; track s.key) {
             <button
-              mat-stroked-button
-              class="more-button"
-              type="button"
-              (click)="ranking.showMore()"
+              gMenuItem
+              [icon]="s.key === sort().active ? 'check' : undefined"
+              (triggered)="sortBy(s.key)"
             >
-              Voir plus ({{ moreSlow() }} restants)
+              {{ s.label }}
             </button>
           }
-        </ng-template>
-      </mat-expansion-panel>
+        </g-menu>
+      </ng-template>
+    </div>
+
+    @if (notes().length > 0) {
+      <g-callout class="notes" kind="info" data-testid="ranking-notes">
+        <p class="notes__first">{{ notes()[0] }}</p>
+        @if (notesOpen()) {
+          <ul class="notes__more">
+            @for (note of notes().slice(1); track $index) {
+              <li>{{ note }}</li>
+            }
+          </ul>
+        }
+        <span gCalloutAction class="notes__actions">
+          @if (notes().length > 1) {
+            <button
+              gButton
+              variant="ghost"
+              size="sm"
+              data-testid="notes-toggle"
+              [attr.aria-expanded]="notesOpen()"
+              (click)="notesOpen.set(!notesOpen())"
+            >
+              @if (notesOpen()) {
+                Moins
+              } @else {
+                +{{ notes().length - 1 }} remarque{{ notes().length > 2 ? 's' : '' }}
+              }
+            </button>
+          }
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            icon
+            data-testid="notes-hide"
+            aria-label="Masquer les remarques"
+            gTooltip="Masquer les remarques"
+            (click)="hideNotes()"
+          >
+            <g-icon name="close" />
+          </button>
+        </span>
+      </g-callout>
     }
 
-    @if (r.tooBigCount > 0) {
-      @if (r.tooBig.length > 0) {
-        <mat-expansion-panel class="section-panel" data-testid="too-big-panel" expanded>
-          <mat-expansion-panel-header>
-            <mat-panel-title>Trop gros ({{ r.tooBigCount }})</mat-panel-title>
-            <mat-panel-description>du plus proche de tenir au plus éloigné</mat-panel-description>
-          </mat-expansion-panel-header>
-          <ng-template matExpansionPanelContent>
+    <div
+      class="panel"
+      role="tabpanel"
+      [id]="sections.panelId(section())"
+      [attr.aria-labelledby]="sections.tabId(section())"
+    >
+      @if (list(); as l) {
+        @if (l.items.length > 0) {
+          <div class="card">
             <app-ranking-table
-              label="Modèles trop gros"
-              [items]="r.tooBig"
+              [attr.data-testid]="l.testId"
+              [label]="l.list"
+              [items]="l.items"
+              [total]="l.total"
+              [budget]="r.budget"
               [selected]="detail.repoId()"
+              [active]="ranking.active()"
+              [(sort)]="sort"
               (openModel)="open($event)"
+              (activeChange)="ranking.setActive($event)"
             />
-            @if (moreTooBig() > 0) {
-              <button
-                mat-stroked-button
-                class="more-button"
-                type="button"
-                (click)="ranking.showMore()"
-              >
-                Voir plus ({{ moreTooBig() }} restants)
+            @if (more(); as m) {
+              <div class="card__footer">
+                <button gButton data-testid="show-more" (click)="ranking.showMore()">
+                  Afficher {{ m.next }} de plus
+                </button>
+                <span class="card__count" data-testid="shown-count"
+                  >{{ l.items.length }} sur {{ l.total }}</span
+                >
+              </div>
+            }
+          </div>
+        } @else if (empty(); as e) {
+          <g-empty-state
+            [attr.data-testid]="e.testId"
+            [icon]="e.icon"
+            [heading]="e.heading"
+            [description]="e.description"
+          >
+            @for (a of e.actions; track a) {
+              <button gButton size="sm" [attr.data-testid]="'empty-' + a" (click)="run(a)">
+                {{ actionLabels[a] }}
               </button>
             }
-          </ng-template>
-        </mat-expansion-panel>
-      } @else {
-        <p class="muted too-big-hint">
-          {{ r.tooBigCount }} modèle{{ r.tooBigCount > 1 ? 's' : '' }} trop gros pour cette machine.
-          <button mat-button type="button" (click)="ranking.setShowTooBig(true)">Afficher</button>
-        </p>
+          </g-empty-state>
+        }
       }
-    }
+    </div>
   } @else if (!ranking.error()) {
-    <p class="empty">Calcul du classement…</p>
+    <div class="card card--loading" aria-hidden="true">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="skeleton-row">
+          <g-skeleton width="20px" height="10px" />
+          <g-skeleton width="38%" height="12px" />
+          <g-skeleton width="16%" height="10px" />
+          <g-skeleton width="12%" height="10px" />
+        </div>
+      }
+    </div>
+    <span class="g-sr-only">Calcul du classement…</span>
   }
 </section>

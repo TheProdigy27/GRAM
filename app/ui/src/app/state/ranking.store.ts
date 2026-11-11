@@ -44,8 +44,13 @@ export class RankingStore {
   /** Recherche par nom, telle que saisie ; vide : tous les modèles. */
   readonly search = signal('');
   readonly showTooBig = signal(false);
-  /** Pages affichées (« Voir plus »). */
+  /** Pages affichées (« Afficher 25 de plus »). */
   readonly pages = signal(1);
+  /**
+   * Ligne active du classement (focus clavier, flèches) : son empreinte est montrée sur la carte
+   * mémoire quand aucune fiche n'est ouverte. `null` : aucune.
+   */
+  readonly active = signal<string | null>(null);
 
   readonly pageSize = computed(() => this.settings.settings()?.pageSize ?? DEFAULT_PAGE_SIZE);
 
@@ -131,6 +136,10 @@ export class RankingStore {
 
   setShowTooBig(show: boolean): void {
     this.showTooBig.set(show);
+  }
+
+  setActive(repoId: string | null): void {
+    this.active.set(repoId);
   }
 
   showMore(): void {

@@ -1,93 +1,121 @@
 <aside class="filters" aria-label="Filtres du classement">
-  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-    <mat-label>Usage</mat-label>
-    <mat-select
-      data-testid="filter-use-case"
-      [value]="ranking.useCase()"
-      (selectionChange)="onUseCase($event.value)"
-    >
-      @for (u of useCases; track u.value) {
-        <mat-option [value]="u.value">{{ u.label }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+  <div class="group" role="group" aria-labelledby="filter-usage" data-testid="filter-use-case">
+    <h2 class="group__label" id="filter-usage">Usage</h2>
+    @for (u of useCases; track u.value) {
+      <button
+        type="button"
+        class="opt"
+        [attr.aria-pressed]="u.value === ranking.useCase()"
+        [attr.aria-keyshortcuts]="u.key"
+        [attr.data-value]="u.value"
+        (click)="onUseCase(u.value)"
+        (keydown)="onListKeydown($event)"
+      >
+        <g-icon [name]="u.icon" />
+        <span class="opt__label">{{ u.label }}</span>
+        <kbd class="g-kbd opt__kbd" aria-hidden="true">{{ u.key }}</kbd>
+      </button>
+    }
+  </div>
 
-  <div class="field">
-    <div class="field-label">
-      <span id="ctx-label">Contexte</span>
-      <strong data-testid="ctx-value">{{ ctxLabel() }}</strong>
+  <div class="group group--ctx">
+    <div class="group__head">
+      <h2 class="group__label" id="filter-ctx">Contexte</h2>
+      <span class="group__value" data-testid="ctx-value"
+        ><strong class="mono">{{ ctxLabel() }}</strong>
+        @if (ranking.ctx() === null) {
+          <span> · défaut</span>
+        }
+      </span>
     </div>
-    <mat-slider min="0" [max]="maxStep" step="1" discrete showTickMarks [displayWith]="stepLabel">
-      <input
-        matSliderThumb
-        aria-labelledby="ctx-label"
-        [value]="ctxStep()"
-        (valueChange)="onCtxStep($event)"
-      />
-    </mat-slider>
-    <div class="scale" aria-hidden="true"><span>2k</span><span>128k</span></div>
+    <g-toggle-group
+      data-testid="filter-ctx"
+      label="Contexte"
+      [columns]="4"
+      [options]="ctxOptions"
+      [value]="ctxValue()"
+      (valueChange)="onCtx($event)"
+    />
     @if (ranking.ctx() !== null) {
-      <button mat-button class="reset" type="button" (click)="ranking.setCtx(null)">
+      <button type="button" class="link" data-testid="ctx-reset" (click)="ranking.setCtx(null)">
         Contexte par défaut
       </button>
     }
   </div>
 
-  <mat-form-field appearance="outline">
-    <mat-label>Runtime</mat-label>
-    <mat-select
-      data-testid="filter-runtime"
-      [value]="ranking.effectiveRuntime()"
-      (selectionChange)="onRuntime($event.value)"
-    >
-      <mat-select-trigger>{{ runtimeName() }}</mat-select-trigger>
-      @for (r of runtimes(); track r.value) {
-        <mat-option [value]="r.value">
-          {{ r.label }}
-          @if (r.hint) {
-            <span class="option-hint">· {{ r.hint }}</span>
-          }
-        </mat-option>
-      }
-    </mat-select>
-    @if (runtimeHint()) {
-      <mat-hint>{{ runtimeHint() }}</mat-hint>
-    }
-  </mat-form-field>
-
-  <mat-form-field appearance="outline">
-    <mat-label>Taille max</mat-label>
-    <input
-      #maxSize
-      matInput
-      type="number"
-      min="1"
-      step="1"
-      inputmode="decimal"
-      placeholder="aucune"
-      data-testid="filter-max-size"
-      (input)="onMaxSize(maxSize.value)"
-    />
-    <span matTextSuffix>Go</span>
-    @if (ranking.maxSizeGb() !== null) {
+  <div class="group" role="group" aria-labelledby="filter-runtime" data-testid="filter-runtime">
+    <h2 class="group__label" id="filter-runtime">Runtime</h2>
+    @for (r of runtimes(); track r.value) {
       <button
-        matIconSuffix
-        mat-icon-button
         type="button"
-        aria-label="Retirer la taille maximale"
-        (click)="maxSize.value = ''; onMaxSize('')"
+        class="opt"
+        gTooltipPosition="right"
+        [attr.aria-pressed]="r.value === ranking.effectiveRuntime()"
+        [attr.data-value]="r.value"
+        [attr.data-state]="runtimesKnown() ? r.state : null"
+        [gTooltip]="r.tooltip"
+        (click)="onRuntime(r.value)"
+        (keydown)="onListKeydown($event)"
       >
-        <mat-icon>close</mat-icon>
+        <span class="opt__dot" aria-hidden="true"></span>
+        <span class="opt__label">{{ r.label }}</span>
+        <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+        <span class="opt__state"> {{ r.stateLabel }}</span>
       </button>
     }
-    <mat-hint>Fichiers de la quantification</mat-hint>
-  </mat-form-field>
+    @if (runtimeHint()) {
+      <p class="group__hint" data-testid="runtime-hint">{{ runtimeHint() }}</p>
+    }
+  </div>
 
-  <mat-checkbox
-    data-testid="filter-too-big"
-    [checked]="ranking.showTooBig()"
-    (change)="ranking.setShowTooBig($event.checked)"
-  >
-    Afficher les modèles trop gros
-  </mat-checkbox>
+  <div class="group group--size">
+    <label class="group__label" for="filter-max-size">Taille max</label>
+    <g-field
+      suffix="Go"
+      hint="Fichiers de la quantification"
+      clearable
+      clearLabel="Retirer la taille maximale"
+    >
+      <input
+        #maxSize
+        gInput
+        id="filter-max-size"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        placeholder="Aucune"
+        data-testid="filter-max-size"
+        [value]="maxSizeText()"
+        (input)="onMaxSize(maxSize.value)"
+      />
+    </g-field>
+    @if (vramGb() !== null) {
+      <button
+        type="button"
+        class="chip"
+        data-testid="fit-vram"
+        [attr.aria-pressed]="fitsVram()"
+        [gTooltip]="vramTooltip()"
+        (click)="toggleFitVram()"
+      >
+        Tient en VRAM
+      </button>
+    }
+  </div>
+
+  <div class="group group--switches">
+    <div>
+      <g-switch labelPosition="before" data-testid="filter-group" disabled
+        >Regrouper les variantes</g-switch
+      >
+      <p class="group__hint">Bientôt : les variantes sous leur modèle officiel.</p>
+    </div>
+    <g-switch
+      labelPosition="before"
+      data-testid="filter-too-big"
+      [checked]="ranking.showTooBig()"
+      (checkedChange)="ranking.setShowTooBig($event)"
+      >Afficher les trop gros</g-switch
+    >
+  </div>
 </aside>

@@ -13,7 +13,7 @@ export interface ToggleOption<T> {
 }
 
 /**
- * Choix unique parmi 5 options au plus, en boutons à bascule (`aria-pressed`) :
+ * Choix unique parmi quelques options, en boutons à bascule (`aria-pressed`) :
  * `segmented` (contrôle segmenté) ou `chips` (pastilles, par exemple le contexte 2k … 128k).
  * Chaque bouton reste accessible à la tabulation ; ← → passent aussi d'un bouton à l'autre.
  */
@@ -45,6 +45,9 @@ export interface ToggleOption<T> {
     '[attr.aria-label]': 'label() || null',
     '[attr.data-appearance]': 'appearance()',
     '[class.g-toggle-group--fill]': 'fill()',
+    '[class.g-toggle-group--grid]': '!!columns()',
+    '[style.grid-template-columns]':
+      'columns() ? "repeat(" + columns() + ", minmax(0, 1fr))" : null',
   },
   styles: `
     :host {
@@ -56,6 +59,9 @@ export interface ToggleOption<T> {
       display: grid;
       grid-auto-columns: minmax(0, 1fr);
       grid-auto-flow: column;
+    }
+    :host(.g-toggle-group--grid) {
+      display: grid;
     }
     .g-toggle {
       display: inline-flex;
@@ -122,6 +128,8 @@ export class ToggleGroup<T> {
   readonly appearance = input<'chips' | 'segmented'>('chips');
   /** Colonnes de largeur égale sur toute la largeur disponible. */
   readonly fill = input(false, { transform: booleanAttribute });
+  /** Grille de N colonnes égales, sur plusieurs lignes (les 7 pastilles du contexte : 4). */
+  readonly columns = input<number | null>(null);
   readonly disabled = input(false, { transform: booleanAttribute });
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;

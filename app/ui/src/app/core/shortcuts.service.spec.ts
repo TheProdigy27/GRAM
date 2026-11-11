@@ -26,6 +26,7 @@ describe('ShortcutsService', () => {
       { key: 'r', run: () => void log.push('rescan') },
       { key: 'Escape', inInputs: true, run: () => void log.push('escape') },
       { key: 'e', run: () => false },
+      { key: '1', code: 'Digit1', run: () => void log.push('usage 1') },
     ]);
     input = document.createElement('input');
     document.body.appendChild(input);
@@ -41,6 +42,13 @@ describe('ShortcutsService', () => {
     expect(event.defaultPrevented).toBe(true);
     key(document.body, 'R', { shiftKey: true });
     expect(log).toEqual(['rescan', 'rescan']);
+  });
+
+  it('chiffre : la touche physique suffit (AZERTY sans Maj)', () => {
+    key(document.body, '&', { code: 'Digit1' });
+    key(document.body, '1', { code: 'Numpad1' });
+    key(document.body, '&', { code: 'KeyQ' });
+    expect(log).toEqual(['usage 1', 'usage 1']);
   });
 
   it('ignorée dans un champ de saisie, sauf Ctrl K et Échap', () => {

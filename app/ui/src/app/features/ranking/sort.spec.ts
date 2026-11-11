@@ -1,5 +1,5 @@
 import { GIB, makeItem } from '../../../testing/fixtures';
-import { rankedRows, sortRows } from './sort';
+import { NO_SORT, ariaSort, nextSort, rankedRows, sortRows } from './sort';
 
 const items = [
   makeItem('Bravo', { rank: 1, score: 90, tokS: 20, size: 8 * GIB }),
@@ -35,5 +35,19 @@ describe('tri du classement', () => {
     expect(names(sortRows(rows, 'model', 'asc'))).toEqual(['alpha', 'Bravo', 'Charlie']);
     expect(names(sortRows(rows, 'mode', 'asc'))).toEqual(['Bravo', 'Charlie', 'alpha']);
     expect(names(sortRows(rows, 'rank', 'desc'))).toEqual(['Charlie', 'alpha', 'Bravo']);
+  });
+
+  it('clic sur un en-tête : sens naturel, inverse, puis ordre du classement', () => {
+    let s = nextSort(NO_SORT, 'tokS');
+    expect(s).toEqual({ active: 'tokS', direction: 'desc' });
+    expect(ariaSort(s, 'tokS')).toBe('descending');
+    expect(ariaSort(s, 'score')).toBeNull();
+    s = nextSort(s, 'tokS');
+    expect(s).toEqual({ active: 'tokS', direction: 'asc' });
+    expect(ariaSort(s, 'tokS')).toBe('ascending');
+    expect(nextSort(s, 'tokS')).toEqual(NO_SORT);
+    // Une autre colonne repart de son sens naturel.
+    expect(nextSort(s, 'size')).toEqual({ active: 'size', direction: 'asc' });
+    expect(nextSort(s, 'model')).toEqual({ active: 'model', direction: 'asc' });
   });
 });

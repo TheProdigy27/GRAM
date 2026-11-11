@@ -2,7 +2,8 @@ import { Component, booleanAttribute, input, model } from '@angular/core';
 
 /**
  * Interrupteur : `<button role="switch" aria-checked>`, libellé projeté dans le bouton (un clic
- * sur le texte bascule aussi). Sans texte visible, donner `ariaLabel`.
+ * sur le texte bascule aussi). Sans texte visible, donner `ariaLabel`. `labelPosition="before"` :
+ * libellé à gauche sur toute la largeur, interrupteur à droite (liste de réglages).
  */
 @Component({
   selector: 'g-switch',
@@ -20,10 +21,22 @@ import { Component, booleanAttribute, input, model } from '@angular/core';
       <span class="g-switch__label"><ng-content /></span>
     </button>
   `,
-  host: { class: 'g-switch' },
+  host: { class: 'g-switch', '[attr.data-label]': 'labelPosition()' },
   styles: `
     :host {
       display: inline-flex;
+    }
+    :host([data-label='before']) {
+      display: flex;
+    }
+    :host([data-label='before']) .g-switch__button {
+      flex: 1;
+      flex-direction: row-reverse;
+      gap: 10px;
+    }
+    :host([data-label='before']) .g-switch__label {
+      flex: 1;
+      font-weight: 500;
     }
     .g-switch__button {
       display: inline-flex;
@@ -93,6 +106,7 @@ import { Component, booleanAttribute, input, model } from '@angular/core';
 export class Switch {
   readonly checked = model(false);
   readonly ariaLabel = input('');
+  readonly labelPosition = input<'after' | 'before'>('after');
   readonly disabled = input(false, { transform: booleanAttribute });
 
   protected toggle(): void {

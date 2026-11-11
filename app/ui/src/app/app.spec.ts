@@ -1,8 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
-import { MatCheckboxHarness } from '@angular/material/checkbox/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
-import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
@@ -11,13 +9,15 @@ import { argsOf, mockBackend } from '../testing/backend';
 import {
   byTestId,
   chooseMenuItem,
+  chooseOption,
   click,
   menuItems,
   press,
   queryTestId,
+  toggleSwitch,
   typeInto,
 } from '../testing/dom';
-import { HARDWARE, RANKING, SYNC_SUMMARY, makeResponse } from '../testing/fixtures';
+import { GIB, HARDWARE, RANKING, SYNC_SUMMARY, makeItem, makeResponse } from '../testing/fixtures';
 import type { RankRequest } from './core/generated/RankRequest';
 import { FILTER_DEBOUNCE_MS } from './state/ranking.store';
 import { DetailStore } from './state/detail.store';
@@ -37,6 +37,31 @@ async function start(updateCheckDelayMs = 60_000) {
 }
 
 const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, ' ').trim();
+
+/** Lignes d'une liste du classement (`table-items`, `table-slow`, `table-too-big`). */
+const rowsOf = (el: HTMLElement, table = 'table-items') => [
+  ...el.querySelectorAll<HTMLElement>(`[data-testid="${table}"] [data-testid="rank-row"]`),
+];
+const namesOf = (el: HTMLElement, table = 'table-items') =>
+  rowsOf(el, table).map((r) => text(r.querySelector('[data-testid="model-name"]')));
+const lastRequest = (calls: ReturnType<typeof mockBackend>) =>
+  argsOf(calls, 'rank').at(-1)!['request'] as RankRequest;
+
+/** Classement avec des modèles lents et trop gros. */
+const SECTIONS = makeResponse(RANKING.items, {
+  totalItems: 40,
+  slow: [
+    makeItem('Llama-70B', {
+      rank: 1,
+      score: 60,
+      tokS: 2.1,
+      mode: { kind: 'hybrid', gpuLayers: 20, layers: 80 },
+      size: 40 * GIB,
+    }),
+  ],
+  totalSlow: 1,
+  tooBigCount: 2,
+});
 
 describe('App', () => {
   afterEach(() => clearMocks());
@@ -66,31 +91,34 @@ describe('App', () => {
   it('les filtres relancent le classement ; le runtime choisi est enregistré', async () => {
     const calls = mockBackend();
     const fixture = await start();
-    const loader = TestbedHarnessEnvironment.loader(fixture);
 
-    const useCase = await loader.getHarness(
-      MatSelectHarness.with({ selector: '[data-testid="filter-use-case"]' }),
-    );
-    await useCase.clickOptions({ text: 'Code' });
-    await fixture.whenStable();
-    let last = argsOf(calls, 'rank').at(-1)!['request'] as RankRequest;
-    expect(last.useCase).toBe('code');
+    await chooseOption(fixture, 'filter-use-case', 'Code');
+    expect(lastRequest(calls).useCase).toBe('code');
 
-    const tooBig = await loader.getHarness(MatCheckboxHarness);
-    await tooBig.check();
-    await fixture.whenStable();
-    last = argsOf(calls, 'rank').at(-1)!['request'] as RankRequest;
-    expect(last.showTooBig).toBe(true);
+    expect(await toggleSwitch(fixture, 'filter-too-big')).toBe(true);
+    expect(lastRequest(calls).showTooBig).toBe(true);
 
-    const runtime = await loader.getHarness(
-      MatSelectHarness.with({ selector: '[data-testid="filter-runtime"]' }),
-    );
-    await runtime.clickOptions({ text: /llama\.cpp/ });
-    await fixture.whenStable();
-    last = argsOf(calls, 'rank').at(-1)!['request'] as RankRequest;
-    expect(last.runtime).toBe('llamaCpp');
+    await chooseOption(fixture, 'filter-runtime', 'llama.cpp');
+    expect(lastRequest(calls).runtime).toBe('llamaCpp');
     const saved = argsOf(calls, 'save_settings').at(-1)!['settings'] as { runtime: string };
     expect(saved.runtime).toBe('llamaCpp');
+  });
+
+  it('touches 1 à 5 : usage, y compris en AZERTY sans Maj', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    await press(fixture, document.body, '2');
+    expect(lastRequest(calls).useCase).toBe('code');
+    await press(fixture, document.body, '"', { code: 'Digit3' });
+    expect(lastRequest(calls).useCase).toBe('reasoning');
+    const pressed = byTestId('filter-use-case', el).querySelector('[aria-pressed="true"]');
+    expect(text(pressed?.querySelector('.opt__label'))).toBe('Raisonnement');
+
+    // Pas dans un champ de saisie.
+    await press(fixture, byTestId('filter-search', el), '5');
+    expect(lastRequest(calls).useCase).toBe('reasoning');
   });
 
   it('recherche un modèle depuis l’en-tête, avec Ctrl K, en gardant le rang', async () => {
@@ -116,22 +144,19 @@ describe('App', () => {
     expect(document.activeElement).toBe(input);
 
     await typeInto(fixture, input, 'mistral');
-    expect((argsOf(calls, 'rank').at(-1)!['request'] as RankRequest).search).toBe('mistral');
-    const rows = el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row');
-    expect(rows).toHaveLength(1);
-    expect(text(rows[0].querySelector('[data-testid="model-name"]'))).toBe('Mistral-Small-24B');
-    expect(text(rows[0].querySelector('td.col-rank'))).toBe('3');
+    expect(lastRequest(calls).search).toBe('mistral');
+    expect(namesOf(el)).toEqual(['Mistral-Small-24B']);
+    expect(text(rowsOf(el)[0].querySelector('[data-col="rank"]'))).toBe('3');
 
     // Rien trouvé : message, et le bouton efface la recherche.
     await typeInto(fixture, input, 'introuvable');
-    expect(text(el.querySelector('[data-testid="search-empty"]'))).toContain(
+    expect(text(byTestId('search-empty', el))).toContain(
       'Aucun modèle ne correspond à « introuvable ».',
     );
-    (el.querySelector('[data-testid="search-empty"] button') as HTMLButtonElement).click();
-    await fixture.whenStable();
+    await click(fixture, byTestId('empty-clearSearch', el));
     expect(input.value).toBe('');
     expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
-    expect(el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row')).toHaveLength(3);
+    expect(rowsOf(el)).toHaveLength(3);
 
     // Le bouton du champ et Échap effacent aussi.
     await typeInto(fixture, input, 'mistral');
@@ -149,8 +174,7 @@ describe('App', () => {
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
 
-    (el.querySelector('[data-testid="table-items"] tr.mat-mdc-row') as HTMLElement).click();
-    await fixture.whenStable();
+    await click(fixture, rowsOf(el)[0]);
 
     expect(argsOf(calls, 'get_model_detail')[0]['request']).toEqual({
       repoId: 'Qwen/Qwen3-8B-GGUF',
@@ -357,15 +381,168 @@ describe('App', () => {
     });
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    expect(text(el.querySelector('.error-box'))).toContain(
+    expect(text(byTestId('ranking-error', el))).toContain(
       'Classement impossible : aucun catalogue disponible',
     );
 
     fail = false;
-    (el.querySelector('.error-box button') as HTMLButtonElement).click();
-    await fixture.whenStable();
+    await click(fixture, byTestId('retry-ranking', el));
     expect(argsOf(calls, 'rank').length).toBeGreaterThanOrEqual(2);
-    expect(el.querySelector('.error-box')).toBeNull();
-    expect(el.querySelectorAll('[data-testid="table-items"] tr.mat-mdc-row')).toHaveLength(3);
+    expect(queryTestId('ranking-error', el)).toBeNull();
+    expect(rowsOf(el)).toHaveLength(3);
+  });
+
+  it('onglets Exécutables, Lents et Trop gros avec leurs compteurs ; « Afficher 25 de plus »', async () => {
+    const calls = mockBackend({
+      rank: (a) => {
+        const request = a['request'] as RankRequest;
+        return request.showTooBig
+          ? {
+              ...SECTIONS,
+              tooBig: [makeItem('DeepSeek-671B', { rank: 1, mode: { kind: 'tooBig' } })],
+            }
+          : SECTIONS;
+      },
+    });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const tabs = () => [
+      ...byTestId('count-items', el).querySelectorAll<HTMLElement>('[role="tab"]'),
+    ];
+
+    expect(tabs().map(text)).toEqual(['Exécutables 40', 'Lents 1']);
+    expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
+    expect(text(byTestId('list-summary', el))).toBe('Polyvalent · contexte 8k · Ollama');
+    const panel = el.querySelector('[role="tabpanel"]')!;
+    expect(panel.getAttribute('aria-labelledby')).toBe(tabs()[0].id);
+    expect(text(byTestId('shown-count', el))).toBe('3 sur 40');
+
+    await click(fixture, byTestId('show-more', el));
+    expect(text(byTestId('show-more', el))).toBe('Afficher 25 de plus');
+    expect(lastRequest(calls).limit).toBe(50);
+
+    // ← → passent d'un onglet à l'autre.
+    tabs()[0].focus();
+    await press(fixture, tabs()[0], 'ArrowRight');
+    expect(namesOf(el, 'table-slow')).toEqual(['Llama-70B']);
+    expect(text(byTestId('list-summary', el))).toContain('sous 5 tok/s');
+    expect(queryTestId('table-items', el)).toBeNull();
+
+    // Trop gros : une ligne « 2 trop gros · Afficher », qui ajoute l'onglet et l'ouvre.
+    expect(text(byTestId('too-big-hint', el))).toBe('2 trop gros · Afficher');
+    await click(fixture, byTestId('show-too-big', el));
+    expect(lastRequest(calls).showTooBig).toBe(true);
+    expect(tabs().map(text)).toEqual(['Exécutables 40', 'Lents 1', 'Trop gros 2']);
+    expect(namesOf(el, 'table-too-big')).toEqual(['DeepSeek-671B']);
+    expect(queryTestId('too-big-hint', el)).toBeNull();
+
+    // Sans l'interrupteur, l'onglet disparaît et on revient aux exécutables.
+    await toggleSwitch(fixture, 'filter-too-big');
+    expect(tabs()).toHaveLength(2);
+    expect(namesOf(el)).toHaveLength(3);
+  });
+
+  it('↑ ↓ depuis la page : la ligne active alimente la carte mémoire ; Entrée ouvre la fiche', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const selection = () => text(byTestId('memory-selection', el));
+    expect(selection()).toContain('En tête du classement : Qwen3-8B · Q8_0');
+
+    await press(fixture, document.body, 'ArrowDown');
+    expect(document.activeElement).toBe(rowsOf(el)[0]);
+    expect(selection()).toContain('Sélection : Qwen3-8B · Q8_0');
+
+    await press(fixture, rowsOf(el)[0], 'ArrowDown');
+    await press(fixture, rowsOf(el)[1], 'ArrowDown');
+    expect(document.activeElement).toBe(rowsOf(el)[2]);
+    expect(selection()).toBe(
+      'Sélection : Mistral-Small-24B · Q4_K_M — 13,9 Go en VRAM, 1,7 Go en RAM',
+    );
+
+    // Dans la liste des usages, ↑ ↓ restent dans la liste.
+    const usage = byTestId('filter-use-case', el);
+    const code = usage.querySelector<HTMLElement>('[data-value="code"]')!;
+    code.focus();
+    await press(fixture, code, 'ArrowUp');
+    expect(document.activeElement?.getAttribute('data-value')).toBe('general');
+
+    // Ailleurs, ↑ reprend avant la ligne active.
+    (document.activeElement as HTMLElement).blur();
+    await press(fixture, document.body, 'ArrowUp');
+    expect(document.activeElement).toBe(rowsOf(el)[1]);
+
+    await press(fixture, rowsOf(el)[1], 'Enter');
+    expect(argsOf(calls, 'get_model_detail')[0]['request']).toMatchObject({
+      repoId: 'org/Gemma-3-12B-GGUF',
+    });
+  });
+
+  it('trie depuis le menu « Trier » comme depuis les en-têtes', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(text(byTestId('sort-menu', el))).toBe('Trier : classement');
+
+    await chooseMenuItem(fixture, 'sort-menu', 'Vitesse');
+    expect(text(byTestId('sort-menu', el))).toBe('Trier : vitesse');
+    expect(namesOf(el)).toEqual(['Qwen3-8B', 'Gemma-3-12B', 'Mistral-Small-24B']);
+    await click(fixture, byTestId('sort-tokS', el)); // sens inverse
+    expect(namesOf(el)).toEqual(['Mistral-Small-24B', 'Gemma-3-12B', 'Qwen3-8B']);
+
+    await chooseMenuItem(fixture, 'sort-menu', 'Ordre du classement');
+    expect(text(byTestId('sort-menu', el))).toBe('Trier : classement');
+    expect(namesOf(el)).toEqual(['Qwen3-8B', 'Gemma-3-12B', 'Mistral-Small-24B']);
+  });
+
+  it('remarques du runtime : repliables, masquables jusqu’à ce qu’elles changent', async () => {
+    let notes = ['Première remarque.', 'Deuxième.', 'Troisième.'];
+    mockBackend({ rank: () => makeResponse(RANKING.items, { notes }) });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const box = () => queryTestId('ranking-notes', el);
+
+    expect(text(box())).toContain('Première remarque.');
+    expect(text(box())).not.toContain('Deuxième.');
+    const toggle = byTestId('notes-toggle', el);
+    expect(text(toggle)).toBe('+2 remarques');
+    await click(fixture, toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(text(box())).toContain('Troisième.');
+
+    await click(fixture, byTestId('notes-hide', el));
+    expect(box()).toBeNull();
+
+    notes = ['Nouvelle remarque.'];
+    await chooseOption(fixture, 'filter-runtime', 'LM Studio');
+    expect(text(box())).toContain('Nouvelle remarque.');
+    expect(queryTestId('notes-toggle', el)).toBeNull();
+  });
+
+  it('filtres trop stricts : état vide avec les actions utiles', async () => {
+    const calls = mockBackend({
+      rank: (a) => {
+        const request = a['request'] as RankRequest;
+        return request.ctx === undefined && request.maxSize === undefined
+          ? SECTIONS
+          : makeResponse([], { slow: SECTIONS.slow, totalSlow: 1 });
+      },
+    });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    await chooseOption(fixture, 'filter-ctx', '128k');
+    expect(lastRequest(calls).ctx).toBe(131072);
+    await typeInto(fixture, 'filter-max-size', '4');
+    const empty = byTestId('filters-empty', el);
+    expect(text(empty)).toContain('Aucun modèle ne tient en mémoire assez vite avec ces filtres.');
+    const actions = [...empty.querySelectorAll('button')].map(text);
+    expect(actions).toEqual(['Voir les lents', 'Contexte par défaut', 'Retirer la taille max']);
+
+    await click(fixture, byTestId('empty-clearMaxSize', el));
+    expect(lastRequest(calls)).not.toHaveProperty('maxSize');
+    expect(byTestId<HTMLInputElement>('filter-max-size', el).value).toBe('');
+    await click(fixture, byTestId('empty-showSlow', el));
+    expect(namesOf(el, 'table-slow')).toEqual(['Llama-70B']);
   });
 });
