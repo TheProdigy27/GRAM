@@ -88,7 +88,7 @@ impl Env {
     fn in_apps(&self, app: &str, rel: &str) -> Vec<Option<PathBuf>> {
         self.applications
             .iter()
-            .map(|dir| Some(dir.join(app).join(rel)))
+            .map(|dir| Some(join_rel(&dir.join(app), rel)))
             .collect()
     }
 }
@@ -98,7 +98,7 @@ type Processes = HashMap<String, Option<PathBuf>>;
 
 fn detect_with(env: &Env, procs: &Processes, ollama_version: Option<String>) -> RuntimesStatus {
     // Emplacements par défaut des installateurs (à compléter si d'autres apparaissent).
-    let under = |base: &Option<PathBuf>, rel: &str| base.as_ref().map(|b| b.join(rel));
+    let under = |base: &Option<PathBuf>, rel: &str| base.as_ref().map(|b| join_rel(b, rel));
     let (ollama_known, lm_studio_known) = match env.os {
         Os::Windows => (
             vec![under(&env.local_app_data, r"Programs\Ollama\ollama.exe")],
@@ -189,6 +189,13 @@ fn exe(stem: &str) -> String {
 
 fn find_in_path(dirs: &[PathBuf], name: &str) -> Option<PathBuf> {
     dirs.iter().map(|d| d.join(name)).find(|p| p.is_file())
+}
+
+/// `base` suivi d'un chemin relatif écrit avec `/` ou `\` : segments joints avec le séparateur
+/// du système, pour que les emplacements d'un autre OS (simulé dans les tests) restent valides.
+fn join_rel(base: &Path, rel: &str) -> PathBuf {
+    rel.split(['/', '\\'])
+        .fold(base.to_path_buf(), |p, part| p.join(part))
 }
 
 /// Processus en cours dont le nom figure dans `names` ; l'exécutable n'est lu que pour eux.
@@ -359,10 +366,8 @@ mod tests {
         let r = detect_with(&env, &Processes::new(), None);
         assert!(r.llama_cpp.installed && !r.llama_cpp.running);
         assert_eq!(r.llama_cpp.path, Some(server.display().to_string()));
-        if cfg!(windows) {
-            assert!(r.ollama.installed);
-            assert_eq!(r.ollama.path, Some(ollama.display().to_string()));
-        }
+        assert!(r.ollama.installed);
+        assert_eq!(r.ollama.path, Some(ollama.display().to_string()));
         assert!(!r.lm_studio.installed);
     }
 
