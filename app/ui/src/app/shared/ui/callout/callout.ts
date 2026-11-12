@@ -13,7 +13,7 @@ const ICON_BY_KIND: Record<CalloutKind, IconName> = {
 /**
  * Encadré d'information, d'attention ou d'erreur, avec une action optionnelle
  * (`[gCalloutAction]`, par exemple « Réessayer »). Pour une erreur qui apparaît en cours
- * d'usage, ajouter `role="alert"` sur l'élément.
+ * d'usage, ajouter `role="alert"` sur l'élément. `icon` remplace l'icône du genre.
  */
 @Component({
   selector: 'g-callout',
@@ -66,5 +66,6 @@ const ICON_BY_KIND: Record<CalloutKind, IconName> = {
 export class Callout {
   readonly kind = input<CalloutKind>('info');
   readonly heading = input('');
-  protected readonly icon = computed(() => ICON_BY_KIND[this.kind()]);
+  readonly iconName = input<IconName | undefined>(undefined, { alias: 'icon' });
+  protected readonly icon = computed(() => this.iconName() ?? ICON_BY_KIND[this.kind()]);
 }

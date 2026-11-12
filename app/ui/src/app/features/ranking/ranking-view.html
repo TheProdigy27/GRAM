@@ -24,7 +24,32 @@
     </g-callout>
   }
 
-  <app-picks-banner />
+  @if (docked()) {
+    <div class="filter-bar" data-testid="filter-bar">
+      <button
+        #filtersButton
+        gButton
+        size="sm"
+        data-testid="filters-toggle"
+        aria-controls="filters-panel"
+        [attr.aria-expanded]="filtersOpen()"
+        (click)="filtersToggle.emit()"
+      >
+        <g-icon name="filter" />
+        Filtres
+      </button>
+      <ul class="filter-pills" aria-label="Filtres actifs" data-testid="filter-pills">
+        @for (p of filterPills(); track p.key) {
+          <li class="g-pill" [class.g-pill--accent]="p.accent" [attr.data-key]="p.key">
+            <span class="g-sr-only">{{ p.prefix }}</span
+            >{{ p.label }}
+          </li>
+        }
+      </ul>
+    </div>
+  } @else {
+    <app-picks-banner />
+  }
 
   @if (response(); as r) {
     <div class="list-head">
@@ -51,19 +76,30 @@
           </button>
         </span>
       }
-      <span class="summary" data-testid="list-summary" gTooltipIfTruncated [gTooltip]="summary()">{{
-        summary()
-      }}</span>
+      @if (!docked()) {
+        <span
+          class="summary"
+          data-testid="list-summary"
+          gTooltipIfTruncated
+          [gTooltip]="summary()"
+          >{{ summary() }}</span
+        >
+      }
       <span class="spacer"></span>
       <button
         gButton
         variant="ghost"
         size="sm"
         data-testid="sort-menu"
+        [icon]="docked()"
+        [attr.aria-label]="docked() ? 'Trier : ' + sortLabel() : null"
+        [gTooltip]="docked() ? 'Trier : ' + sortLabel() : ''"
         [cdkMenuTriggerFor]="sortMenuTpl"
       >
         <g-icon [name]="sortIcon()" />
-        Trier : {{ sortLabel() }}
+        @if (!docked()) {
+          Trier : {{ sortLabel() }}
+        }
       </button>
       <ng-template #sortMenuTpl>
         <g-menu aria-label="Trier le classement">
@@ -141,6 +177,8 @@
               [selected]="detail.repoId()"
               [active]="ranking.active()"
               [grouped]="display.groupVariants()"
+              [docked]="docked()"
+              [compact]="docked()"
               [search]="r.search"
               [(sort)]="sort"
               (openModel)="open($event)"

@@ -182,7 +182,13 @@
 }
 
 .flag {
+  flex: none;
   color: var(--g-muted);
+  border-radius: 4px;
+}
+
+.flag--ok {
+  color: var(--g-ok);
 }
 
 // Nombre de variantes d'une famille.
@@ -307,6 +313,14 @@ g-tag {
   .row--more:hover & {
     text-decoration: underline;
   }
+}
+
+// --- Fiche ouverte : colonnes secondaires repliées ----------------------------------------------
+
+// Les colonnes Quant, Taille et Ctx max, les repères secondaires et la fin de « mieux noté »
+// ne sont pas rendus ; le mot « variantes » est masqué par `g-sr-only` (gabarit).
+:host([data-docked]) {
+  --cols: 28px minmax(0, 1fr) 96px 46px 40px;
 }
 
 // --- Fenêtre étroite -----------------------------------------------------------------------------

@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import type { MemoryBudget } from '../../core/generated/MemoryBudget';
 import type { RankItem } from '../../core/generated/RankItem';
-import { CtxPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
+import { CtxPipe, GbPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
 import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
@@ -33,6 +33,9 @@ import { FootprintCell } from './footprint-cell';
 import { ScoreCell } from './score-cell';
 import { NO_SORT, type SortKey, type SortState, ariaSort, nextSort } from './sort';
 
+/** Colonnes repliées quand la fiche est ouverte. */
+const DOCKED_HIDDEN: ReadonlySet<SortKey> = new Set(['quant', 'size', 'ctxMax']);
+
 /** Lignes sautées par Page précédente / Page suivante. */
 const PAGE_STEP = 10;
 
@@ -44,6 +47,9 @@ const PAGE_STEP = 10;
  * famille (grille arborescente) : repliées, puis 3 variantes et « Voir les N autres ». Pendant
  * une recherche, les familles sont dépliées et montrent toutes les variantes trouvées.
  *
+ * Avec `docked` (fiche ouverte à côté), seules restent les colonnes #, Modèle (quant · taille en
+ * sous-ligne), Mode, tok/s et Score (le total seul).
+ *
  * Clavier : une seule ligne est dans l'ordre de tabulation (la ligne active) ; ↑ ↓, Début, Fin,
  * Page précédente / suivante passent d'une ligne à l'autre, Entrée ouvre la fiche. → déplie une
  * famille puis descend sur sa première variante, ← la replie ou remonte d'une variante à sa
@@ -51,12 +57,24 @@ const PAGE_STEP = 10;
  */
 @Component({
   selector: 'app-ranking-table',
-  imports: [FootprintCell, Icon, ModeBadge, ScoreCell, Tag, Tooltip, CtxPipe, ParamsPipe, TokSPipe],
+  imports: [
+    FootprintCell,
+    Icon,
+    ModeBadge,
+    ScoreCell,
+    Tag,
+    Tooltip,
+    CtxPipe,
+    GbPipe,
+    ParamsPipe,
+    TokSPipe,
+  ],
   templateUrl: './ranking-table.html',
   styleUrl: './ranking-table.scss',
   host: {
     '[attr.data-density]': 'compact() ? "compact" : null',
     '[attr.data-tree]': 'tree() ? "" : null',
+    '[attr.data-docked]': 'docked() ? "" : null',
   },
 })
 export class RankingTable {
@@ -75,6 +93,8 @@ export class RankingTable {
   readonly compact = input(false, { transform: booleanAttribute });
   /** Variantes regroupées sous leur modèle officiel. */
   readonly grouped = input(false, { transform: booleanAttribute });
+  /** Fiche ouverte à côté : colonnes secondaires repliées. */
+  readonly docked = input(false, { transform: booleanAttribute });
   /** Recherche appliquée : les familles sont dépliées tant qu'elle dure. */
   readonly search = input<string | null>(null);
   readonly sort = model<SortState>(NO_SORT);
@@ -84,7 +104,7 @@ export class RankingTable {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
 
-  protected readonly columns: readonly { key: SortKey; label: string; num?: boolean }[] = [
+  private readonly allColumns: readonly { key: SortKey; label: string; num?: boolean }[] = [
     { key: 'rank', label: '#', num: true },
     { key: 'model', label: 'Modèle' },
     { key: 'quant', label: 'Quant' },
@@ -137,6 +157,12 @@ export class RankingTable {
   protected readonly tabbable = computed(() => Math.max(this.currentIndex(), 0));
 
   protected readonly scale = computed(() => scaleLabel(this.budget()));
+  /** Fiche ouverte : sans Quant, Taille ni Ctx max (quant · taille passent en sous-ligne). */
+  protected readonly columns = computed(() =>
+    this.docked() ? this.allColumns.filter((c) => !DOCKED_HIDDEN.has(c.key)) : this.allColumns,
+  );
+  /** Colonnes couvertes par « Voir les N autres » (toutes sauf #). */
+  protected readonly moreSpan = computed(() => this.columns().length - 1);
   protected readonly rowCount = computed(() => {
     const total = this.total();
     if (total === null || total <= this.items().length) return null;
@@ -280,6 +306,14 @@ export class RankingTable {
     }
     if (open) return false;
     this.focusRow(rows.findIndex((r) => r.kind === 'model' && r.id === row.family.head.repoId));
+    return true;
+  }
+
+  /** Focus sur la ligne d'un modèle (fiche refermée) ; `false` si elle n'est pas affichée. */
+  focusModel(repoId: string): boolean {
+    const i = this.rows().findIndex((r) => r.kind === 'model' && r.id === repoId);
+    if (i < 0) return false;
+    this.focusRow(i);
     return true;
   }
 

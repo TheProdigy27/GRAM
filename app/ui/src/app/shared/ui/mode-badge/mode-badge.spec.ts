@@ -6,11 +6,12 @@ import { ModeBadge } from './mode-badge';
 
 @Component({
   imports: [ModeBadge],
-  template: `<app-mode-badge [mode]="mode()" [tooltip]="tooltip()" />`,
+  template: `<app-mode-badge [mode]="mode()" [tooltip]="tooltip()" [compact]="compact()" />`,
 })
 class Host {
   readonly mode = signal<RunMode>({ kind: 'gpu' });
   readonly tooltip = signal('');
+  readonly compact = signal(false);
 }
 
 describe('ModeBadge', () => {
@@ -50,6 +51,16 @@ describe('ModeBadge', () => {
     await fixture.whenStable();
     const custom = document.getElementById(badge().getAttribute('aria-describedby')!);
     expect(custom?.textContent).toBe('Tient en partie en VRAM');
+  });
+
+  it('compact : sans les couches, toujours dites par l’infobulle', async () => {
+    const { fixture, host, badge } = await render();
+    host.mode.set({ kind: 'hybrid', gpuLayers: 62, layers: 65 });
+    host.compact.set(true);
+    await fixture.whenStable();
+    expect(text(badge())).toBe('Hybride');
+    const description = document.getElementById(badge().getAttribute('aria-describedby')!);
+    expect(description?.textContent).toBe('62 couches sur 65 en VRAM');
   });
 
   it('trop gros : croix et libellé', async () => {

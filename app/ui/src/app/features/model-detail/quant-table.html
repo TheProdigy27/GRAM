@@ -1,0 +1,91 @@
+<div class="table-wrap">
+  <table class="variants" [attr.aria-labelledby]="labelledBy() || null">
+    <thead>
+      <tr>
+        <th scope="col">Quant</th>
+        <th scope="col" class="num">Taille</th>
+        <th scope="col" class="num">
+          <span gTooltip="Bits par poids réels">Bits/poids</span>
+        </th>
+        <th scope="col">Mode</th>
+        <th scope="col" class="num">tok/s</th>
+        <th scope="col" class="num">Ctx max</th>
+        <th scope="col" class="num">Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (v of variants(); track v.variant.label; let i = $index) {
+        @let fit = fitMark(v);
+        @let isSelected = v.variant.label === selected();
+        <tr
+          data-testid="variant-row"
+          [class.is-selected]="isSelected"
+          [class.is-dimmed]="!v.withinSize"
+          [attr.data-fit]="fit.tone"
+          (click)="selectedChange.emit(v.variant.label)"
+        >
+          <td>
+            <span class="quant">
+              <g-icon
+                class="fit"
+                [attr.data-tone]="fit.tone"
+                [name]="fit.icon"
+                [size]="14"
+                [label]="fit.label"
+                [gTooltip]="fit.label"
+              />
+              <button
+                type="button"
+                class="quant__name mono"
+                data-testid="variant-select"
+                [attr.aria-pressed]="isSelected"
+                [gTooltip]="v.withinSize ? '' : 'Au-dessus de la taille maximale demandée'"
+                (click)="choose($event, v.variant.label)"
+              >
+                {{ v.variant.label }}
+              </button>
+              @if (i === best()) {
+                <g-icon
+                  class="best"
+                  name="star"
+                  data-testid="variant-best"
+                  label="Meilleure pour cette machine"
+                  gTooltip="Meilleure quantification pour cette machine"
+                  [size]="14"
+                />
+              }
+              @if (v.ollamaModel) {
+                <g-tag
+                  tone="ok"
+                  size="sm"
+                  data-testid="variant-installed"
+                  [gTooltip]="'Installée dans Ollama : ' + v.ollamaModel"
+                  >Installée</g-tag
+                >
+              }
+              @if (!v.variant.exact) {
+                <span
+                  class="approx"
+                  role="img"
+                  aria-label="Taille estimée"
+                  gTooltip="Taille estimée (fichiers pas encore lus)"
+                  >≈</span
+                >
+              }
+            </span>
+          </td>
+          <td class="num mono">{{ v.variant.sizeBytes | gb }}</td>
+          <td class="num mono">{{ decimal(v.variant.bpw, 1) }}</td>
+          <td><app-mode-badge compact [mode]="v.estimate.mode" /></td>
+          <td class="num mono">{{ v.estimate.tokS | tokS }}</td>
+          <td class="num mono">{{ v.estimate.ctxMax | ctx }}</td>
+          <td class="num mono">
+            <span class="score" [gTooltip]="scoreTooltip(v.score)">{{
+              v.score.total.toFixed(0)
+            }}</span>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

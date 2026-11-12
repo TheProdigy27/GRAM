@@ -1,4 +1,13 @@
-import { Component, DestroyRef, PendingTasks, computed, inject } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  PendingTasks,
+  booleanAttribute,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+} from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
@@ -20,6 +29,7 @@ import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import {
   type MemorySelection,
+  machinePills,
   memoryCard,
   ramChannels,
   ramSizeType,
@@ -130,6 +140,9 @@ export function simulationLabel(p: HardwareProfile): string {
  * Bande « Votre machine » : carte mémoire (VRAM puis RAM sur une même échelle, empreinte du
  * modèle sélectionné), CPU, runtimes, avertissements, « Ré-analyser » (touche R) et
  * « Corriger… » (corrections et simulation).
+ *
+ * `compact` (fiche ouverte) : une ligne de pastilles (VRAM, RAM, runtime choisi), la simulation
+ * et les avertissements, et « Détails de la machine » qui rouvre la bande complète.
  */
 @Component({
   selector: 'app-hardware-banner',
@@ -144,6 +157,12 @@ export class HardwareBanner {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly pendingTasks = inject(PendingTasks);
+
+  /** Fiche ouverte : bande resserrée en une ligne. */
+  readonly compact = input(false, { transform: booleanAttribute });
+  /** Bande complète rouverte malgré la fiche ; oublié à chaque ouverture ou fermeture. */
+  protected readonly expanded = linkedSignal({ source: this.compact, computation: () => false });
+  protected readonly isCompact = computed(() => this.compact() && !this.expanded());
 
   protected readonly profile = this.hardware.profile;
   protected readonly error = this.hardware.error;
@@ -215,6 +234,19 @@ export class HardwareBanner {
   });
 
   protected readonly warnings = computed(() => this.profile()?.warnings ?? []);
+
+  /** VRAM et RAM utilisables, en pastilles (bande resserrée). */
+  protected readonly pills = computed(() => {
+    const p = this.profile();
+    const b = this.ranking.response()?.budget;
+    return p && b ? machinePills(b, p) : null;
+  });
+
+  /** Runtime choisi pour le classement et son état (bande resserrée). */
+  protected readonly runtime = computed(() => {
+    const id = this.ranking.effectiveRuntime();
+    return this.runtimes()?.find((r) => r.value === id) ?? null;
+  });
 
   /** Bouton « Ré-analyser » et touche R : nouvelle détection du matériel et des runtimes. */
   protected rescan(): void {

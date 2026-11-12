@@ -2,99 +2,47 @@
   display: block;
 }
 
-h3 {
-  margin: 20px 0 8px;
-  font: var(--mat-sys-title-small);
+.measure {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.measure__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.measure__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 p {
-  margin: 6px 0;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 
 .muted {
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--g-muted);
 }
 
 .small {
-  font: var(--mat-sys-body-small);
+  font-size: 12px;
+  color: var(--g-fg-2);
 }
 
-mat-progress-bar {
-  margin-top: 8px;
-}
-
-.cmd-row {
+.card {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-  padding-left: 10px;
-  border-radius: 6px;
-  background: var(--mat-sys-surface-container-high);
-
-  code {
-    flex: 1;
-    overflow-x: auto;
-    white-space: nowrap;
-    padding: 6px 0;
-  }
-}
-
-.error {
-  color: var(--mat-sys-error);
-}
-
-.results {
-  width: 100%;
-  margin-top: 12px;
-  border-collapse: collapse;
-  font: var(--mat-sys-body-small);
-
-  th,
-  td {
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
-    text-align: left;
-  }
-
-  thead th {
-    font-weight: 500;
-    color: var(--mat-sys-on-surface-variant);
-  }
-
-  tbody th {
-    font-weight: 400;
-  }
-
-  .num {
-    text-align: right;
-    white-space: nowrap;
-  }
-}
-
-.warn-line {
-  display: flex;
-  gap: 6px;
-  font: var(--mat-sys-body-small);
-
-  mat-icon {
-    flex: none;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    color: var(--gram-warn);
-  }
-}
-
-.calibration {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--mat-sys-surface-container);
-
-  p {
-    margin: 0 0 8px;
-  }
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--g-line);
+  border-radius: var(--g-radius-card);
 }
 
 .actions {
@@ -102,4 +50,206 @@ mat-progress-bar {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+// --- Résultats -------------------------------------------------------------------------------
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--g-fg-2);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot--measured {
+  background: var(--g-accent);
+}
+
+.dot--estimated {
+  border: 2px solid var(--g-muted);
+}
+
+.dumbbell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dumbbell__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.dumbbell__title {
+  font-weight: 500;
+}
+
+.dumbbell__gap {
+  color: var(--g-muted);
+
+  strong {
+    font-weight: 600;
+    color: var(--g-fg);
+  }
+}
+
+// Axe horizontal : trait de fond, écart entre les deux points, valeurs au-dessus.
+.track {
+  position: relative;
+  height: 34px;
+}
+
+.track__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 22px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--g-track);
+}
+
+.track__span {
+  position: absolute;
+  top: 22px;
+  height: 2px;
+  background: var(--g-muted);
+}
+
+.track__marker {
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  border-left: 1.5px dashed var(--g-gpu);
+}
+
+.point {
+  position: absolute;
+  top: 17px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+}
+
+.point--measured {
+  background: var(--g-accent);
+  box-shadow: 0 0 0 2px var(--g-surface);
+}
+
+.point--estimated {
+  border: 2px solid var(--g-muted);
+  background: var(--g-surface);
+}
+
+.value {
+  position: absolute;
+  top: 0;
+  font-size: 11px;
+  color: var(--g-muted);
+  white-space: nowrap;
+
+  &[data-side='left'] {
+    transform: translateX(calc(-100% - 2px));
+  }
+
+  &[data-side='right'] {
+    margin-left: 2px;
+  }
+}
+
+.value--measured {
+  font-weight: 600;
+  color: var(--g-fg);
+}
+
+.axis {
+  position: relative;
+  height: 14px;
+  font-size: 10.5px;
+  color: var(--g-muted);
+}
+
+.axis__tick,
+.axis__marker {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+.axis__tick {
+  transform: translateX(-50%);
+
+  &:first-child {
+    transform: none;
+  }
+}
+
+.axis__tick--end {
+  transform: translateX(-100%);
+}
+
+.axis__marker {
+  padding-left: 4px;
+  color: var(--g-vram-fg);
+  background: var(--g-surface);
+}
+
+.axis__marker--end {
+  padding: 0 4px 0 0;
+  transform: translateX(-100%);
+}
+
+.facts {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--g-muted);
+}
+
+// --- Calibration -----------------------------------------------------------------------------
+
+.calibration {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--g-accent-line);
+  border-radius: var(--g-radius-card);
+  background: var(--g-accent-weak);
+  color: var(--g-vram-fg);
+}
+
+.calibration__title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calibration__summary {
+  color: var(--g-fg-2);
 }

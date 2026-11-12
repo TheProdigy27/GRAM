@@ -194,6 +194,66 @@ describe('App', () => {
     expect(text(el.querySelector('[data-testid="detail-title"]'))).toBe('Qwen3-8B');
   });
 
+  it('fiche ancrée : classement resserré, bande machine et filtres repliés, Échap', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(queryTestId('detail-pane', el)).toBeNull();
+    expect(queryTestId('filter-bar', el)).toBeNull();
+
+    await click(fixture, rowsOf(el)[0]);
+    expect(text(byTestId('detail-title', el))).toBe('Qwen3-8B');
+    // Le classement reste affiché et cliquable, sans les conseils ni les colonnes secondaires.
+    expect(queryTestId('picks', el)).toBeNull();
+    expect(queryTestId('list-summary', el)).toBeNull();
+    expect(byTestId('table-items', el).hasAttribute('data-docked')).toBe(true);
+    expect(rowsOf(el)[0].getAttribute('aria-selected')).toBe('true');
+    // Bande machine en pastilles, filtres en un bouton suivi des filtres actifs.
+    expect(queryTestId('memory-card', el)).toBeNull();
+    expect(queryTestId('machine-pills', el)).not.toBeNull();
+    const pills = () => [...byTestId('filter-pills', el).querySelectorAll('li')].map(text);
+    expect(pills()).toEqual(['Usage Polyvalent', 'Contexte 8k', 'Runtime Ollama']);
+    expect(text(el.querySelector('app-status-bar .hints'))).toContain('Échap fermer la fiche');
+
+    // Les touches 1 à 5 marchent toujours, filtres repliés.
+    await press(fixture, document.body, '2', { code: 'Digit2' });
+    expect(pills()[0]).toBe('Usage Code');
+
+    // « Filtres » les ouvre par-dessus le classement ; Échap les referme d'abord.
+    const toggle = byTestId('filters-toggle', el);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    await click(fixture, toggle);
+    const filters = el.querySelector('#filters-panel')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(filters.classList).toContain('filters--open');
+    expect(filters.contains(document.activeElement)).toBe(true);
+    await press(fixture, document.activeElement!, 'Escape');
+    expect(filters.classList).not.toContain('filters--open');
+    expect(document.activeElement).toBe(toggle);
+    expect(queryTestId('detail-pane', el)).not.toBeNull();
+
+    // Un clic ailleurs les referme aussi.
+    await click(fixture, toggle);
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    await fixture.whenStable();
+    expect(filters.classList).not.toContain('filters--open');
+
+    // Échap dans la fiche la ferme ; le focus revient sur la ligne du modèle.
+    byTestId('close-detail', el).focus();
+    await press(fixture, document.activeElement!, 'Escape');
+    expect(queryTestId('detail-pane', el)).toBeNull();
+    expect(document.activeElement).toBe(rowsOf(el)[0]);
+    expect(queryTestId('memory-card', el)).not.toBeNull();
+    expect(queryTestId('filter-bar', el)).toBeNull();
+
+    // Le bouton ✕ aussi.
+    await press(fixture, rowsOf(el)[1], 'Enter');
+    expect(queryTestId('detail-pane', el)).not.toBeNull();
+    await click(fixture, 'close-detail');
+    expect(queryTestId('detail-pane', el)).toBeNull();
+    expect(document.activeElement).toBe(rowsOf(el)[1]);
+  });
+
   it('affiche la progression de la synchronisation et recalcule le classement à la fin', async () => {
     let finish: (v: unknown) => void = () => undefined;
     const calls = mockBackend({

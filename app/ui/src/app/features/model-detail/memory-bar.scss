@@ -1,77 +1,169 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .bar {
   position: relative;
-  display: flex;
-  height: 20px;
-  border-radius: 4px;
-  background: var(--mat-sys-surface-container-highest);
-  overflow: visible;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--g-track);
+}
 
-  &.overflow {
-    box-shadow: inset 0 0 0 1px var(--mat-sys-error);
-  }
+.bar--over {
+  box-shadow: inset 0 0 0 1px var(--g-error);
+}
+
+.bar__fill {
+  display: flex;
+  gap: 2px;
+  height: 100%;
 }
 
 .segment {
   height: 100%;
+  min-width: 2px;
+  background: var(--g-mem-weights);
 
   &:first-child {
-    border-radius: 4px 0 0 4px;
+    border-radius: 6px 0 0 6px;
+  }
+
+  &:last-child {
+    border-radius: 0 6px 6px 0;
+  }
+
+  &:only-child {
+    border-radius: 6px;
+  }
+
+  &[data-key='kv'] {
+    background: var(--g-mem-kv);
+  }
+
+  &[data-key='vision'] {
+    background: var(--g-mem-vision);
+  }
+
+  &[data-key='overhead'] {
+    background: var(--g-mem-overhead);
   }
 }
 
-.seg-weights {
-  background: var(--mat-sys-primary);
+// Part en RAM (orange) ou au-delà de la mémoire utilisable (rouge), en hachures par-dessus.
+.hatch {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 0 6px 6px 0;
 }
 
-.seg-kv {
-  background: var(--mat-sys-tertiary);
+.hatch--ram {
+  background: repeating-linear-gradient(135deg, var(--g-hybrid) 0 3px, transparent 3px 6px);
 }
 
-.seg-vision {
-  background: var(--gram-warn);
-}
-
-.seg-overhead {
-  background: var(--mat-sys-outline);
+.hatch--over {
+  background: repeating-linear-gradient(135deg, var(--g-error) 0 3px, transparent 3px 6px);
 }
 
 .marker {
   position: absolute;
-  top: -4px;
-  bottom: -4px;
+  top: -5px;
+  bottom: -5px;
   width: 2px;
   margin-left: -1px;
-  background: var(--mat-sys-on-surface);
+  border-radius: 1px;
+  background: var(--g-fg);
+}
+
+// Noms des repères sous la barre, alignés sur le repère (à gauche de lui au-delà de 60 %).
+.marks {
+  position: relative;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.mark {
+  position: absolute;
+  top: 2px;
+  padding-left: 6px;
+  font-size: 11.5px;
+  color: var(--g-muted);
+  white-space: nowrap;
+
+  strong {
+    font-weight: 600;
+    color: var(--g-fg-2);
+  }
+}
+
+.marks--two {
+  height: 36px;
+}
+
+// Deux repères (modèle trop gros) : le premier sur une seconde ligne, sans chevauchement.
+.mark--low {
+  top: 20px;
+}
+
+.mark--end {
+  padding: 0 6px 0 0;
+  transform: translateX(-100%);
 }
 
 .legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 14px;
-  margin: 8px 0 0;
+  gap: 6px 16px;
+  margin: 4px 0 0;
   padding: 0;
   list-style: none;
-  font: var(--mat-sys-body-small);
+  font-size: 12px;
+  color: var(--g-fg-2);
 
   li {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
+
+  strong {
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+}
+
+.legend__total {
+  margin-left: auto;
 }
 
 .swatch {
   width: 10px;
   height: 10px;
   border-radius: 2px;
+  background: var(--g-mem-weights);
+
+  &[data-key='kv'] {
+    background: var(--g-mem-kv);
+  }
+
+  &[data-key='vision'] {
+    background: var(--g-mem-vision);
+  }
+
+  &[data-key='overhead'] {
+    background: var(--g-mem-overhead);
+  }
 }
 
-.total {
-  font-weight: 600;
+.swatch--ram {
+  background: repeating-linear-gradient(135deg, var(--g-hybrid) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px var(--g-hybrid);
 }
 
 .placement {
-  margin: 4px 0 0;
-  font: var(--mat-sys-body-small);
-  color: var(--mat-sys-on-surface-variant);
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--g-muted);
 }

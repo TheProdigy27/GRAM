@@ -1,6 +1,12 @@
 import { BUDGET, GIB, HARDWARE, MAC_HARDWARE } from '../../../testing/fixtures';
 import type { MemoryBudget } from '../../core/generated/MemoryBudget';
-import { type MemorySelection, memoryCard, shortCpuName, shortGpuName } from './memory-card';
+import {
+  type MemorySelection,
+  machinePills,
+  memoryCard,
+  shortCpuName,
+  shortGpuName,
+} from './memory-card';
 
 const QWEN: MemorySelection = {
   name: 'Qwen3-8B',
@@ -104,6 +110,35 @@ describe('memoryCard', () => {
   it('bande passante du GPU inconnue : pas de rapport des vitesses', () => {
     const c = memoryCard({ ...BUDGET, gpuBandwidthGbs: null }, HARDWARE, null);
     expect(c.zones.map((z) => z.detail)).toEqual(['14,3 Go', '47,3 Go · 96 Go/s']);
+  });
+});
+
+describe('machinePills', () => {
+  const line = (p: ReturnType<typeof machinePills>[number]) => p.text + p.value + p.after;
+
+  it('GPU dédié : VRAM puis RAM utilisables', () => {
+    const pills = machinePills(BUDGET, HARDWARE);
+    expect(pills.map((p) => p.kind)).toEqual(['vram', 'ram']);
+    expect(pills.map(line)).toEqual([
+      'RTX 5080 · 14,3 Go de VRAM utilisables',
+      '64 Go DDR5-6000 · 47,3 Go de RAM utilisables',
+    ]);
+    expect(pills[0].tooltip).toBe('VRAM à 960 Go/s, la mémoire la plus rapide');
+  });
+
+  it('mémoire unifiée : une seule pastille, part du GPU comprise', () => {
+    const pills = machinePills(MAC_BUDGET, MAC_HARDWARE);
+    expect(pills.map((p) => p.kind)).toEqual(['unified']);
+    expect(line(pills[0])).toContain('12,0 Go utilisables, dont 8,9 Go pour le GPU');
+  });
+
+  it('sans VRAM utilisable : la RAM seule, avec la raison', () => {
+    const pills = machinePills(
+      { ...BUDGET, vram: 0, gpuBandwidthGbs: null },
+      { ...HARDWARE, gpu: null },
+    );
+    expect(pills.map((p) => p.kind)).toEqual(['ram']);
+    expect(pills[0].tooltip).toContain('aucun GPU : calcul sur le CPU');
   });
 });
 

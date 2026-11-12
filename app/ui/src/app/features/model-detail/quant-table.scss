@@ -1,0 +1,122 @@
+// Vue tableau des quantifications de la fiche.
+
+:host {
+  display: block;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--g-line);
+  border-radius: var(--g-radius-card);
+}
+
+.variants {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+
+  th {
+    height: 34px;
+    padding: 0 8px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--g-muted);
+    white-space: nowrap;
+    background: var(--g-surface-2);
+    border-bottom: 1px solid var(--g-line-2);
+  }
+
+  td {
+    height: 38px;
+    padding: 0 8px;
+    border-top: 1px solid var(--g-line-2);
+    white-space: nowrap;
+  }
+
+  th:first-child,
+  td:first-child {
+    padding-left: 12px;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 12px;
+  }
+
+  tbody tr {
+    cursor: pointer;
+
+    &:first-child td {
+      border-top: 0;
+    }
+
+    &:hover {
+      background: var(--g-hover);
+    }
+
+    &.is-selected {
+      background: var(--g-accent-weak);
+    }
+
+    &.is-dimmed td {
+      color: var(--g-muted);
+    }
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
+.quant {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fit {
+  color: var(--g-ok);
+
+  &[data-tone='warn'] {
+    color: var(--g-warn);
+  }
+
+  &[data-tone='bad'] {
+    color: var(--g-error);
+  }
+}
+
+.quant__name {
+  height: 28px;
+  margin: 0 -4px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--g-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &[aria-pressed='true'] {
+    color: var(--g-accent-ink);
+  }
+}
+
+.best {
+  color: var(--g-warn);
+}
+
+.approx {
+  font-weight: 700;
+  color: var(--g-warn);
+}
+
+.score {
+  font-weight: 600;
+}

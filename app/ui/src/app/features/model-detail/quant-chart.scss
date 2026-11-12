@@ -1,0 +1,258 @@
+:host {
+  display: block;
+  --plot-height: 160px;
+  --bar-gap: 4px;
+}
+
+// --- Légende -------------------------------------------------------------------------------------
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  color: var(--g-fg-2);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--g-gpu);
+
+  [data-mode='hybrid'] > & {
+    background: var(--g-hybrid);
+  }
+
+  [data-mode='cpu'] > & {
+    background: var(--g-cpu);
+  }
+
+  [data-mode='tooBig'] > & {
+    background: repeating-linear-gradient(135deg, var(--g-error) 0 2px, transparent 2px 4px);
+    box-shadow: inset 0 0 0 1px var(--g-error);
+  }
+}
+
+// --- Graphique -----------------------------------------------------------------------------------
+
+// La marge du haut laisse la place au nom de la quantification choisie au-dessus de sa barre.
+.chart {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 6px;
+  margin: 0;
+  padding-top: 36px;
+}
+
+.y-axis {
+  position: relative;
+  height: var(--plot-height);
+}
+
+.y-axis__tick {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--g-muted);
+}
+
+.plot-area {
+  min-width: 0;
+}
+
+.plot {
+  position: relative;
+  height: var(--plot-height);
+  border-bottom: 1px solid var(--g-control);
+}
+
+.grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--g-line-2);
+}
+
+// Repère pointillé au passage de GPU à hybride.
+.limit {
+  position: absolute;
+  top: -8px;
+  bottom: 0;
+  z-index: 1;
+  border-left: 1.5px dashed var(--g-fg-2);
+  pointer-events: none;
+}
+
+.limit__label {
+  position: absolute;
+  top: -10px;
+  left: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--g-surface);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--g-fg-2);
+  white-space: nowrap;
+}
+
+.limit--left .limit__label {
+  left: auto;
+  right: 4px;
+}
+
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--bar-gap);
+}
+
+// Toute la hauteur de la colonne est cliquable, pas seulement la barre.
+.col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--g-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: 1px;
+  }
+}
+
+.bar {
+  width: 100%;
+  max-width: 18px;
+  min-height: 3px;
+  border-radius: 4px 4px 0 0;
+  background: var(--g-gpu);
+
+  [data-mode='hybrid'] > & {
+    background: var(--g-hybrid);
+  }
+
+  [data-mode='cpu'] > & {
+    background: var(--g-cpu);
+  }
+
+  [data-mode='tooBig'] > & {
+    background: var(--g-error);
+  }
+
+  .col--dimmed > & {
+    opacity: 0.4;
+  }
+
+  .col--selected > & {
+    box-shadow:
+      0 0 0 2px var(--g-surface),
+      0 0 0 4px var(--g-fg);
+  }
+}
+
+// Nom et vitesse de la quantification choisie, au-dessus de sa barre.
+.col__tag {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--g-surface);
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--g-fg);
+  white-space: nowrap;
+  pointer-events: none;
+
+  &[data-align='start'] {
+    left: -4px;
+    align-items: flex-start;
+    transform: none;
+  }
+
+  &[data-align='end'] {
+    left: auto;
+    right: -4px;
+    align-items: flex-end;
+    transform: none;
+  }
+}
+
+.col__speed {
+  font-weight: 500;
+  color: var(--g-fg-2);
+}
+
+// --- Axe des quantifications ---------------------------------------------------------------------
+
+.x-axis {
+  display: flex;
+  gap: var(--bar-gap);
+  height: 18px;
+  margin-top: 4px;
+}
+
+.x-axis__slot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.x-axis__label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  color: var(--g-muted);
+  white-space: nowrap;
+
+  &[data-align='start'] {
+    left: 0;
+    transform: none;
+  }
+
+  &[data-align='end'] {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+.direction {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--g-muted);
+}

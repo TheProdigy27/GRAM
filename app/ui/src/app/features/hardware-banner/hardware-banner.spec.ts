@@ -159,6 +159,34 @@ describe('bande « Votre machine »', () => {
     );
   });
 
+  it('fiche ouverte : une ligne de pastilles, « Détails de la machine » rouvre la bande', async () => {
+    const { fixture, el } = await render();
+    fixture.componentRef.setInput('compact', true);
+    await fixture.whenStable();
+    expect(queryTestId('memory-card', el)).toBeNull();
+    expect([...byTestId('machine-pills', el).querySelectorAll('li')].map(text)).toEqual([
+      'RTX 5080 · 14,3 Go de VRAM utilisables',
+      '64 Go DDR5-6000 · 47,3 Go de RAM utilisables',
+      'Ollama en cours',
+    ]);
+    expect(el.querySelector('#machine-title')).not.toBeNull();
+
+    await click(fixture, 'machine-expand');
+    expect(queryTestId('memory-card', el)).not.toBeNull();
+    expect(byTestId('machine-collapse', el).getAttribute('aria-expanded')).toBe('true');
+    await click(fixture, 'machine-collapse');
+    expect(queryTestId('memory-card', el)).toBeNull();
+
+    // Rouverte puis fiche refermée et rouverte : de nouveau resserrée.
+    await click(fixture, 'machine-expand');
+    fixture.componentRef.setInput('compact', false);
+    await fixture.whenStable();
+    expect(queryTestId('machine-collapse', el)).toBeNull();
+    fixture.componentRef.setInput('compact', true);
+    await fixture.whenStable();
+    expect(queryTestId('machine-pills', el)).not.toBeNull();
+  });
+
   it('Mac à mémoire unifiée : une seule zone et le repère du GPU', async () => {
     const { el } = await render({
       get_hardware: () => MAC_HARDWARE,

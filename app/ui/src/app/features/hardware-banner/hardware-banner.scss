@@ -262,7 +262,8 @@
   }
 }
 
-.runtimes {
+.runtimes,
+.pills {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
@@ -324,4 +325,48 @@
 
 .failure {
   flex: 1;
+}
+
+// --- Bande resserrée (fiche ouverte) ----------------------------------------------------------
+
+.machine--compact {
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+}
+
+.pills {
+  align-items: center;
+  gap: 8px;
+}
+
+// Pastille globale `.g-pill` (styles.scss) ; ici, le chiffre en gras et le repère.
+.pill {
+  strong {
+    margin: 0 3px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--g-fg);
+  }
+}
+
+.pill__mark {
+  width: 8px;
+  height: 8px;
+  margin-right: 2px;
+  border-radius: 2px;
+  background: var(--g-gpu);
+
+  [data-kind='ram'] > & {
+    background: var(--g-hybrid);
+  }
+}
+
+.expand,
+.collapse {
+  color: var(--g-muted);
+}
+
+.collapse {
+  margin-left: auto;
 }

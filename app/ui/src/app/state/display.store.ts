@@ -6,9 +6,13 @@ export interface DisplayPrefs {
   groupVariants: boolean;
   /** Bandeau « Trois conseils » replié sur son titre. */
   picksCollapsed: boolean;
+  /** Quantifications de la fiche : graphique des vitesses ou tableau. */
+  quantView: QuantView;
 }
 
-const DEFAULTS: DisplayPrefs = { groupVariants: true, picksCollapsed: false };
+export type QuantView = 'chart' | 'table';
+
+const DEFAULTS: DisplayPrefs = { groupVariants: true, picksCollapsed: false, quantView: 'chart' };
 
 /** Clé du stockage local. */
 export const DISPLAY_PREFS_KEY = 'gram.display';
@@ -36,6 +40,7 @@ export class DisplayStore {
 
   readonly groupVariants = computed(() => this.prefs().groupVariants);
   readonly picksCollapsed = computed(() => this.prefs().picksCollapsed);
+  readonly quantView = computed(() => this.prefs().quantView);
 
   setGroupVariants(groupVariants: boolean): void {
     this.update({ groupVariants });
@@ -43,6 +48,10 @@ export class DisplayStore {
 
   setPicksCollapsed(picksCollapsed: boolean): void {
     this.update({ picksCollapsed });
+  }
+
+  setQuantView(quantView: QuantView): void {
+    this.update({ quantView });
   }
 
   private update(patch: Partial<DisplayPrefs>): void {
@@ -61,6 +70,10 @@ export class DisplayStore {
           typeof saved.picksCollapsed === 'boolean'
             ? saved.picksCollapsed
             : DEFAULTS.picksCollapsed,
+        quantView:
+          saved.quantView === 'chart' || saved.quantView === 'table'
+            ? saved.quantView
+            : DEFAULTS.quantView,
       };
     } catch {
       return { ...DEFAULTS };

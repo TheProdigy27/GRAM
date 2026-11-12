@@ -1,9 +1,83 @@
 <section
   class="machine"
   aria-labelledby="machine-title"
+  [class.machine--compact]="isCompact()"
   [attr.aria-busy]="!profile() && !error() ? 'true' : null"
 >
-  @if (profile()) {
+  @if (isCompact()) {
+    <!-- Fiche ouverte : une ligne de pastilles. -->
+    <h2 class="g-sr-only" id="machine-title">Votre machine</h2>
+    <ul class="pills" data-testid="machine-pills" aria-label="Mémoire utilisable et runtime">
+      @if (pills(); as list) {
+        @for (p of list; track p.kind) {
+          <li class="g-pill pill" tabindex="0" [attr.data-kind]="p.kind" [gTooltip]="p.tooltip">
+            <span class="pill__mark" aria-hidden="true"></span>{{ p.text
+            }}<strong class="mono">{{ p.value }}</strong
+            >{{ p.after }}
+          </li>
+        }
+      } @else if (!error()) {
+        <li><g-skeleton width="220px" height="28px" radius="14px" /></li>
+        <li><g-skeleton width="200px" height="28px" radius="14px" /></li>
+      }
+      @if (runtime(); as r) {
+        <li
+          class="g-pill pill"
+          tabindex="0"
+          data-kind="runtime"
+          [attr.data-state]="r.state"
+          [gTooltip]="r.tooltip"
+        >
+          <span class="runtime__dot" aria-hidden="true"></span>{{ r.label }}
+          <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+          <span class="muted"> {{ r.stateLabel }}</span>
+        </li>
+      }
+    </ul>
+    @if (simulation(); as sim) {
+      <span class="simulation" data-testid="simulation">
+        <g-tag tone="warn" icon="warning" size="sm" [gTooltip]="sim.tooltip">
+          Simulation · {{ sim.label }}
+        </g-tag>
+        <button
+          gButton
+          variant="ghost"
+          size="sm"
+          data-testid="stop-simulation"
+          (click)="stopSimulation()"
+        >
+          Arrêter
+        </button>
+      </span>
+    }
+    @if (error(); as message) {
+      <g-tag tone="error" icon="error" size="sm" [gTooltip]="message">Détection impossible</g-tag>
+    }
+    @if (warnings().length > 0) {
+      <g-icon
+        class="warning"
+        name="warning"
+        tabindex="0"
+        data-testid="hw-warnings"
+        gTooltipPosition="below"
+        [size]="16"
+        [label]="'Avertissements de détection (' + warnings().length + ')'"
+        [gTooltip]="warnings().join('\n')"
+      />
+    }
+    <button
+      gButton
+      variant="ghost"
+      size="sm"
+      class="expand"
+      data-testid="machine-expand"
+      aria-expanded="false"
+      (click)="expanded.set(true)"
+    >
+      Détails de la machine
+      <g-icon name="chevron-down" [size]="14" />
+    </button>
+  } @else if (profile()) {
     <div class="memory">
       <div class="memory__head">
         <h2 class="label" id="machine-title">Votre machine</h2>
@@ -59,6 +133,20 @@
             />
           }
         </span>
+        @if (compact()) {
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            class="collapse"
+            data-testid="machine-collapse"
+            aria-expanded="true"
+            (click)="expanded.set(false)"
+          >
+            Réduire
+            <g-icon name="chevron-up" [size]="14" />
+          </button>
+        }
       </div>
 
       @if (card(); as c) {

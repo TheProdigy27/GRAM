@@ -21,6 +21,24 @@
   border-radius: 0;
 }
 
+// --- Filtres repliés (fiche ouverte) -------------------------------------------------------------
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 // --- En-tête de liste ----------------------------------------------------------------------------
 
 // Une seule ligne : le résumé se tronque (texte complet en infobulle) plutôt que de faire

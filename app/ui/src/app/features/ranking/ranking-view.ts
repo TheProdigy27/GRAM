@@ -1,4 +1,15 @@
-import { Component, DestroyRef, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  booleanAttribute,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import type { RankItem } from '../../core/generated/RankItem';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { ctxK, decimal, int } from '../../shared/format';
@@ -53,6 +64,15 @@ const SORT_MENU: readonly (SortKey | '')[] = [
 
 const plural = (n: number, word: string) => `${int(n)} ${word}${n > 1 ? 's' : ''}`;
 
+/** Filtre actif affiché en pastille quand la fiche est ouverte. */
+export interface FilterPill {
+  key: string;
+  label: string;
+  /** Début lu par les lecteurs d'écran seulement (« Contexte »). */
+  prefix: string;
+  accent: boolean;
+}
+
 /**
  * Zone principale : trois conseils (ils défilent avec la liste : la fenêtre peut ne faire que
  * 640 px de haut), onglets Exécutables / Lents / Trop gros avec leurs compteurs, résumé des
@@ -60,6 +80,9 @@ const plural = (n: number, word: string) => `${int(n)} ${word}${n > 1 ? 's' : ''
  * l'interrupteur des filtres) et « Afficher 25 de plus ». ↑ ↓ (hors des champs) passent d'une
  * ligne à l'autre depuis n'importe où, ← → replient et déplient la famille de la ligne active,
  * sauf dans la fiche.
+ *
+ * Fiche ouverte (`docked`) : bouton « Filtres » et filtres actifs en pastilles à la place des
+ * conseils et du résumé, colonnes secondaires du tableau repliées.
  */
 @Component({
   selector: 'app-ranking-view',
@@ -84,8 +107,17 @@ export class RankingView {
   protected readonly detail = inject(DetailStore);
   protected readonly display = inject(DisplayStore);
 
+  /** Fiche ouverte à côté : liste resserrée. */
+  readonly docked = input(false, { transform: booleanAttribute });
+  /** Filtres ouverts par-dessus la liste (bouton « Filtres »). */
+  readonly filtersOpen = input(false, { transform: booleanAttribute });
+  readonly filtersToggle = output<void>();
+
   protected readonly response = this.ranking.response;
   private readonly table = viewChild(RankingTable);
+  private readonly filtersButton = viewChild('filtersButton', {
+    read: ElementRef<HTMLElement>,
+  });
 
   /** Onglet choisi ; « Trop gros » n'existe qu'avec l'interrupteur. */
   private readonly chosen = signal<Section>('items');
@@ -149,6 +181,24 @@ export class RankingView {
     if (section === 'slow') return `${base} · sous ${decimal(r.slowTokS, 1)} tok/s${grouped}`;
     if (section === 'tooBig') return `${base} · du plus proche de tenir au plus éloigné${grouped}`;
     return base + grouped;
+  });
+
+  /** Usage, contexte, runtime, taille max : les filtres repliés derrière « Filtres ». */
+  protected readonly filterPills = computed<FilterPill[]>(() => {
+    const ctx = this.ranking.effectiveCtx();
+    const max = this.ranking.maxSizeGb();
+    const pill = (key: string, label: string, prefix: string, accent = false): FilterPill => ({
+      key,
+      label,
+      prefix,
+      accent,
+    });
+    return [
+      pill('useCase', useCaseLabel(this.ranking.useCase()), 'Usage ', true),
+      ...(ctx !== null ? [pill('ctx', ctxK(ctx), 'Contexte ')] : []),
+      pill('runtime', runtimeLabel(this.ranking.effectiveRuntime()), 'Runtime '),
+      ...(max !== null ? [pill('maxSize', `≤ ${decimal(max, 1)} Go`, 'Taille max ')] : []),
+    ];
   });
 
   /** « 7 trop gros · Afficher » quand l'onglet Trop gros est masqué. */
@@ -307,6 +357,16 @@ export class RankingView {
 
   protected open(repoId: string): void {
     this.detail.open(repoId);
+  }
+
+  /** Focus sur la ligne d'un modèle (fiche refermée) ; `false` si elle n'est pas affichée. */
+  focusModel(repoId: string): boolean {
+    return this.table()?.focusModel(repoId) ?? false;
+  }
+
+  /** Focus sur le bouton « Filtres » (filtres refermés par Échap). */
+  focusFiltersToggle(): void {
+    this.filtersButton()?.nativeElement.focus();
   }
 
   /** ↑ ↓ hors du tableau : pas dans la fiche, qui défile. */

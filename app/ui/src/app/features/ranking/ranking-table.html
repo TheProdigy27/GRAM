@@ -6,7 +6,7 @@
 >
   <div class="head" role="rowgroup">
     <div class="row row--head" role="row" aria-rowindex="1">
-      @for (c of columns; track c.key) {
+      @for (c of columns(); track c.key) {
         <div
           class="th"
           role="columnheader"
@@ -52,7 +52,7 @@
           (keydown)="onKeydown($event, i)"
         >
           <div class="td" role="gridcell" data-col="rank"></div>
-          <div class="td td--more" role="gridcell" aria-colspan="7">
+          <div class="td td--more" role="gridcell" [attr.aria-colspan]="moreSpan()">
             <span class="branch" aria-hidden="true"></span>
             <span class="more__label">{{ moreLabel(row.hidden) }}</span>
           </div>
@@ -111,12 +111,13 @@
                 @if (row.expanded !== null) {
                   <span class="variants" data-testid="variant-count"
                     >{{ row.family.variants.length
-                    }}<span class="variants__word">{{
+                    }}<span class="variants__word" [class.g-sr-only]="docked()">{{
                       variantWord(row.family.variants.length)
                     }}</span></span
                   >
                 }
-                @if (row.item.pipeline === 'image-text-to-text') {
+                <!-- Fiche ouverte : le nom passe avant les repères secondaires, détaillés dans la fiche. -->
+                @if (row.item.pipeline === 'image-text-to-text' && !docked()) {
                   <g-icon
                     class="flag"
                     name="eye"
@@ -126,7 +127,7 @@
                     [size]="14"
                   />
                 }
-                @if (row.item.gated) {
+                @if (row.item.gated && !docked()) {
                   <g-icon
                     class="flag"
                     name="lock"
@@ -137,13 +138,26 @@
                   />
                 }
                 @if (row.item.installed.length > 0) {
-                  <g-tag
-                    tone="ok"
-                    size="sm"
-                    data-testid="installed"
-                    [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
-                    >Installé</g-tag
-                  >
+                  @if (docked()) {
+                    <!-- Classement resserré : une icône à la place de l'étiquette. -->
+                    <g-icon
+                      class="flag flag--ok"
+                      name="check"
+                      tabindex="0"
+                      label="Installé"
+                      data-testid="installed"
+                      [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
+                      [size]="14"
+                    />
+                  } @else {
+                    <g-tag
+                      tone="ok"
+                      size="sm"
+                      data-testid="installed"
+                      [gTooltip]="'Déjà installé dans Ollama : ' + row.item.installed.join(', ')"
+                      >Installé</g-tag
+                    >
+                  }
                 }
                 @if (row.better) {
                   <g-tag
@@ -151,10 +165,11 @@
                     size="sm"
                     data-testid="better-than-official"
                     [gTooltip]="betterHint(row)"
-                    ><span aria-hidden="true">▲ </span>mieux noté<span class="better__long">
-                      que l’officiel</span
-                    ></g-tag
-                  >
+                    ><span aria-hidden="true">▲ </span>mieux noté
+                    @if (!docked()) {
+                      <span class="better__long"> que l’officiel</span>
+                    }
+                  </g-tag>
                 }
                 @if (row.item.best.estimate.approximate) {
                   <span
@@ -168,34 +183,52 @@
                 }
               </div>
               <div class="model__sub">
-                <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
-                >{{ row.item.paramsTotal | params: row.item.paramsActive }} · {{ row.item.repoId }}
+                @if (docked()) {
+                  <span class="mono" data-testid="model-quant-size"
+                    >{{ row.item.best.variant.label }} ·
+                    {{ row.item.best.variant.sizeBytes | gb }}</span
+                  >
+                } @else {
+                  <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
+                  >{{ row.item.paramsTotal | params: row.item.paramsActive }} ·
+                  {{ row.item.repoId }}
+                }
               </div>
             </div>
           </div>
 
-          <div class="td td--quant mono" role="gridcell" data-col="quant">
-            {{ row.item.best.variant.label }}
-          </div>
+          @if (!docked()) {
+            <div class="td td--quant mono" role="gridcell" data-col="quant">
+              {{ row.item.best.variant.label }}
+            </div>
+          }
 
-          <div class="td" role="gridcell" data-col="size">
-            <app-footprint-cell [best]="row.item.best" [budget]="budget()" />
-          </div>
+          @if (!docked()) {
+            <div class="td" role="gridcell" data-col="size">
+              <app-footprint-cell [best]="row.item.best" [budget]="budget()" />
+            </div>
+          }
 
           <div class="td" role="gridcell" data-col="mode">
-            <app-mode-badge [mode]="row.item.best.estimate.mode" [tooltip]="row.item.explanation" />
+            <app-mode-badge
+              [mode]="row.item.best.estimate.mode"
+              [tooltip]="row.item.explanation"
+              [compact]="docked()"
+            />
           </div>
 
           <div class="td td--num td--speed mono" role="gridcell" data-col="tokS">
             {{ row.item.best.estimate.tokS | tokS }}
           </div>
 
-          <div class="td td--num td--ctx mono" role="gridcell" data-col="ctxMax">
-            {{ row.item.best.estimate.ctxMax | ctx }}
-          </div>
+          @if (!docked()) {
+            <div class="td td--num td--ctx mono" role="gridcell" data-col="ctxMax">
+              {{ row.item.best.estimate.ctxMax | ctx }}
+            </div>
+          }
 
           <div class="td" role="gridcell" data-col="score">
-            <app-score-cell [score]="row.item.score" />
+            <app-score-cell [score]="row.item.score" [compact]="docked()" />
           </div>
         </div>
       }

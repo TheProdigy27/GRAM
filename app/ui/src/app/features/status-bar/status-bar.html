@@ -1,6 +1,6 @@
 <footer class="status" role="status">
   <ul class="hints" aria-label="Raccourcis clavier">
-    @for (h of hints; track h.label) {
+    @for (h of hints(); track h.label) {
       <li class="hint">
         @for (k of h.keys; track k) {
           <kbd class="g-kbd">{{ k }}</kbd>

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, booleanAttribute, computed, input } from '@angular/core';
 import type { Score } from '../../core/generated/Score';
 import { decimal } from '../../shared/format';
 import { scoreAxes, scoreFactors, scoreFormula, scoreTooltip } from '../../shared/score';
@@ -9,18 +9,21 @@ const SPARK_HEIGHT = 18;
 
 /**
  * Score d'une ligne : quatre mini-barres verticales (qualité, vitesse, marge, contexte) puis le
- * total. L'infobulle détaille les axes en barres, leurs poids, la popularité et les facteurs.
+ * total (`compact` : le total seul). L'infobulle détaille les axes en barres, leurs poids, la
+ * popularité et les facteurs.
  */
 @Component({
   selector: 'app-score-cell',
   imports: [Tooltip],
   template: `
     <span class="score" gTooltipPosition="left" [gTooltip]="text()" [gTooltipTemplate]="detail">
-      <span class="spark" aria-hidden="true">
-        @for (a of axes(); track a.key) {
-          <span class="spark__bar" [style.height.px]="sparkHeight(a.value)"></span>
-        }
-      </span>
+      @if (!compact()) {
+        <span class="spark" aria-hidden="true">
+          @for (a of axes(); track a.key) {
+            <span class="spark__bar" [style.height.px]="sparkHeight(a.value)"></span>
+          }
+        </span>
+      }
       <span class="score__total mono" data-testid="score">{{ total() }}</span>
     </span>
 
@@ -143,6 +146,8 @@ const SPARK_HEIGHT = 18;
 })
 export class ScoreCell {
   readonly score = input.required<Score>();
+  /** Le total seul, sans les mini-barres (classement resserré à côté de la fiche). */
+  readonly compact = input(false, { transform: booleanAttribute });
 
   protected readonly total = computed(() => Math.round(this.score().total));
   protected readonly axes = computed(() => scoreAxes(this.score()));

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, booleanAttribute, computed, input } from '@angular/core';
 import type { RunMode } from '../../../core/generated/RunMode';
 import { MODE_LABELS } from '../../labels';
 import { Icon } from '../icon/icon';
@@ -6,7 +6,8 @@ import { Tooltip } from '../tooltip/tooltip';
 
 /**
  * Badge du mode d'exécution : repère coloré (GPU, hybride, CPU) et libellé, couches en VRAM en
- * hybride (« Hybride 62/65 ») ; « Trop gros » en rouge avec une croix.
+ * hybride (« Hybride 62/65 », sauf `compact` : l'infobulle les donne) ; « Trop gros » en rouge
+ * avec une croix.
  */
 @Component({
   selector: 'app-mode-badge, g-mode-badge',
@@ -68,12 +69,14 @@ export class ModeBadge {
   readonly mode = input.required<RunMode>();
   /** Infobulle (par défaut : répartition des couches en mode hybride). */
   readonly tooltip = input<string>('');
+  /** Sans les couches en VRAM (colonne étroite). */
+  readonly compact = input(false, { transform: booleanAttribute });
 
   protected readonly label = computed(() => MODE_LABELS[this.mode().kind]);
 
   protected readonly layers = computed(() => {
     const m = this.mode();
-    return m.kind === 'hybrid' ? `${m.gpuLayers}/${m.layers}` : '';
+    return m.kind === 'hybrid' && !this.compact() ? `${m.gpuLayers}/${m.layers}` : '';
   });
 
   protected readonly hint = computed(() => {

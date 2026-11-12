@@ -12,6 +12,7 @@ import { Callout } from './callout';
       Hugging Face injoignable.
       <button gCalloutAction type="button">Réessayer</button>
     </g-callout>
+    <g-callout icon="bolt">Q3_K_L tient entièrement en VRAM.</g-callout>
   `,
 })
 class Host {}
@@ -20,7 +21,7 @@ describe('Callout', () => {
   it('information, attention, erreur : icône, titre, action', async () => {
     const fixture = TestBed.createComponent(Host);
     await fixture.whenStable();
-    const [info, warn, error] = [
+    const [info, warn, error, custom] = [
       ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('g-callout'),
     ];
     expect(info.dataset['kind']).toBe('info');
@@ -32,5 +33,8 @@ describe('Callout', () => {
     // L'action est hors du corps du texte, à droite.
     expect(error.querySelector('.g-callout__body button')).toBeNull();
     expect(text(error.querySelector(':scope > button'))).toBe('Réessayer');
+    // Icône choisie à la place de celle du genre.
+    expect(custom.dataset['kind']).toBe('info');
+    expect(custom.querySelector('g-icon')?.getAttribute('data-icon')).toBe('bolt');
   });
 });

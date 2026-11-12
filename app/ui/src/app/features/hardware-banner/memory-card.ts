@@ -225,3 +225,59 @@ export function memoryCard(
     ariaLabel: description,
   };
 }
+
+/** Une pastille de la bande machine resserrée (fiche ouverte). */
+export interface MachinePill {
+  kind: 'vram' | 'ram' | 'unified';
+  /** « RTX 5080 · ». */
+  text: string;
+  /** « 14,3 Go », en gras. */
+  value: string;
+  /** « VRAM utilisables ». */
+  after: string;
+  /** Détail (bande passante, raison de l'absence de VRAM). */
+  tooltip: string;
+}
+
+/**
+ * Bande machine en une ligne, quand la fiche est ouverte : VRAM et RAM utilisables (une seule
+ * pastille en mémoire unifiée, ou sans VRAM utilisable).
+ */
+export function machinePills(b: MemoryBudget, p: HardwareProfile): MachinePill[] {
+  const scale = memoryScale(b);
+  const ram = ramSizeType(p.ram);
+  if (scale.unified) {
+    return [
+      {
+        kind: 'unified',
+        text: `Mémoire unifiée ${ram} · `,
+        value: gb(b.ram),
+        after: ` utilisables, dont ${gb(b.vram)} pour le GPU`,
+        tooltip: `Mémoire unifiée à ${speed(b.ramBandwidthGbs)} : le GPU calcule dans la RAM.`,
+      },
+    ];
+  }
+  const ramPill: MachinePill = {
+    kind: 'ram',
+    text: `${ram} · `,
+    value: gb(b.ram),
+    after: ' de RAM utilisables',
+    tooltip: `RAM ${ramDescription(p)} à ${speed(b.ramBandwidthGbs)}`,
+  };
+  if (scale.vramEnd <= 0) {
+    return [{ ...ramPill, tooltip: `${ramPill.tooltip} · ${cpuOnlyNote(p)}` }];
+  }
+  const gpuName = p.gpu ? shortGpuName(p.gpu.name) : 'GPU';
+  return [
+    {
+      kind: 'vram',
+      text: `${gpuName} · `,
+      value: gb(b.vram),
+      after: ' de VRAM utilisables',
+      tooltip: b.gpuBandwidthGbs
+        ? `VRAM à ${speed(b.gpuBandwidthGbs)}, la mémoire la plus rapide`
+        : 'VRAM utilisable par un modèle',
+    },
+    ramPill,
+  ];
+}

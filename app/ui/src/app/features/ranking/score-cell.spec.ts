@@ -8,10 +8,11 @@ import { ScoreCell } from './score-cell';
 
 @Component({
   imports: [ScoreCell],
-  template: `<app-score-cell [score]="score()" />`,
+  template: `<app-score-cell [score]="score()" [compact]="compact()" />`,
 })
 class Host {
   readonly score = signal<Score>(makeScore(86.4));
+  readonly compact = signal(false);
 }
 
 describe('ScoreCell', () => {
@@ -28,6 +29,14 @@ describe('ScoreCell', () => {
     // 82, 71, 100, 100 sur 18 px.
     expect(bars).toEqual(['15px', '13px', '18px', '18px']);
     expect(el.querySelector('.spark')?.getAttribute('aria-hidden')).toBe('true');
+    expect(text(byTestId('score', el))).toBe('86');
+  });
+
+  it('compact : le total seul', async () => {
+    const { fixture, el } = await render();
+    fixture.componentInstance.compact.set(true);
+    await fixture.whenStable();
+    expect(el.querySelector('.spark')).toBeNull();
     expect(text(byTestId('score', el))).toBe('86');
   });
 

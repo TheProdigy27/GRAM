@@ -67,6 +67,14 @@ $light: (
   axis-speed: #0e9384,
   axis-fit: #c76a00,
   axis-context: #c8417a,
+  // Projecteur vision de la barre mémoire (catégorie à part des trois bleus ordonnés)
+  mem-vision: #0e9384,
+  // Blocs de commande à copier : fond sombre dans les deux thèmes
+  code-bg: #0f172a,
+  code-fg: #e2e8f0,
+  code-muted: #94a3b8,
+  code-hover: #1e293b,
+  code-line: #0f172a,
   // Ombres et voile
   shadow: 0 1px 2px rgba(16, 24, 40, 0.08),
   shadow-pop: 0 12px 28px rgba(16, 24, 40, 0.14),
@@ -132,6 +140,12 @@ $dark: (
   axis-speed: #1fa996,
   axis-fit: #c98419,
   axis-context: #d6639a,
+  mem-vision: #1fa996,
+  code-bg: #07090d,
+  code-fg: #d7e2f0,
+  code-muted: #8b93a7,
+  code-hover: #1a1e28,
+  code-line: #1a1e28,
   // En sombre, une bordure remplace l'ombre.
   shadow: 0 0 0 1px #232836,
   shadow-pop: (
@@ -316,6 +330,27 @@ kbd,
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+// Pastille d'information (bande machine resserrée, filtres actifs quand la fiche est ouverte).
+.g-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--g-line);
+  border-radius: 14px;
+  background: var(--g-surface);
+  font-size: 12px;
+  color: var(--g-fg-2);
+  white-space: nowrap;
+}
+
+.g-pill--accent {
+  border-color: var(--g-accent-line);
+  background: var(--g-accent-weak);
+  color: var(--g-vram-fg);
 }
 
 // Voile des dialogues CDK (DialogService).

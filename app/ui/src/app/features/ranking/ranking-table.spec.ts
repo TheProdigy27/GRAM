@@ -15,6 +15,7 @@ import { NO_SORT, type SortState } from './sort';
     [selected]="selected()"
     [active]="active()"
     [grouped]="grouped()"
+    [docked]="docked()"
     [search]="search()"
     [(sort)]="sort"
     (openModel)="opened.push($event)"
@@ -38,6 +39,7 @@ class Host {
   readonly selected = signal<string | null>('org/Vision-GGUF');
   readonly active = signal<string | null>(null);
   readonly grouped = signal(false);
+  readonly docked = signal(false);
   readonly search = signal<string | null>(null);
   readonly sort = signal<SortState>(NO_SORT);
   readonly opened: string[] = [];
@@ -99,6 +101,27 @@ describe('RankingTable', () => {
 
     expect(vision.getAttribute('aria-selected')).toBe('true');
     expect(rapide.getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('fiche ouverte : #, Modèle avec quant · taille, Mode sans couches, tok/s, score seul', async () => {
+    const { fixture, el, host, rows } = await render();
+    host.docked.set(true);
+    await fixture.whenStable();
+    expect(el.querySelector('app-ranking-table')?.hasAttribute('data-docked')).toBe(true);
+    expect(text(byTestId('model-quant-size', rows()[0]))).toBe('Q4_K_M · 4,7 Go');
+    expect(cell(rows()[1], 'mode')).toBe('Hybride');
+    expect(rows()[0].querySelector('.spark')).toBeNull();
+    expect(text(byTestId('score', rows()[0]))).toBe('90');
+    // Les lignes restent navigables et ouvrent la fiche.
+    await press(fixture, rows()[1], 'Enter');
+    expect(host.opened).toEqual(['org/Hybride-GGUF']);
+  });
+
+  it('focusModel() : focus sur la ligne d’un modèle affiché', async () => {
+    const { host, rows } = await render();
+    expect(host.table().focusModel('org/Vision-GGUF')).toBe(true);
+    expect(document.activeElement).toBe(rows()[2]);
+    expect(host.table().focusModel('org/Absent-GGUF')).toBe(false);
   });
 
   it('empreinte sur l’échelle de la carte mémoire : part en VRAM puis part en RAM', async () => {

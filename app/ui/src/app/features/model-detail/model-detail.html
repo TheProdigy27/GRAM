@@ -1,184 +1,200 @@
-<article class="detail" aria-label="Fiche du modèle">
+<article class="detail" aria-labelledby="detail-title" [attr.aria-busy]="store.loading() || null">
   <header class="head">
-    <div class="titles">
-      <h2 data-testid="detail-title">{{ detail()?.model?.displayName ?? store.repoId() }}</h2>
+    <div class="head__titles">
+      <div class="head__line">
+        <h2 class="head__name" id="detail-title" data-testid="detail-title">{{ title() }}</h2>
+        @if (standing(); as s) {
+          <g-tag tone="accent" data-testid="detail-standing" [gTooltip]="s.tooltip">{{
+            s.label
+          }}</g-tag>
+        }
+      </div>
       @if (detail(); as d) {
-        <div class="repo">{{ d.model.repoId }}</div>
+        <div class="head__sub">
+          <span class="mono head__repo">{{ d.model.repoId }}</span>
+          @if (released()) {
+            <span class="head__released"> · publié {{ released() }}</span>
+          }
+        </div>
+        @if (tags().length > 0) {
+          <div class="head__tags" data-testid="detail-tags">
+            @for (t of tags(); track t.label) {
+              <g-tag size="sm" [icon]="t.icon">{{ t.label }}</g-tag>
+            }
+          </div>
+        }
       }
     </div>
-    <button mat-icon-button type="button" aria-label="Fermer la fiche" (click)="store.close()">
-      <mat-icon>close</mat-icon>
+    @if (detail(); as d) {
+      <button
+        gButton
+        size="sm"
+        data-testid="open-hf"
+        gTooltip="Ouvrir la page du dépôt sur huggingface.co"
+        (click)="openUrl(d.hfUrl)"
+      >
+        <g-icon name="external" />
+        Hugging Face
+      </button>
+    }
+    <button
+      gButton
+      variant="ghost"
+      size="sm"
+      icon
+      data-testid="close-detail"
+      aria-label="Fermer la fiche"
+      gTooltip="Fermer la fiche · Échap"
+      (click)="dismiss.emit()"
+    >
+      <g-icon name="close" [size]="18" />
     </button>
   </header>
 
   <div class="progress-slot">
     @if (store.loading()) {
-      <mat-progress-bar mode="indeterminate" aria-label="Chargement de la fiche" />
+      <g-progress size="sm" label="Chargement de la fiche" />
     }
   </div>
 
-  @if (store.error(); as message) {
-    <p class="error" role="alert">Fiche indisponible : {{ message }}</p>
-  }
+  <div class="body">
+    @if (store.error(); as message) {
+      <g-callout kind="error" role="alert">Fiche indisponible : {{ message }}</g-callout>
+    }
 
-  @if (detail(); as d) {
-    <div class="body">
-      <p class="facts">
-        {{ d.model.paramsTotal | params: d.model.paramsActive }} de paramètres · contexte
-        d’entraînement {{ d.model.ctxTrain | ctx }} · {{ d.model.downloads | count }}
-        téléchargements (30 j)
-        @if (released()) {
-          · publié {{ released() }}
+    @if (detail(); as d) {
+      <div class="tiles">
+        @for (t of tiles(); track t.key) {
+          <div class="tile" [attr.data-testid]="'tile-' + t.key">
+            <span class="tile__label">{{ t.label }}</span>
+            <span class="tile__value mono">{{ t.value }}</span>
+            @if (t.sub) {
+              <span class="tile__sub">{{ t.sub }}</span>
+            }
+          </div>
         }
-        @if (d.model.arch; as arch) {
-          · architecture {{ arch.architecture }}
-        }
-      </p>
-      <div class="tags-row">
-        @for (tag of tags(); track tag) {
-          <span class="tag">{{ tag }}</span>
-        }
-        <button
-          mat-stroked-button
-          type="button"
-          class="hf-button"
-          data-testid="open-hf"
-          (click)="openUrl(d.hfUrl)"
-        >
-          <mat-icon>open_in_new</mat-icon>
-          Hugging Face
-        </button>
       </div>
 
+      <!-- Vitesse selon la quantification -->
+      <section class="section" aria-labelledby="quant-title">
+        <div class="section__head">
+          <h3 class="section__title" id="quant-title">
+            Vitesse estimée selon la quantification
+            <span class="section__count">· {{ d.variants.length }} proposées</span>
+          </h3>
+          @if (d.variants.length > 0) {
+            <g-toggle-group
+              appearance="segmented"
+              label="Affichage des quantifications"
+              data-testid="quant-view"
+              [options]="viewOptions"
+              [value]="display.quantView()"
+              (valueChange)="setView($event)"
+            />
+          }
+        </div>
+
+        @if (d.variants.length === 0) {
+          <p class="muted">Aucune quantification proposée pour ce modèle.</p>
+        } @else if (display.quantView() === 'chart') {
+          <p class="section__note">
+            Au contexte {{ d.ctx | ctx }}. Survoler une barre pour le détail, cliquer pour choisir.
+          </p>
+          <app-quant-chart
+            [variants]="d.variants"
+            [best]="d.best"
+            [budget]="d.budget"
+            [selected]="store.selectedLabel()"
+            (selectedChange)="select($event)"
+          />
+        } @else {
+          <app-quant-table
+            labelledBy="quant-title"
+            [variants]="d.variants"
+            [best]="d.best"
+            [selected]="store.selectedLabel()"
+            (selectedChange)="select($event)"
+          />
+        }
+
+        @if (suggestion(); as s) {
+          <g-callout class="suggestion" icon="bolt" data-testid="suggestion">
+            <!-- Espaces dans les textes : Angular retire celles entre deux éléments. -->
+            <strong class="mono">{{ s.label }}</strong> tient entièrement en VRAM :
+            <strong>{{ s.speed }}</strong
+            >{{ s.after }}
+            <button
+              gCalloutAction
+              gButton
+              size="sm"
+              data-testid="choose-suggestion"
+              (click)="select(s.label)"
+            >
+              Choisir {{ s.label }}
+            </button>
+          </g-callout>
+        }
+      </section>
+
       @if (selected(); as v) {
-        <section aria-labelledby="mem-title">
-          <h3 id="mem-title">
+        <!-- Mémoire -->
+        <section class="section" aria-labelledby="mem-title">
+          <h3 class="section__title" id="mem-title">
             Mémoire en <span class="mono">{{ v.variant.label }}</span> au contexte
             {{ v.estimate.ctxUsed | ctx }}
           </h3>
           <app-memory-bar [estimate]="v.estimate" [budget]="d.budget" />
           <p class="explanation" data-testid="explanation">{{ v.explanation }}</p>
-          @for (w of v.estimate.warnings; track $index) {
-            <p class="warn-line"><mat-icon aria-hidden="true">warning</mat-icon>{{ w }}</p>
+          @if (v.estimate.warnings.length > 0) {
+            <g-callout kind="warn" data-testid="estimate-warnings">
+              @if (v.estimate.warnings.length === 1) {
+                {{ v.estimate.warnings[0] }}
+              } @else {
+                <ul class="callout-list">
+                  @for (w of v.estimate.warnings; track $index) {
+                    <li>{{ w }}</li>
+                  }
+                </ul>
+              }
+            </g-callout>
           }
         </section>
-      } @else if (d.variants.length === 0) {
-        <p class="muted">Aucune quantification proposée pour ce modèle.</p>
-      }
 
-      <section aria-labelledby="variants-title">
-        <h3 id="variants-title">Quantifications ({{ d.variants.length }})</h3>
-        <table class="variants" aria-describedby="variants-title">
-          <thead>
-            <tr>
-              <th>Quant</th>
-              <th class="num">Taille</th>
-              <th class="num" title="Bits par poids réels">Bits/poids</th>
-              <th>Mode</th>
-              <th class="num">tok/s</th>
-              <th class="num">Ctx max</th>
-              <th class="num">Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (v of d.variants; track v.variant.label; let i = $index) {
-              <tr
-                tabindex="0"
-                data-testid="variant-row"
-                [class]="'fit-' + fitClass(v)"
-                [class.selected]="v.variant.label === store.selectedLabel()"
-                [class.dimmed]="!v.withinSize"
-                [attr.aria-selected]="v.variant.label === store.selectedLabel()"
-                [matTooltip]="v.withinSize ? '' : 'Au-dessus de la taille maximale demandée'"
-                (click)="store.select(v.variant.label)"
-                (keydown.enter)="store.select(v.variant.label)"
-              >
-                <td>
-                  <span class="quant">
-                    <span
-                      class="dot"
-                      [matTooltip]="
-                        v.estimate.mode.kind === 'tooBig'
-                          ? 'Ne tient pas'
-                          : fitLabels[v.estimate.fit]
-                      "
-                    ></span>
-                    <span class="mono">{{ v.variant.label }}</span>
-                    @if (i === d.best) {
-                      <mat-icon
-                        class="best"
-                        matTooltip="Meilleure quantification pour cette machine"
-                        >star</mat-icon
-                      >
-                    }
-                    @if (v.ollamaModel) {
-                      <mat-icon
-                        class="installed"
-                        data-testid="variant-installed"
-                        [matTooltip]="'Installée dans Ollama : ' + v.ollamaModel"
-                        >download_done</mat-icon
-                      >
-                    }
-                    @if (!v.variant.exact) {
-                      <span class="approx" matTooltip="Taille estimée (fichiers pas encore lus)"
-                        >≈</span
-                      >
-                    }
-                  </span>
-                </td>
-                <td class="num">{{ v.variant.sizeBytes | gb }}</td>
-                <td class="num">{{ decimal(v.variant.bpw, 1) }}</td>
-                <td><app-mode-badge [mode]="v.estimate.mode" /></td>
-                <td class="num">{{ v.estimate.tokS | tokS }}</td>
-                <td class="num">{{ v.estimate.ctxMax | ctx }}</td>
-                <td class="num">
-                  <span
-                    matTooltipClass="gram-multiline-tooltip"
-                    [matTooltip]="scoreTooltip(v.score)"
-                    >{{ v.score.total.toFixed(0) }}</span
-                  >
-                </td>
-              </tr>
+        <!-- Lancement -->
+        <section class="section" aria-labelledby="launch-title">
+          <div class="section__head">
+            <h3 class="section__title" id="launch-title">
+              Lancer <span class="mono">{{ v.variant.label }}</span> avec {{ runtimeName() }}
+            </h3>
+            @if (shell() && v.launch.commands.length > 0) {
+              <span class="section__aside">{{ shell() }}</span>
             }
-          </tbody>
-        </table>
-      </section>
-
-      @if (selected(); as v) {
-        <section class="launch" aria-labelledby="launch-title">
-          <h3 id="launch-title">
-            Lancer <span class="mono">{{ v.variant.label }}</span> avec {{ runtimeName() }}
-          </h3>
-          @for (c of v.launch.commands; track $index) {
-            <div class="command">
-              <div class="cmd-label">{{ c.label }}</div>
-              <div class="cmd-row">
-                <code data-testid="command">{{ c.command }}</code>
-                <button
-                  mat-icon-button
-                  type="button"
-                  matTooltip="Copier"
-                  [attr.aria-label]="'Copier : ' + c.command"
-                  (click)="copy(c.command)"
-                >
-                  <mat-icon>content_copy</mat-icon>
-                </button>
-              </div>
-            </div>
+          </div>
+          @if (v.launch.commands.length > 0) {
+            <ol class="commands">
+              @for (c of v.launch.commands; track $index; let n = $index) {
+                <li class="command">
+                  <span class="command__label">{{ n + 1 }} · {{ c.label }}</span>
+                  <app-command-block [command]="c.command" />
+                </li>
+              }
+            </ol>
           }
           @if (v.launch.openUrl; as url) {
-            <button
-              mat-flat-button
-              type="button"
-              data-testid="open-launch-url"
-              (click)="openUrl(url)"
-            >
-              <mat-icon>open_in_new</mat-icon>
-              Ouvrir la page du dépôt
-            </button>
+            <div>
+              <button
+                gButton
+                variant="primary"
+                data-testid="open-launch-url"
+                (click)="openUrl(url)"
+              >
+                <g-icon name="external" />
+                Ouvrir la page du dépôt
+              </button>
+            </div>
           }
           @if (v.launch.notes.length > 0 || d.notes.length > 0) {
-            <ul class="notes">
+            <ul class="notes" data-testid="launch-notes">
               @for (n of v.launch.notes; track $index) {
                 <li>{{ n }}</li>
               }
@@ -188,30 +204,57 @@
             </ul>
           }
         </section>
-      }
 
-      @if (selected(); as v) {
         <app-measure-panel [detail]="d" [variant]="v" />
       }
 
       @if (d.model.alternatives.length > 0) {
-        <section aria-labelledby="alt-title">
-          <h3 id="alt-title">Autres dépôts GGUF ({{ d.model.alternatives.length }})</h3>
-          <ul class="alternatives">
+        <section class="section" aria-labelledby="alt-title">
+          <h3 class="section__title" id="alt-title">
+            Autres dépôts GGUF
+            <span class="section__count">· {{ d.model.alternatives.length }}</span>
+          </h3>
+          <ul class="alternatives" data-testid="alternatives">
             @for (a of d.model.alternatives; track a.repoId) {
-              <li>
-                <button mat-button type="button" (click)="openUrl(hfUrl(a.repoId))">
+              <li class="alternative">
+                <button
+                  type="button"
+                  class="alternative__link mono"
+                  data-testid="alternative"
+                  [gTooltip]="'Ouvrir ' + a.repoId + ' sur huggingface.co'"
+                  (click)="openUrl(hfUrl(a.repoId))"
+                >
                   {{ a.repoId }}
                 </button>
-                <span class="muted">{{ a.downloads | count }} téléchargements</span>
                 @if (a.gated) {
-                  <mat-icon class="flag" matTooltip="Dépôt protégé">lock</mat-icon>
+                  <g-icon
+                    class="flag"
+                    name="lock"
+                    label="Dépôt protégé"
+                    gTooltip="Dépôt protégé : conditions à accepter sur Hugging Face"
+                    [size]="14"
+                  />
                 }
+                <span class="alternative__downloads"
+                  >{{ a.downloads | count }} téléchargements</span
+                >
               </li>
             }
           </ul>
         </section>
       }
-    </div>
-  }
+    } @else if (!store.error()) {
+      <div class="loading" aria-hidden="true">
+        <div class="tiles">
+          @for (i of [1, 2, 3, 4]; track i) {
+            <g-skeleton height="58px" radius="10px" />
+          }
+        </div>
+        <g-skeleton width="55%" height="14px" />
+        <g-skeleton height="180px" radius="10px" />
+        <g-skeleton width="40%" height="14px" />
+        <g-skeleton height="22px" radius="6px" />
+      </div>
+    }
+  </div>
 </article>

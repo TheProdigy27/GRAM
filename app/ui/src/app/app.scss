@@ -62,19 +62,28 @@
   background: var(--g-line);
 }
 
-// --- Classement et fiche (Material jusqu'à la phase 6) ----------------------------------------
+// --- Classement et fiche --------------------------------------------------------------------
 
+// Fiche fermée : filtres puis classement. Fiche ouverte : classement puis fiche ancrée à droite
+// (600 à 720 px) ; les filtres se replient derrière le bouton « Filtres » du classement.
 .body {
   flex: 1;
   min-height: 0;
-  --mat-sidenav-content-background-color: var(--g-bg);
-  --mat-sidenav-content-text-color: var(--g-fg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--g-bg);
+}
+
+.body--docked {
+  grid-template-columns: minmax(0, 1fr) clamp(600px, 46vw, 720px);
 }
 
 // Filtres et classement défilent chacun de leur côté : les filtres restent visibles.
 .workspace {
+  position: relative;
   display: flex;
-  height: 100%;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -90,20 +99,42 @@
   overflow-y: auto;
 }
 
-// Fenêtre étroite : les filtres passent au-dessus du tableau, tout défile ensemble.
+// Fiche ouverte : filtres masqués (leurs raccourcis 1 à 5 restent actifs), ouverts par-dessus le
+// classement par le bouton « Filtres ».
+.body--docked .filters {
+  display: none;
+}
+
+.body--docked .filters.filters--open {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  display: block;
+  width: 248px;
+  background: var(--g-surface);
+  border-right: 1px solid var(--g-line);
+  box-shadow: var(--g-shadow-pop);
+}
+
+.detail-pane {
+  min-width: 0;
+  min-height: 0;
+  background: var(--g-surface);
+  border-left: 1px solid var(--g-line);
+}
+
+// Fenêtre étroite (navigateur seulement : la fenêtre de GRAM fait au moins 1 024 px) : les
+// filtres passent au-dessus du tableau, tout défile ensemble.
 @media (max-width: 900px) {
-  .workspace {
+  .body:not(.body--docked) .workspace {
     display: block;
     overflow-y: auto;
   }
 
-  .filters,
-  .main {
+  .body:not(.body--docked) .filters,
+  .body:not(.body--docked) .main {
     overflow: visible;
   }
-}
-
-.detail-drawer {
-  width: min(600px, 60vw);
-  border-left: 1px solid var(--mat-sys-outline-variant);
 }

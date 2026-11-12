@@ -118,24 +118,28 @@
   </div>
 </header>
 
-<app-hardware-banner />
+<app-hardware-banner [compact]="detail.isOpen()" />
 
-<mat-drawer-container class="body" [hasBackdrop]="false">
-  <mat-drawer
-    class="detail-drawer"
-    position="end"
-    mode="over"
-    [opened]="detail.isOpen()"
-    (closedStart)="detail.close()"
-  >
-    @if (detail.isOpen()) {
-      <app-model-detail />
-    }
-  </mat-drawer>
-  <mat-drawer-content class="workspace">
-    <app-filters-panel class="filters" />
-    <app-ranking-view class="main" />
-  </mat-drawer-content>
-</mat-drawer-container>
+<div class="body" [class.body--docked]="detail.isOpen()">
+  <div class="workspace">
+    <app-filters-panel
+      id="filters-panel"
+      class="filters"
+      [class.filters--open]="filtersOpen()"
+      (focusout)="onFiltersFocusOut($event)"
+    />
+    <app-ranking-view
+      class="main"
+      [docked]="detail.isOpen()"
+      [filtersOpen]="filtersOpen()"
+      (filtersToggle)="toggleFilters()"
+    />
+  </div>
+  @if (detail.isOpen()) {
+    <div #pane class="detail-pane" data-testid="detail-pane">
+      <app-model-detail (dismiss)="closeDetail(true)" />
+    </div>
+  }
+</div>
 
 <app-status-bar />
