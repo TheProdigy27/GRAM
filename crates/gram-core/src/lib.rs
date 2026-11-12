@@ -14,6 +14,7 @@ pub mod export;
 pub mod family;
 pub mod fmt;
 pub mod hardware;
+pub mod harness;
 pub mod launch;
 pub mod model;
 pub mod rank;

@@ -1,6 +1,6 @@
 [package]
 name = "gram-ollama"
-description = "API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles."
+description = "API locale d'Ollama : modèles installés, mesure réelle, ajout pour GRAM Harness."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -16,7 +16,10 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-# HTTP simple vers localhost : ni TLS, ni compression.
+# Délai entre deux morceaux d'un flux, annulation d'un ajout (`select!`).
+tokio.workspace = true
+# HTTP simple vers localhost : ni TLS, ni compression. `Response::chunk` suffit pour lire un
+# flux, sans la fonctionnalité `stream`.
 reqwest.workspace = true
 
 [dev-dependencies]

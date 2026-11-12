@@ -20,3 +20,27 @@ Toutes les durées sont en nanosecondes. Ce qu'Ollama ajoute par rapport à la d
 `runner` dans `/api/ps`, `prompt_eval_cached_count` dans `/api/generate`. Qwen3 réfléchit avant de
 répondre : les 128 tokens vont dans `thinking` et `response` reste vide, sans effet sur la mesure
 (`eval_count` compte les deux).
+
+## Ajout pour GRAM Harness
+
+Enregistrées le 12 novembre 2026, même machine et même version d'Ollama, avec
+`hf.co/unsloth/Qwen3-1.7B-GGUF:Q4_K_M` (déjà installé) et
+`hf.co/ggml-org/SmolVLM-256M-Instruct-GGUF:Q8_0` (petit modèle de vision, téléchargé pour
+l'occasion puis supprimé). Dans les `modelfile` de `show-*.json`, le dossier de l'utilisateur
+devient `C:\Users\gram`.
+
+| Fichier | Requête |
+|---|---|
+| `pull-installed.ndjson` | `POST /api/pull` (`stream: true`) d'un modèle déjà installé : 9 lignes en 0,45 s, une seule par couche, déjà complète |
+| `pull-resume.ndjson` | `POST /api/pull` de SmolVLM, repris après une annulation : la première ligne repart de 39,5 Mo ; trois couches (modèle, projecteur `mmproj`, paramètres) ; les premières lignes du projecteur n'ont pas de `completed` ; la dernière ligne du modèle s'arrête avant `total` ; une ligne toutes les 60 ms |
+| `pull-error-quant.ndjson` | Quantification qui n'existe pas dans le dépôt : statut HTTP 200, puis une ligne `{"error": …}` |
+| `pull-error-gated.ndjson` | Dépôt protégé depuis `hf.co/` : `realm host "huggingface.co" does not match original host "hf.co"`. Un dépôt **inexistant** donne exactement la même erreur |
+| `pull-error-gated-key.ndjson` | Même dépôt protégé depuis `huggingface.co/` : Ollama signe avec sa clé, Hugging Face répond 401 « Invalid username or password » (clé non enregistrée). Là encore, un dépôt inexistant donne la même erreur |
+| `pull-error-sharded.ndjson` | Quantification découpée en plusieurs fichiers : refusée par Hugging Face dès le manifeste |
+| `create.json` | `POST /api/create` (`stream: false`) du modèle dérivé `gram/qwen3-1.7b:q4_k_m`, `num_ctx` 16384 |
+| `show-base.json` | `POST /api/show` de la base : des paramètres (`stop`, `temperature`…), pas de `num_ctx` |
+| `show-alias.json` | `POST /api/show` du modèle dérivé : les paramètres de la base, plus `num_ctx 16384` ; `details.parent_model` donne la base |
+| `show-vision.json` | `POST /api/show` de SmolVLM : capacité `vision`, `projector_info`, aucun paramètre (`parameters` absent) |
+
+Sans flux (`stream: false`), une erreur de `pull` arrive avec le statut HTTP 500. `DELETE
+/api/delete` répond 200 sans corps, ou 404 avec `error-not-found.json` si le modèle est déjà absent.

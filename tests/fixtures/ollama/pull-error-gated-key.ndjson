@@ -1,0 +1,2 @@
+{"status":"pulling manifest"}
+{"error":"pull model manifest: 401: {\"error\":\"Invalid username or password.\"}"}

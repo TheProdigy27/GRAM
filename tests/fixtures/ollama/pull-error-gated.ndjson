@@ -1,0 +1,2 @@
+{"status":"pulling manifest"}
+{"error":"pull model manifest: realm host \"huggingface.co\" does not match original host \"hf.co\""}

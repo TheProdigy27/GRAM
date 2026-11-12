@@ -10,6 +10,10 @@ pub enum OllamaError {
     /// impossible à charger.
     #[error("Ollama a refusé la requête (HTTP {status}) : {message}")]
     Api { status: u16, message: String },
+    /// Erreur signalée au milieu d'un flux (`{"error": "…"}` après le statut HTTP 200), par
+    /// exemple un manifeste introuvable ou un dépôt protégé au début d'un téléchargement.
+    #[error("Ollama a interrompu l'opération : {0}")]
+    Interrupted(String),
     #[error("réponse inattendue d'Ollama : {0}")]
     Invalid(String),
     #[error("requête vers Ollama impossible : {0}")]

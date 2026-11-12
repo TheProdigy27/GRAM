@@ -59,10 +59,10 @@ node scripts/release.mjs 0.2.0                               # release : sur le 
 
 | Dossier | Rôle |
 |---|---|
-| `crates/gram-core` | Types, moteur d'estimation, scoring, familles de modèles et conseils (pur, sans I/O) |
+| `crates/gram-core` | Types, moteur d'estimation, scoring, familles de modèles et conseils, progression d'un ajout à Ollama et place sur le disque (pur, sans I/O) |
 | `crates/gram-hw` | Détection matériel et runtimes installés (Windows, macOS ; CPU et RAM seulement ailleurs) |
 | `crates/gram-hub` | Client Hugging Face, cache, parseur GGUF, dédoublonnage, catalogue embarqué |
-| `crates/gram-ollama` | API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles |
+| `crates/gram-ollama` | API locale d'Ollama : modèles installés, mesure de la vitesse et de la mémoire réelles, ajout d'un modèle pour GRAM Harness (téléchargement suivi et annulable, modèle dérivé qui porte le contexte, suppression, capacités) |
 | `crates/gram-cli` | Binaire de debug : `hw`, `sync`, `estimate`, `rank`, `ollama`, `snapshot` |
 | `app/src-tauri` | Application Tauri : commandes IPC, état, événements, icônes (`icons/`, générées) |
 | `app/ui` | Frontend Angular, composants maison dans `shared/ui/` (sans Angular Material) : `core/` (service Tauri typé, raccourcis clavier, types générés), `state/` (stores à base de signals ; préférences d'affichage dans le stockage local de la WebView), `features/` (bande « Votre machine » et dialogue « Corriger… », filtres, trois conseils, classement regroupé par famille, fiche détail, palette Ctrl F, aide des raccourcis, paramètres, barre d'état), `app-commands.ts` (actions de la coque partagées par l'en-tête, les raccourcis et la palette), `shared/` (mise en forme française, libellés, échelle mémoire commune), `shared/ui/` (composants sur le CDK d'Angular, qui n'apporte que des comportements accessibles : icônes SVG, boutons, champs, listes, bascules, infobulles, menus, dialogues, toasts, onglets, badges ; superpositions CDK sans l'API popover, comme sous le WebKit de Safari 15), `src/styles.scss` (jetons `--g-*` clair et sombre, polices Inter et JetBrains Mono embarquées), `src/testing/` (fixtures typées, faux backend et helpers DOM `dom.ts` pour les tests), `public/logo.svg` (logo, source des icônes) |
