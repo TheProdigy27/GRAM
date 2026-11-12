@@ -17,6 +17,15 @@ import { HardwareStore } from './hardware.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from './ranking.store';
 import { SettingsStore } from './settings.store';
 
+/** Un modèle dont la fiche a été ouverte pendant la session (palette, sans saisie). */
+export interface RecentModel {
+  repoId: string;
+  displayName: string;
+}
+
+/** Modèles récents gardés, le plus récent d'abord. */
+export const MAX_RECENT = 4;
+
 /**
  * Fiche détail du modèle sélectionné, avec les filtres du classement (cas d'usage, contexte,
  * runtime, taille maximale), et la quantification choisie dans son tableau.
@@ -63,7 +72,10 @@ export class DetailStore {
       this.lastRepoId = request.repoId;
       if (sameModel && previous.status !== 'idle') await delay(this.debounceMs, abortSignal);
       const detail = await this.tauri.getModelDetail(request);
-      if (!abortSignal.aborted) this.last.set(detail);
+      if (!abortSignal.aborted) {
+        this.last.set(detail);
+        this.remember(detail);
+      }
       return detail;
     },
   });
@@ -76,6 +88,20 @@ export class DetailStore {
 
   readonly loading = this.query.isLoading;
   readonly error = computed(() => this.query.error()?.message ?? null);
+
+  private readonly recentModels = signal<readonly RecentModel[]>([]);
+  /** Fiches ouvertes pendant la session, la plus récente d'abord (au plus `MAX_RECENT`). */
+  readonly recent = this.recentModels.asReadonly();
+
+  private remember({ model }: ModelDetail): void {
+    const entry: RecentModel = { repoId: model.repoId, displayName: model.displayName };
+    this.recentModels.update((list) => {
+      if (list[0]?.repoId === entry.repoId && list[0].displayName === entry.displayName) {
+        return list;
+      }
+      return [entry, ...list.filter((r) => r.repoId !== entry.repoId)].slice(0, MAX_RECENT);
+    });
+  }
 
   /** Quantification demandée à l'ouverture (conseil « Le plus rapide »…), si elle existe. */
   private wanted: { repoId: string; label: string } | null = null;

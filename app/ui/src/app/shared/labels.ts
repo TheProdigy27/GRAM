@@ -9,6 +9,7 @@ import type { Runtime } from '../core/generated/Runtime';
 import type { Source } from '../core/generated/Source';
 import type { SyncPhase } from '../core/generated/SyncPhase';
 import type { UseCase } from '../core/generated/UseCase';
+import type { IconName } from './ui/icon/icons';
 
 export const USE_CASES: readonly { value: UseCase; label: string }[] = [
   { value: 'general', label: 'Polyvalent' },
@@ -23,6 +24,15 @@ export const RUNTIMES: readonly { value: Runtime; label: string }[] = [
   { value: 'lmStudio', label: 'LM Studio' },
   { value: 'llamaCpp', label: 'llama.cpp' },
 ];
+
+/** Icône de chaque usage (filtres, palette). */
+export const USE_CASE_ICONS: Record<UseCase, IconName> = {
+  general: 'grid',
+  code: 'code',
+  reasoning: 'bulb',
+  fastChat: 'bolt',
+  vision: 'eye',
+};
 
 export function useCaseLabel(u: UseCase): string {
   return USE_CASES.find((x) => x.value === u)?.label ?? u;

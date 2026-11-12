@@ -84,6 +84,14 @@ export class TauriService {
     return this.call('rank', { request });
   }
 
+  /**
+   * Classement pour la palette de recherche : comme `rank`, sans devenir le classement exporté
+   * (le backend retient la dernière requête de `rank` pour `export_ranking`).
+   */
+  searchRanking(request: RankRequest): Promise<RankResponse> {
+    return this.call('search_ranking', { request });
+  }
+
   getModelDetail(request: DetailRequest): Promise<ModelDetail> {
     return this.call('get_model_detail', { request });
   }

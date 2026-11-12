@@ -488,6 +488,13 @@ fn export_markdown_et_csv() {
         "rank",
         json!({ "request": { "useCase": "fastChat", "limit": 3 } }),
     );
+    // Une recherche de la palette ne remplace pas le classement exporté.
+    let found = h.ok(
+        "search_ranking",
+        json!({ "request": { "useCase": "code", "search": "qwen3 8b", "limit": 6 } }),
+    );
+    assert_eq!(found["search"], json!("qwen3 8b"));
+    assert!(found["items"].as_array().unwrap().len() <= 6);
     let md = h.dir.join("classement.md");
     let csv = h.dir.join("classement.csv");
     let written = h.ok(
@@ -502,6 +509,7 @@ fn export_markdown_et_csv() {
     let text = std::fs::read_to_string(&md).unwrap();
     assert!(text.starts_with("# Classement GRAM"));
     assert!(text.contains("Cas d'usage : Chat rapide · contexte 4 096 tokens"));
+    assert!(!text.contains("- Recherche :"), "{text}");
     assert!(text.contains("GPU NVIDIA GeForce RTX 5080"));
     // Exporté en entier, sans la limite de 3 lignes du dernier classement.
     let rows = text

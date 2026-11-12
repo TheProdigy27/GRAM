@@ -40,6 +40,18 @@ pub async fn rank<R: Runtime>(
     Ok(response)
 }
 
+/// Classement calculé pour la palette de recherche (modèles trouvés, modèles récents) : comme
+/// `rank`, mais la requête n'est pas retenue, l'export reprend donc toujours le classement
+/// affiché.
+#[tauri::command]
+pub async fn search_ranking<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    request: RankRequest,
+) -> CmdResult<RankResponse> {
+    compute(&app, &state, request).await
+}
+
 /// Chemin d'export accepté : absolu, avec l'extension du format (évite d'écraser un fichier
 /// d'un autre type par erreur).
 fn export_path(path: &str, format: ExportFormat) -> CmdResult<PathBuf> {

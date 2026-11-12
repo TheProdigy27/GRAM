@@ -1,13 +1,13 @@
 import {
   Component,
   DestroyRef,
-  PendingTasks,
   booleanAttribute,
   computed,
   inject,
   input,
   linkedSignal,
 } from '@angular/core';
+import { AppCommands } from '../../app-commands';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
 import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import type { Source } from '../../core/generated/Source';
@@ -18,7 +18,6 @@ import { SOURCE_LABELS } from '../../shared/labels';
 import { runtimeRows } from '../../shared/runtimes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
-import { DialogService } from '../../shared/ui/dialog/dialog';
 import { Icon } from '../../shared/ui/icon/icon';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Tag } from '../../shared/ui/tag/tag';
@@ -153,9 +152,8 @@ export class HardwareBanner {
   protected readonly hardware = inject(HardwareStore);
   protected readonly ranking = inject(RankingStore);
   private readonly detail = inject(DetailStore);
-  private readonly dialogs = inject(DialogService);
+  private readonly commands = inject(AppCommands);
   private readonly toast = inject(ToastService);
-  private readonly pendingTasks = inject(PendingTasks);
 
   /** Fiche ouverte : bande resserrée en une ligne. */
   readonly compact = input(false, { transform: booleanAttribute });
@@ -249,17 +247,11 @@ export class HardwareBanner {
 
   /** Bouton « Ré-analyser » et touche R : nouvelle détection du matériel et des runtimes. */
   protected rescan(): void {
-    this.hardware.rescan().catch((e: unknown) => {
-      this.toast.show(`Analyse impossible : ${errorMessage(e)}`, { kind: 'error' });
-    });
+    this.commands.rescan();
   }
 
-  /** Le dialogue est chargé à la première ouverture. */
   protected openCorrections(): void {
-    this.pendingTasks.run(async () => {
-      const { CorrectionsDialog } = await import('./corrections-dialog');
-      this.dialogs.open(CorrectionsDialog, { width: '720px' });
-    });
+    this.commands.openCorrections();
   }
 
   protected stopSimulation(): void {

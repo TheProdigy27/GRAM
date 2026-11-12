@@ -4,11 +4,10 @@ import type { UseCase } from '../../core/generated/UseCase';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
 import { CTX_STEPS, ctxK, decimal } from '../../shared/format';
-import { RUNTIMES, USE_CASES } from '../../shared/labels';
+import { RUNTIMES, USE_CASES, USE_CASE_ICONS } from '../../shared/labels';
 import { type RuntimeRow, runtimeRows } from '../../shared/runtimes';
 import { FIELD } from '../../shared/ui/field/field';
 import { Icon } from '../../shared/ui/icon/icon';
-import type { IconName } from '../../shared/ui/icon/icons';
 import { Switch } from '../../shared/ui/switch/switch';
 import { ToastService } from '../../shared/ui/toast/toast';
 import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
@@ -19,14 +18,6 @@ import { RankingStore } from '../../state/ranking.store';
 import { SettingsStore } from '../../state/settings.store';
 
 const GIB = 2 ** 30;
-
-const USE_CASE_ICONS: Record<UseCase, IconName> = {
-  general: 'grid',
-  code: 'code',
-  reasoning: 'bulb',
-  fastChat: 'bolt',
-  vision: 'eye',
-};
 
 /**
  * Colonne de gauche, réglable en un clic : usage (touches 1 à 5), contexte en pastilles,

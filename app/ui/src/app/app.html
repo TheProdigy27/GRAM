@@ -4,25 +4,42 @@
     <span class="brand__name">GRAM</span>
   </div>
 
-  <div class="search" role="search">
-    <g-field clearable clearLabel="Effacer la recherche">
-      <g-icon gPrefix name="search" />
-      <input
-        #search
-        gInput
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
-        aria-label="Rechercher un modèle"
-        placeholder="Rechercher par nom, dépôt ou modèle de base…"
-        data-testid="filter-search"
+  <div class="search">
+    <div class="search__box" [class.search__box--active]="ranking.search() !== ''">
+      <button
+        #trigger
+        type="button"
+        class="search__trigger"
+        aria-haspopup="dialog"
+        data-testid="search-trigger"
         [attr.aria-keyshortcuts]="searchShortcut"
-        [value]="ranking.search()"
-        (input)="ranking.setSearch(search.value)"
-        (keydown.escape)="clearSearch($event)"
-      />
-      <kbd gSuffix class="g-kbd search__kbd" aria-hidden="true">{{ searchShortcutLabel }}</kbd>
-    </g-field>
+        (click)="commands.openPalette(trigger)"
+      >
+        <g-icon name="search" />
+        @if (ranking.search(); as active) {
+          <span class="search__text" data-testid="search-active"
+            ><span class="g-sr-only">Recherche : </span>{{ active }}</span
+          >
+        } @else {
+          <span class="search__text search__text--placeholder"
+            >Rechercher un modèle ou une commande…</span
+          >
+        }
+        <kbd class="g-kbd" aria-hidden="true">{{ searchShortcutLabel }}</kbd>
+      </button>
+      @if (ranking.search() !== '') {
+        <button
+          type="button"
+          class="search__clear"
+          aria-label="Effacer la recherche"
+          data-testid="search-clear"
+          gTooltip="Effacer la recherche"
+          (click)="clearSearch()"
+        >
+          <g-icon name="close" />
+        </button>
+      }
+    </div>
   </div>
 
   <div class="actions">
@@ -32,7 +49,7 @@
       data-testid="refresh-catalog"
       gTooltip="Synchroniser le catalogue avec Hugging Face"
       [busy]="catalog.syncing()"
-      (click)="refreshCatalog()"
+      (click)="commands.refreshCatalog()"
     >
       @if (!catalog.syncing()) {
         <g-icon name="sync" />
@@ -46,10 +63,10 @@
       gTooltip="Enregistrer le classement affiché, en entier"
       gTooltipShortcut="E"
       [cdkMenuTriggerFor]="exportMenu"
-      [busy]="exporting()"
+      [busy]="commands.exporting()"
       [disabled]="!ranking.response()"
     >
-      @if (!exporting()) {
+      @if (!commands.exporting()) {
         <g-icon name="download" />
       }
       Exporter
@@ -62,7 +79,7 @@
           icon="file"
           shortcut="M"
           data-testid="export-md"
-          (triggered)="exportRanking('md')"
+          (triggered)="commands.exportRanking('md')"
         >
           Markdown (.md)
         </button>
@@ -71,7 +88,7 @@
           icon="table"
           shortcut="C"
           data-testid="export-csv"
-          (triggered)="exportRanking('csv')"
+          (triggered)="commands.exportRanking('csv')"
         >
           CSV pour Excel (.csv)
         </button>
@@ -86,7 +103,7 @@
         variant="primary"
         data-testid="open-update"
         [gTooltip]="'Installer GRAM ' + u.version"
-        (click)="openUpdate()"
+        (click)="commands.openUpdate()"
       >
         <g-icon name="update" />
         Mise à jour {{ u.version }}
@@ -99,7 +116,7 @@
         data-testid="open-update"
         aria-label="Rechercher une mise à jour"
         gTooltip="Rechercher une mise à jour"
-        (click)="openUpdate()"
+        (click)="commands.openUpdate()"
       >
         <g-icon name="update" [size]="18" />
       </button>
@@ -111,7 +128,7 @@
       data-testid="open-settings"
       aria-label="Paramètres"
       gTooltip="Paramètres"
-      (click)="openSettings()"
+      (click)="commands.openSettings()"
     >
       <g-icon name="settings" [size]="18" />
     </button>

@@ -26,11 +26,12 @@ export class StatusBar {
   private readonly detail = inject(DetailStore);
 
   /**
-   * Raccourcis rappelés : seulement ceux qui marchent déjà (? arrive avec l'aide, phase 8) ;
-   * Échap quand la fiche est ouverte.
+   * Raccourcis rappelés, Échap quand la fiche est ouverte. ? (l'aide, qui donne tous les
+   * autres) vient juste après Ctrl K : une fenêtre étroite ne garde que ces deux-là.
    */
   protected readonly hints = computed<readonly { keys: string[]; label: string }[]>(() => [
     { keys: [this.shortcuts.modShortcut('K')], label: 'chercher' },
+    { keys: ['?'], label: 'raccourcis' },
     { keys: ['↑', '↓'], label: 'naviguer' },
     { keys: ['Entrée'], label: 'fiche' },
     ...(this.detail.isOpen() ? [{ keys: ['Échap'], label: 'fermer la fiche' }] : []),

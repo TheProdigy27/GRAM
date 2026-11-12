@@ -29,7 +29,7 @@ export interface ToastDismissal {
   dismissedByAction: boolean;
 }
 
-/** Toast affiché : action, fermeture (mêmes noms que `MatSnackBarRef` pour la migration). */
+/** Toast affiché : action (`onAction`), fermeture (`afterDismissed`, `dismiss`). */
 export class ToastRef {
   private readonly action$ = new Subject<void>();
   private readonly dismissed$ = new Subject<ToastDismissal>();

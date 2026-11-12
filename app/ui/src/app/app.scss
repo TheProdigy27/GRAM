@@ -38,15 +38,75 @@
   min-width: 0;
   display: flex;
   justify-content: center;
+}
 
-  g-field {
-    flex: 1;
-    max-width: 560px;
+// Déclencheur de la palette, à l'allure d'un champ ; teinté quand une recherche est active.
+.search__box {
+  flex: 1;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  border: 1px solid var(--g-input);
+  border-radius: var(--g-radius);
+  background: var(--g-surface);
+}
+
+.search__box--active {
+  border-color: var(--g-accent-line);
+  background: var(--g-accent-weak);
+}
+
+.search__trigger,
+.search__clear {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--g-muted);
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline-offset: -2px;
   }
 }
 
-.search__kbd {
+.search__trigger {
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px;
+  text-align: left;
+
+  &:hover {
+    color: var(--g-fg-2);
+  }
+}
+
+.search__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--g-fg);
+}
+
+.search__text--placeholder {
+  color: inherit;
+}
+
+.search__clear {
   flex: none;
+  justify-content: center;
+  width: 34px;
+
+  &:hover {
+    color: var(--g-fg);
+  }
 }
 
 .actions {

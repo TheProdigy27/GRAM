@@ -131,11 +131,11 @@ describe('App', () => {
     expect(text(pressed?.querySelector('.opt__label'))).toBe('Raisonnement');
 
     // Pas dans un champ de saisie.
-    await press(fixture, byTestId('filter-search', el), '5');
+    await press(fixture, byTestId('filter-max-size', el), '5');
     expect(lastRequest(calls).useCase).toBe('reasoning');
   });
 
-  it('recherche un modèle depuis l’en-tête, avec Ctrl K, en gardant le rang', async () => {
+  it('Ctrl K ouvre la palette ; Ctrl Entrée filtre le classement, recherche affichée dans l’en-tête', async () => {
     const calls = mockBackend({
       rank: (a) => {
         const search = (a['request'] as RankRequest).search;
@@ -146,41 +146,92 @@ describe('App', () => {
     });
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    const input = byTestId<HTMLInputElement>('filter-search', el);
-    expect(input.closest('header')).not.toBeNull();
-    expect(input.getAttribute('aria-keyshortcuts')).toBe('Control+K');
+    const trigger = byTestId('search-trigger', el);
+    expect(trigger.closest('header')).not.toBeNull();
+    expect(trigger.getAttribute('aria-keyshortcuts')).toBe('Control+K');
+    expect(text(trigger.querySelector('.search__text'))).toBe(
+      'Rechercher un modèle ou une commande…',
+    );
+    expect(text(trigger.querySelector('kbd'))).toBe('Ctrl K');
 
-    // Ctrl K place le curseur dans la recherche (Ctrl F aussi, l'ancien raccourci).
+    // Ctrl K : palette en haut de la fenêtre, focus dans son champ.
     await press(fixture, document.body, 'k', { ctrlKey: true });
-    expect(document.activeElement).toBe(input);
-    input.blur();
-    await press(fixture, document.body, 'f', { ctrlKey: true });
+    expect(dialogs()).toHaveLength(1);
+    expect(dialogs()[0].getAttribute('aria-label')).toBe('Rechercher un modèle ou une commande');
+    const input = byTestId<HTMLInputElement>('palette-input');
     expect(document.activeElement).toBe(input);
 
     await typeInto(fixture, input, 'mistral');
+    expect(argsOf(calls, 'search_ranking').at(-1)!['request']).toMatchObject({ search: 'mistral' });
+    expect(lastRequest(calls).search).toBeUndefined();
+    await press(fixture, input, 'Enter', { ctrlKey: true });
+    expect(dialogs()).toHaveLength(0);
     expect(lastRequest(calls).search).toBe('mistral');
     expect(namesOf(el)).toEqual(['Mistral-Small-24B']);
     expect(text(rowsOf(el)[0].querySelector('[data-col="rank"]'))).toBe('3');
+    expect(text(byTestId('search-active', el))).toBe('Recherche : mistral');
 
-    // Rien trouvé : message, et le bouton efface la recherche.
-    await typeInto(fixture, input, 'introuvable');
+    // Le bouton ✕ du champ retire la recherche.
+    await click(fixture, byTestId('search-clear', el));
+    expect(lastRequest(calls)).not.toHaveProperty('search');
+    expect(queryTestId('search-active', el)).toBeNull();
+    expect(rowsOf(el)).toHaveLength(3);
+
+    // Rien trouvé : message, et le bouton efface la recherche. Ctrl F ouvre aussi la palette.
+    await press(fixture, document.body, 'f', { ctrlKey: true });
+    await typeInto(fixture, byTestId('palette-input'), 'introuvable');
+    await press(fixture, byTestId('palette-input'), 'Enter');
     expect(text(byTestId('search-empty', el))).toContain(
       'Aucun modèle ne correspond à « introuvable ».',
     );
+    // Rouverte depuis le champ : elle reprend la recherche active.
+    await click(fixture, trigger);
+    expect(byTestId<HTMLInputElement>('palette-input').value).toBe('introuvable');
+    await press(fixture, byTestId('palette-input'), 'Escape');
+    expect(dialogs()).toHaveLength(0);
+    expect(document.activeElement).toBe(trigger);
     await click(fixture, byTestId('empty-clearSearch', el));
-    expect(input.value).toBe('');
-    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
+    expect(lastRequest(calls)).not.toHaveProperty('search');
     expect(rowsOf(el)).toHaveLength(3);
+  });
 
-    // Le bouton du champ et Échap effacent aussi.
-    await typeInto(fixture, input, 'mistral');
-    await click(fixture, byTestId('field-clear', el));
-    expect(input.value).toBe('');
-    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
-    await typeInto(fixture, input, 'mistral');
-    await press(fixture, input, 'Escape');
-    expect(input.value).toBe('');
-    expect(argsOf(calls, 'rank').at(-1)!['request']).not.toHaveProperty('search');
+  it('palette : Entrée ouvre la fiche d’un modèle, qui devient récent', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    await press(fixture, document.body, 'k', { ctrlKey: true });
+    await typeInto(fixture, byTestId('palette-input'), 'gemma');
+    await press(fixture, byTestId('palette-input'), 'ArrowDown');
+    await press(fixture, byTestId('palette-input'), 'Enter');
+    expect(dialogs()).toHaveLength(0);
+    expect(argsOf(calls, 'get_model_detail').at(-1)!['request']).toMatchObject({
+      repoId: 'org/Gemma-3-12B-GGUF',
+    });
+    expect(queryTestId('detail-pane', el)).not.toBeNull();
+
+    await press(fixture, document.body, 'k', { ctrlKey: true });
+    const recent = document.querySelector('[role="group"][data-group="Récents"]');
+    expect(recent).not.toBeNull();
+    // `makeDetail` décrit toujours Qwen3-8B, quel que soit le dépôt demandé.
+    expect(text(recent!.querySelector('.opt__label'))).toBe('Qwen3-8B');
+  });
+
+  it('touche ? : aide des raccourcis, rappelée dans la barre d’état', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(text(el.querySelector('app-status-bar .hints'))).toContain('? raccourcis');
+
+    // Pas pendant une saisie.
+    await press(fixture, byTestId('filter-max-size', el), '?');
+    expect(dialogs()).toHaveLength(0);
+
+    await press(fixture, document.body, '?', { shiftKey: true });
+    expect(dialogTitle(dialogs().at(-1))).toBe('Raccourcis clavier');
+    expect(text(dialogs().at(-1)!.querySelector('dd'))).toBe('Chercher un modèle ou une commande');
+    await press(fixture, document.body, 'Escape');
+    expect(dialogs()).toHaveLength(0);
   });
 
   it('ouvre la fiche détail au clic sur une ligne', async () => {
@@ -412,21 +463,19 @@ describe('App', () => {
     expect(menuItems()).toEqual([]);
   });
 
-  it('Échap ferme la fiche, mais vide d’abord la recherche', async () => {
+  it('Échap ferme la palette, puis la fiche', async () => {
     mockBackend();
     const fixture = await start();
-    const el = fixture.nativeElement as HTMLElement;
     const detail = TestBed.inject(DetailStore);
     detail.open('Qwen/Qwen3-8B-GGUF');
     await fixture.whenStable();
 
-    const input = byTestId<HTMLInputElement>('filter-search', el);
-    await typeInto(fixture, input, 'qwen');
-    await press(fixture, input, 'Escape');
-    expect(input.value).toBe('');
+    await press(fixture, document.body, 'k', { ctrlKey: true });
+    await press(fixture, byTestId('palette-input'), 'Escape');
+    expect(dialogs()).toHaveLength(0);
     expect(detail.isOpen()).toBe(true);
 
-    await press(fixture, input, 'Escape');
+    await press(fixture, document.activeElement ?? document.body, 'Escape');
     expect(detail.isOpen()).toBe(false);
   });
 

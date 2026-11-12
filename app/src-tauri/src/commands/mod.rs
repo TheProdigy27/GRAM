@@ -30,6 +30,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         catalog::get_cache_info,
         catalog::clear_cache,
         ranking::rank,
+        ranking::search_ranking,
         ranking::export_ranking,
         settings::get_settings,
         settings::get_default_settings,

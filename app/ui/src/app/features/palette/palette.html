@@ -1,0 +1,79 @@
+<label class="search">
+  <g-icon name="search" [size]="18" />
+  <input
+    #input
+    class="search__input"
+    type="text"
+    role="combobox"
+    autocomplete="off"
+    spellcheck="false"
+    aria-autocomplete="list"
+    aria-expanded="true"
+    aria-label="Modèle, filtre ou commande"
+    placeholder="Modèle, filtre ou commande…"
+    data-testid="palette-input"
+    [attr.aria-controls]="listId"
+    [attr.aria-activedescendant]="active()?.id ?? null"
+    [value]="query()"
+    (input)="onInput(input.value)"
+    (keydown)="onKeydown($event)"
+  />
+  <kbd class="g-kbd" aria-hidden="true">Échap</kbd>
+</label>
+
+<div class="list" role="listbox" aria-label="Résultats" data-testid="palette-list" [id]="listId">
+  @for (g of groups(); track g.label) {
+    <div class="group" role="group" [attr.aria-labelledby]="g.id" [attr.data-group]="g.label">
+      <div class="group__label" role="presentation" [id]="g.id">{{ g.label }}</div>
+      @for (o of g.options; track o.key) {
+        <div
+          class="opt"
+          role="option"
+          data-testid="palette-option"
+          [class.opt--model]="o.option.kind === 'model'"
+          [id]="o.id"
+          [attr.data-kind]="o.option.kind"
+          [attr.data-key]="o.key"
+          [attr.aria-selected]="o.key === active()?.key"
+          [attr.aria-label]="o.ariaLabel"
+          (mousedown)="$event.preventDefault()"
+          (mousemove)="hover(o)"
+          (click)="run(o.option)"
+        >
+          @if (o.option.kind === 'model') {
+            <span class="opt__rank mono">{{ o.rank }}</span>
+            <span class="opt__main">
+              <span class="opt__label opt__label--model">{{ o.label }}</span>
+              <span class="opt__sub">{{ o.sub }}</span>
+            </span>
+            @if (o.mode; as mode) {
+              <g-mode-badge compact [mode]="mode" />
+              <span class="opt__tok mono">{{ o.tokS }}</span>
+              <span class="opt__score mono">{{ o.score }}</span>
+            }
+          } @else {
+            <span class="opt__icon"><g-icon [name]="o.icon" /></span>
+            <span class="opt__label">{{ o.label }}</span>
+            @if (o.hint) {
+              <span class="opt__hint">{{ o.hint }}</span>
+            }
+            @if (o.shortcut) {
+              <kbd class="g-kbd">{{ o.shortcut }}</kbd>
+            }
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<footer class="footer">
+  <span class="footer__hint"><kbd class="g-kbd">↑</kbd><kbd class="g-kbd">↓</kbd> choisir</span>
+  <span class="footer__hint"><kbd class="g-kbd">Entrée</kbd> ouvrir</span>
+  @if (hasQuery()) {
+    <span class="footer__hint"
+      ><kbd class="g-kbd">{{ filterShortcut }}</kbd> filtrer le classement</span
+    >
+  }
+  <span class="footer__status" aria-live="polite" data-testid="palette-status">{{ status() }}</span>
+</footer>
