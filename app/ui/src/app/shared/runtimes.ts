@@ -18,6 +18,8 @@ export interface RuntimeRow {
   state: RuntimeState;
   /** « en cours », « installé », « absent ». */
   stateLabel: string;
+  /** Version exposée par le runtime (API locale d'Ollama) ; `null` si inconnue. */
+  version: string | null;
   /** Version, modèles installés (Ollama) et chemin, une ligne chacun ; vide si rien n'est connu. */
   tooltip: string;
 }
@@ -33,6 +35,7 @@ export function runtimeRows(status: RuntimesStatus): RuntimeRow[] {
       label,
       state,
       stateLabel: RUNTIME_STATE_LABELS[state],
+      version: s.version,
       tooltip: [
         s.version && `version ${s.version}`,
         models > 0 && `${models} modèle${models > 1 ? 's' : ''} installé${models > 1 ? 's' : ''}`,

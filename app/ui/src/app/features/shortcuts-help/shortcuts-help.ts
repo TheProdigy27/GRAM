@@ -16,14 +16,14 @@ export interface ShortcutGroup {
 
 /**
  * Table « Raccourcis » de l'application. `mod` met une touche avec Ctrl (⌘ sur Mac) :
- * « Ctrl K », « ⌘K ».
+ * « Ctrl F », « ⌘F ».
  */
 export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
   return [
     {
       title: 'Partout',
       rows: [
-        { keys: [mod('K')], label: 'Chercher un modèle ou une commande' },
+        { keys: [mod('F')], label: 'Chercher un modèle ou une commande' },
         { keys: ['?'], label: 'Afficher cette aide' },
         { keys: ['Échap'], label: 'Fermer la fiche, le dialogue ou la palette' },
         { keys: ['R'], label: 'Ré-analyser le matériel' },
@@ -97,7 +97,7 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
         }
       </div>
       <p class="note">
-        Les touches seules ne marchent pas pendant une saisie ni sous un dialogue ; {{ modK }} et
+        Les touches seules ne marchent pas pendant une saisie ni sous un dialogue ; {{ modF }} et
         Échap, si.
       </p>
     </g-dialog>
@@ -151,5 +151,5 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
 export class ShortcutsHelp {
   private readonly shortcuts = inject(ShortcutsService);
   protected readonly groups = shortcutGroups((key) => this.shortcuts.modShortcut(key));
-  protected readonly modK = this.shortcuts.modShortcut('K');
+  protected readonly modF = this.shortcuts.modShortcut('F');
 }

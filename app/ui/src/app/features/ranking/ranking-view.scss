@@ -3,7 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 18px 20px 24px;
+  // À droite, la barre de défilement de la zone complète la marge (styles.scss).
+  padding: 18px calc(20px - var(--g-scrollbar-size)) 24px 20px;
 }
 
 // Barre de calcul collée en haut de la zone qui défile, sans décaler le contenu.
@@ -12,7 +13,7 @@
   top: 0;
   z-index: 3;
   height: 0;
-  margin: -18px -20px 18px;
+  margin: -18px calc(var(--g-scrollbar-size) - 20px) 18px -20px;
 }
 
 .progress {

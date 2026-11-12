@@ -124,7 +124,7 @@ describe('RankingTable', () => {
     expect(host.table().focusModel('org/Absent-GGUF')).toBe(false);
   });
 
-  it('empreinte sur l’échelle de la carte mémoire : part en VRAM puis part en RAM', async () => {
+  it('empreinte sur l’échelle mémoire commune : part en VRAM puis part en RAM', async () => {
     const { rows } = await render();
     const [rapide, hybride] = rows();
 

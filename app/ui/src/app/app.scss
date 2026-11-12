@@ -49,7 +49,7 @@
   height: 36px;
   border: 1px solid var(--g-input);
   border-radius: var(--g-radius);
-  background: var(--g-surface);
+  background: var(--g-field);
 }
 
 .search__box--active {
@@ -147,16 +147,17 @@
   overflow: hidden;
 }
 
+// `scroll` plutôt que `auto` : place de la barre toujours réservée (styles.scss).
 .filters {
   flex: 0 0 clamp(236px, 20vw, 248px);
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 
 .main {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 
 // Fiche ouverte : filtres masqués (leurs raccourcis 1 à 5 restent actifs), ouverts par-dessus le
@@ -190,7 +191,7 @@
 @media (max-width: 900px) {
   .body:not(.body--docked) .workspace {
     display: block;
-    overflow-y: auto;
+    overflow-y: scroll;
   }
 
   .body:not(.body--docked) .filters,

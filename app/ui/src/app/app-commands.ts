@@ -10,7 +10,7 @@ import { RankingStore } from './state/ranking.store';
 
 /**
  * Actions de la coque, partagées par l'en-tête, la bande « Votre machine », les raccourcis et la
- * palette Ctrl K. Les dialogues sont chargés à leur première ouverture ; le chargement compte
+ * palette Ctrl F. Les dialogues sont chargés à leur première ouverture ; le chargement compte
  * comme une tâche en cours (l'application n'est pas « stable » avant l'ouverture).
  */
 @Injectable({ providedIn: 'root' })
@@ -93,12 +93,12 @@ export class AppCommands {
   }
 
   /**
-   * Ctrl K et champ de l'en-tête : palette de recherche, en haut de la fenêtre. Le focus revient
+   * Ctrl F et champ de l'en-tête : palette de recherche, en haut de la fenêtre. Le focus revient
    * à `origin` à la fermeture (WebKit ne donne pas le focus à un bouton cliqué), sinon là où il
    * était.
    */
   openPalette(origin?: HTMLElement): void {
-    // Une seule palette, même si Ctrl K est répété pendant son chargement.
+    // Une seule palette, même si Ctrl F est répété pendant son chargement.
     if (this.paletteOpen) return;
     this.paletteOpen = true;
     this.pendingTasks.run(async () => {

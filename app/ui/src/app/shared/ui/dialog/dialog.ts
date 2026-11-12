@@ -110,14 +110,18 @@ export class DialogService {
       font-weight: 700;
       outline: none;
     }
+    // Place de la barre de défilement réservée, et retirée de la marge droite (styles.scss).
     .g-dialog__body {
       flex: 1 1 auto;
       min-height: 0;
-      padding: 20px;
-      overflow: auto;
+      padding: 20px calc(20px - var(--g-scrollbar-size)) 20px 20px;
+      overflow-x: auto;
+      overflow-y: scroll;
     }
+    // Sans marge, le contenu a ses propres zones qui défilent.
     .g-dialog--flush > .g-dialog__body {
       padding: 0;
+      overflow-y: auto;
     }
     .g-dialog__actions {
       display: flex;

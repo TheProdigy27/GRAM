@@ -1,4 +1,4 @@
-// Empreinte d'une ligne du classement, sur l'échelle de la carte mémoire (0 → VRAM + RAM
+// Empreinte d'une ligne du classement, sur l'échelle mémoire commune (0 → VRAM + RAM
 // utilisables) : on voit d'un coup d'œil ce qui tient en VRAM.
 
 import type { Estimate } from '../../core/generated/Estimate';
@@ -23,7 +23,7 @@ export interface RowFootprint {
   label: string;
 }
 
-/** « 0–62 Go » : l'échelle de la colonne, la même que celle de la carte mémoire. */
+/** « 0–62 Go » : l'échelle de la colonne, la même pour toutes les lignes. */
 export function scaleLabel(budget: MemoryBudget): string {
   return `0–${int(Math.round(memoryScale(budget).total / GIB))} Go`;
 }

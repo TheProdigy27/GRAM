@@ -8,11 +8,21 @@ export interface DisplayPrefs {
   picksCollapsed: boolean;
   /** Quantifications de la fiche : graphique des vitesses ou tableau. */
   quantView: QuantView;
+  /** Thème de l'interface, appliqué par `ThemeService`. */
+  theme: ThemePref;
 }
 
 export type QuantView = 'chart' | 'table';
 
-const DEFAULTS: DisplayPrefs = { groupVariants: true, picksCollapsed: false, quantView: 'chart' };
+/** Thème : celui du système, ou clair ou sombre quel que soit le système. */
+export type ThemePref = 'system' | 'light' | 'dark';
+
+const DEFAULTS: DisplayPrefs = {
+  groupVariants: true,
+  picksCollapsed: false,
+  quantView: 'chart',
+  theme: 'system',
+};
 
 /** Clé du stockage local. */
 export const DISPLAY_PREFS_KEY = 'gram.display';
@@ -41,6 +51,7 @@ export class DisplayStore {
   readonly groupVariants = computed(() => this.prefs().groupVariants);
   readonly picksCollapsed = computed(() => this.prefs().picksCollapsed);
   readonly quantView = computed(() => this.prefs().quantView);
+  readonly theme = computed(() => this.prefs().theme);
 
   setGroupVariants(groupVariants: boolean): void {
     this.update({ groupVariants });
@@ -52,6 +63,10 @@ export class DisplayStore {
 
   setQuantView(quantView: QuantView): void {
     this.update({ quantView });
+  }
+
+  setTheme(theme: ThemePref): void {
+    this.update({ theme });
   }
 
   private update(patch: Partial<DisplayPrefs>): void {
@@ -74,6 +89,10 @@ export class DisplayStore {
           saved.quantView === 'chart' || saved.quantView === 'table'
             ? saved.quantView
             : DEFAULTS.quantView,
+        theme:
+          saved.theme === 'system' || saved.theme === 'light' || saved.theme === 'dark'
+            ? saved.theme
+            : DEFAULTS.theme,
       };
     } catch {
       return { ...DEFAULTS };

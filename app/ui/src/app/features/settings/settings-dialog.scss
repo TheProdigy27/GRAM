@@ -27,10 +27,11 @@ g-dialog {
   gap: 2px;
   flex: none;
   width: 220px;
-  padding: 14px 10px;
+  // Place de la barre réservée, et retirée de la marge droite (styles.scss).
+  padding: 14px 0 14px 10px;
   border-right: 1px solid var(--g-line-2);
   background: var(--g-surface-2);
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 
 .nav__item {
@@ -89,8 +90,8 @@ g-dialog {
 .content {
   flex: 1;
   min-height: 0;
-  padding: 20px 28px 12px;
-  overflow-y: auto;
+  padding: 20px calc(28px - var(--g-scrollbar-size)) 12px 28px;
+  overflow-y: scroll;
 }
 
 .section + .section {

@@ -64,6 +64,7 @@ const DEFAULTS: Record<string, Handler> = {
   install_update: () => new Promise(() => undefined), // l'application redémarre
   'plugin:clipboard-manager|write_text': () => null,
   'plugin:opener|open_url': () => null,
+  'plugin:window|set_theme': () => null,
 };
 
 /**

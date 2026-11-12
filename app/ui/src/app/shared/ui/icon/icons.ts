@@ -64,6 +64,14 @@ export const ICONS = {
   filter: ['M3 5h18l-7 8v6l-4 2v-8L3 5Z'],
   trash: ['M4 7h16', 'M10 11v6M14 11v6', 'M6 7l1 13h10l1-13', 'M9 7V4h6v3'],
   play: ['M7 4v16l13-8L7 4Z'],
+  // Thème (clair, sombre, celui du système)
+  sun: [
+    circle(12, 12, 4),
+    'M12 2v2M12 20v2M2 12h2M20 12h2',
+    'M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  ],
+  moon: ['M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z'],
+  monitor: [rect(2, 4, 20, 13, 2), 'M8 21h8M12 17v4'],
   // Cas d'usage
   grid: [
     rect(3, 3, 7, 7, 1.5),
@@ -92,6 +100,15 @@ export const ICONS = {
   chart: ['M4 20h16', 'M6 16v-5M10 16V6M14 16v-8M18 16v-3'],
   lock: [rect(5, 11, 14, 10, 2), 'M8 11V7a4 4 0 0 1 8 0v4'],
   star: ['M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z'],
+  // Matériel (cartes de la bande « Votre machine »)
+  gpu: [rect(2, 6, 20, 11, 2), circle(9, 11.5, 3), 'M15 9.5h4M15 13.5h4M5 17v2'],
+  ram: [rect(2, 7, 20, 10, 1.5), 'M6 11v2M10 11v2M14 11v2M18 11v2M6 17v3M18 17v3'],
+  cpu: [
+    rect(5, 5, 14, 14, 2),
+    rect(9, 9, 6, 6, 1),
+    'M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3',
+  ],
+  terminal: [rect(2, 4, 20, 16, 2), 'm6 9 3 3-3 3', 'M12 15h6'],
   // États
   info: [circle(12, 12, 9), 'M12 11v5M12 8h.01'],
   warning: ['M12 3 2 20h20L12 3Z', 'M12 10v4M12 17h.01'],

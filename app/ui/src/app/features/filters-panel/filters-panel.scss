@@ -77,8 +77,9 @@
   text-align: left;
   cursor: pointer;
 
+  // Voile plutôt que `--g-hover` : les options sont posées sur le fond, pas sur une surface.
   &:hover {
-    background: var(--g-hover);
+    background: var(--g-hover-overlay);
   }
 
   &[aria-pressed='true'] {

@@ -41,7 +41,7 @@ const PAGE_STEP = 10;
 
 /**
  * Une liste du classement (exécutables, lents ou trop gros) en grille ARIA : en-têtes triables,
- * empreinte sur l'échelle de la carte mémoire, badge de mode, score en mini-barres.
+ * empreinte sur l'échelle mémoire commune, badge de mode, score en mini-barres.
  *
  * Avec `grouped`, les variantes d'un modèle (`RankItem.family`) sont regroupées sous sa ligne de
  * famille (grille arborescente) : repliées, puis 3 variantes et « Voir les N autres ». Pendant

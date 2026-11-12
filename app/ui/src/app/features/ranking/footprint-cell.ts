@@ -6,7 +6,7 @@ import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { rowFootprint } from './footprint';
 
 /**
- * Taille du fichier au-dessus d'une barre de 8 px sur l'échelle de la carte mémoire : zone VRAM
+ * Taille du fichier au-dessus d'une barre de 8 px sur l'échelle mémoire commune : zone VRAM
  * teintée, part en VRAM (`--g-gpu`) puis part en RAM (`--g-hybrid`) ; un modèle trop gros
  * déborde en rouge jusqu'au bout de l'échelle.
  */

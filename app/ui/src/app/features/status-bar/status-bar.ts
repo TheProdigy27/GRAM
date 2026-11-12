@@ -1,17 +1,15 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { ShortcutsService } from '../../core/shortcuts.service';
 import { int, relativeTime } from '../../shared/format';
 import { DATA_SOURCE_LABELS, SYNC_PHASE_LABELS } from '../../shared/labels';
 import { Icon } from '../../shared/ui/icon/icon';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { CatalogStore } from '../../state/catalog.store';
-import { DetailStore } from '../../state/detail.store';
 import { RankingStore } from '../../state/ranking.store';
 
 /**
- * Barre d'état : rappels des raccourcis, source des données, nombre de modèles, progression de
- * la synchronisation, quota de l'API Hugging Face, marge des estimations.
+ * Barre d'état : source des données, nombre de modèles, progression de la synchronisation,
+ * quota de l'API Hugging Face, marge des estimations.
  */
 @Component({
   selector: 'app-status-bar',
@@ -22,23 +20,6 @@ import { RankingStore } from '../../state/ranking.store';
 export class StatusBar {
   protected readonly catalog = inject(CatalogStore);
   private readonly ranking = inject(RankingStore);
-  private readonly shortcuts = inject(ShortcutsService);
-  private readonly detail = inject(DetailStore);
-
-  /**
-   * Raccourcis rappelés, Échap quand la fiche est ouverte. ? (l'aide, qui donne tous les
-   * autres) vient juste après Ctrl K : une fenêtre étroite ne garde que ces deux-là.
-   */
-  protected readonly hints = computed<readonly { keys: string[]; label: string }[]>(() => [
-    { keys: [this.shortcuts.modShortcut('K')], label: 'chercher' },
-    { keys: ['?'], label: 'raccourcis' },
-    { keys: ['↑', '↓'], label: 'naviguer' },
-    { keys: ['Entrée'], label: 'fiche' },
-    ...(this.detail.isOpen() ? [{ keys: ['Échap'], label: 'fermer la fiche' }] : []),
-    { keys: ['←', '→'], label: 'replier, déplier' },
-    { keys: ['R'], label: 'ré-analyser' },
-    { keys: ['E'], label: 'exporter' },
-  ]);
 
   /** Heure courante, rafraîchie chaque minute pour « il y a 2 h ». */
   private readonly now = signal(Date.now());

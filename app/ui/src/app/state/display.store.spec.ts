@@ -9,14 +9,17 @@ describe('DisplayStore', () => {
     expect(store.groupVariants()).toBe(true);
     expect(store.picksCollapsed()).toBe(false);
     expect(store.quantView()).toBe('chart');
+    expect(store.theme()).toBe('system');
 
     store.setPicksCollapsed(true);
     store.setGroupVariants(false);
     store.setQuantView('table');
+    store.setTheme('dark');
     expect(JSON.parse(localStorage.getItem(DISPLAY_PREFS_KEY)!)).toEqual({
       groupVariants: false,
       picksCollapsed: true,
       quantView: 'table',
+      theme: 'dark',
     });
 
     TestBed.resetTestingModule();
@@ -24,6 +27,14 @@ describe('DisplayStore', () => {
     expect(next.groupVariants()).toBe(false);
     expect(next.picksCollapsed()).toBe(true);
     expect(next.quantView()).toBe('table');
+    expect(next.theme()).toBe('dark');
+  });
+
+  it('valeur inconnue dans le stockage : celle par défaut', () => {
+    localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify({ theme: 'sépia', quantView: 'table' }));
+    const store = TestBed.inject(DisplayStore);
+    expect(store.theme()).toBe('system');
+    expect(store.quantView()).toBe('table');
   });
 
   it('stockage illisible ou indisponible : valeurs par défaut, pour la session', () => {

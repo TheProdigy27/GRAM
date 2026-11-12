@@ -78,6 +78,7 @@ describe('App', () => {
   afterEach(() => {
     clearMocks();
     localStorage.clear();
+    delete document.documentElement.dataset['theme'];
   });
 
   it('au lancement : matériel, classement et source des données, puis synchronisation sans forcer', async () => {
@@ -89,8 +90,8 @@ describe('App', () => {
     expect(text(byTestId('hw-usable', el))).toBe(
       '61,6 Go utilisables par un modèle, à deux vitesses',
     );
-    const titles = [...byTestId('memory-card', el).querySelectorAll('.zone__title')].map(text);
-    expect(titles).toEqual(['VRAM · RTX 5080', 'RAM · 64 Go DDR5-6000, 2 canaux']);
+    const titles = [...el.querySelectorAll('app-hardware-banner .card__title')].map(text);
+    expect(titles).toEqual(['NVIDIA GeForce RTX 5080', '64 Go DDR5-6000', 'Ryzen 7 9800X3D']);
 
     const names = [
       ...el.querySelectorAll('[data-testid="table-items"] [data-testid="model-name"]'),
@@ -135,7 +136,7 @@ describe('App', () => {
     expect(lastRequest(calls).useCase).toBe('reasoning');
   });
 
-  it('Ctrl K ouvre la palette ; Ctrl Entrée filtre le classement, recherche affichée dans l’en-tête', async () => {
+  it('Ctrl F ouvre la palette ; Ctrl Entrée filtre le classement, recherche affichée dans l’en-tête', async () => {
     const calls = mockBackend({
       rank: (a) => {
         const search = (a['request'] as RankRequest).search;
@@ -148,14 +149,14 @@ describe('App', () => {
     const el = fixture.nativeElement as HTMLElement;
     const trigger = byTestId('search-trigger', el);
     expect(trigger.closest('header')).not.toBeNull();
-    expect(trigger.getAttribute('aria-keyshortcuts')).toBe('Control+K');
+    expect(trigger.getAttribute('aria-keyshortcuts')).toBe('Control+F');
     expect(text(trigger.querySelector('.search__text'))).toBe(
       'Rechercher un modèle ou une commande…',
     );
-    expect(text(trigger.querySelector('kbd'))).toBe('Ctrl K');
+    expect(text(trigger.querySelector('kbd'))).toBe('Ctrl F');
 
-    // Ctrl K : palette en haut de la fenêtre, focus dans son champ.
-    await press(fixture, document.body, 'k', { ctrlKey: true });
+    // Ctrl F : palette en haut de la fenêtre, focus dans son champ.
+    await press(fixture, document.body, 'f', { ctrlKey: true });
     expect(dialogs()).toHaveLength(1);
     expect(dialogs()[0].getAttribute('aria-label')).toBe('Rechercher un modèle ou une commande');
     const input = byTestId<HTMLInputElement>('palette-input');
@@ -177,7 +178,7 @@ describe('App', () => {
     expect(queryTestId('search-active', el)).toBeNull();
     expect(rowsOf(el)).toHaveLength(3);
 
-    // Rien trouvé : message, et le bouton efface la recherche. Ctrl F ouvre aussi la palette.
+    // Rien trouvé : message, et le bouton efface la recherche.
     await press(fixture, document.body, 'f', { ctrlKey: true });
     await typeInto(fixture, byTestId('palette-input'), 'introuvable');
     await press(fixture, byTestId('palette-input'), 'Enter');
@@ -200,7 +201,7 @@ describe('App', () => {
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
 
-    await press(fixture, document.body, 'k', { ctrlKey: true });
+    await press(fixture, document.body, 'f', { ctrlKey: true });
     await typeInto(fixture, byTestId('palette-input'), 'gemma');
     await press(fixture, byTestId('palette-input'), 'ArrowDown');
     await press(fixture, byTestId('palette-input'), 'Enter');
@@ -210,6 +211,7 @@ describe('App', () => {
     });
     expect(queryTestId('detail-pane', el)).not.toBeNull();
 
+    // Ctrl K, l'ancien raccourci, ouvre aussi la palette.
     await press(fixture, document.body, 'k', { ctrlKey: true });
     const recent = document.querySelector('[role="group"][data-group="Récents"]');
     expect(recent).not.toBeNull();
@@ -217,11 +219,10 @@ describe('App', () => {
     expect(text(recent!.querySelector('.opt__label'))).toBe('Qwen3-8B');
   });
 
-  it('touche ? : aide des raccourcis, rappelée dans la barre d’état', async () => {
+  it('touche ? : aide des raccourcis', async () => {
     mockBackend();
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    expect(text(el.querySelector('app-status-bar .hints'))).toContain('? raccourcis');
 
     // Pas pendant une saisie.
     await press(fixture, byTestId('filter-max-size', el), '?');
@@ -263,11 +264,10 @@ describe('App', () => {
     expect(byTestId('table-items', el).hasAttribute('data-docked')).toBe(true);
     expect(rowsOf(el)[0].getAttribute('aria-selected')).toBe('true');
     // Bande machine en pastilles, filtres en un bouton suivi des filtres actifs.
-    expect(queryTestId('memory-card', el)).toBeNull();
+    expect(queryTestId('hw-gpu', el)).toBeNull();
     expect(queryTestId('machine-pills', el)).not.toBeNull();
     const pills = () => [...byTestId('filter-pills', el).querySelectorAll('li')].map(text);
     expect(pills()).toEqual(['Usage Polyvalent', 'Contexte 8k', 'Runtime Ollama']);
-    expect(text(el.querySelector('app-status-bar .hints'))).toContain('Échap fermer la fiche');
 
     // Les touches 1 à 5 marchent toujours, filtres repliés.
     await press(fixture, document.body, '2', { code: 'Digit2' });
@@ -297,7 +297,7 @@ describe('App', () => {
     await press(fixture, document.activeElement!, 'Escape');
     expect(queryTestId('detail-pane', el)).toBeNull();
     expect(document.activeElement).toBe(rowsOf(el)[0]);
-    expect(queryTestId('memory-card', el)).not.toBeNull();
+    expect(queryTestId('hw-gpu', el)).not.toBeNull();
     expect(queryTestId('filter-bar', el)).toBeNull();
 
     // Le bouton ✕ aussi.
@@ -423,6 +423,25 @@ describe('App', () => {
     expect(argsOf(calls, 'check_update')).toHaveLength(2);
   });
 
+  it('bouton soleil ou lune : thème clair ou sombre pour la page et la fenêtre', async () => {
+    const calls = mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    const button = byTestId('toggle-theme', el);
+    // Pas de matchMedia sous jsdom : le système passe pour clair.
+    expect(button.getAttribute('aria-label')).toBe('Passer au thème sombre');
+    expect(document.documentElement.dataset['theme']).toBeUndefined();
+
+    await click(fixture, button);
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(button.getAttribute('aria-label')).toBe('Passer au thème clair');
+    expect(argsOf(calls, 'plugin:window|set_theme')).toEqual([{ label: 'main', value: 'dark' }]);
+
+    await click(fixture, button);
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(button.getAttribute('aria-label')).toBe('Passer au thème sombre');
+  });
+
   it('ouvre les paramètres et le dialogue « Corriger… »', async () => {
     const calls = mockBackend();
     const fixture = await start();
@@ -470,7 +489,7 @@ describe('App', () => {
     detail.open('Qwen/Qwen3-8B-GGUF');
     await fixture.whenStable();
 
-    await press(fixture, document.body, 'k', { ctrlKey: true });
+    await press(fixture, document.body, 'f', { ctrlKey: true });
     await press(fixture, byTestId('palette-input'), 'Escape');
     expect(dialogs()).toHaveLength(0);
     expect(detail.isOpen()).toBe(true);
@@ -568,23 +587,16 @@ describe('App', () => {
     expect(namesOf(el)).toHaveLength(3);
   });
 
-  it('↑ ↓ depuis la page : la ligne active alimente la carte mémoire ; Entrée ouvre la fiche', async () => {
+  it('↑ ↓ depuis la page : ligne active ; Entrée ouvre la fiche', async () => {
     const calls = mockBackend();
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    const selection = () => text(byTestId('memory-selection', el));
-    expect(selection()).toContain('En tête du classement : Qwen3-8B · Q8_0');
-
     await press(fixture, document.body, 'ArrowDown');
     expect(document.activeElement).toBe(rowsOf(el)[0]);
-    expect(selection()).toContain('Sélection : Qwen3-8B · Q8_0');
 
     await press(fixture, rowsOf(el)[0], 'ArrowDown');
     await press(fixture, rowsOf(el)[1], 'ArrowDown');
     expect(document.activeElement).toBe(rowsOf(el)[2]);
-    expect(selection()).toBe(
-      'Sélection : Mistral-Small-24B · Q4_K_M — 13,9 Go en VRAM, 1,7 Go en RAM',
-    );
 
     // Dans la liste des usages, ↑ ↓ restent dans la liste.
     const usage = byTestId('filter-use-case', el);

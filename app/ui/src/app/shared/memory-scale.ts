@@ -1,4 +1,4 @@
-// Échelle commune de la carte mémoire (bande « Votre machine ») et des empreintes du classement :
+// Échelle mémoire des empreintes du classement (même échelle pour toutes les lignes) :
 // de 0 à « VRAM + RAM utilisables », zone VRAM d'abord (rapide), puis zone RAM. En mémoire
 // unifiée (Mac Apple Silicon), une seule zone de la taille de la RAM : VRAM et RAM ne
 // s'additionnent pas.
@@ -66,17 +66,4 @@ export function footprint(scale: MemoryScale, memGpu: number, memCpu: number): F
     ram: clip(ramStart, ramWidth, 1),
     overflow,
   };
-}
-
-/**
- * Graduations « rondes » de l'échelle, en Go : pas de 1, 2, 5, 10, 20, 25, 50… choisi pour
- * avoir au plus cinq repères (0 compris). 60,5 Go → 0, 20, 40, 60.
- */
-export function scaleTicks(totalGb: number): number[] {
-  if (!(totalGb > 0)) return [0];
-  const steps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
-  const step = steps.find((s) => Math.floor(totalGb / s) <= 4) ?? Math.ceil(totalGb / 4);
-  const ticks: number[] = [];
-  for (let t = 0; t <= totalGb + 1e-9; t += step) ticks.push(t);
-  return ticks;
 }

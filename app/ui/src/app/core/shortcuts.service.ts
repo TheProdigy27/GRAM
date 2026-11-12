@@ -13,7 +13,7 @@ export interface Shortcut {
   code?: string;
   /** Avec Ctrl (⌘ sur Mac). Sans : la touche seule, sans aucun modificateur. */
   mod?: boolean;
-  /** Actif aussi dans un champ de saisie (Ctrl K, Échap). */
+  /** Actif aussi dans un champ de saisie (Ctrl F, Échap). */
   inInputs?: boolean;
   /** Action ; renvoyer `false` laisse passer la touche (rien à faire dans cet état). */
   run: (event: KeyboardEvent) => boolean | void;
@@ -62,7 +62,7 @@ export class ShortcutsService {
     inject(DestroyRef).onDestroy(() => this.document.removeEventListener('keydown', listener));
   }
 
-  /** Libellé d'un raccourci avec Ctrl : « Ctrl K », « ⌘K ». */
+  /** Libellé d'un raccourci avec Ctrl : « Ctrl F », « ⌘F ». */
   modShortcut(key: string): string {
     return this.isMac ? `⌘${key}` : `Ctrl ${key}`;
   }

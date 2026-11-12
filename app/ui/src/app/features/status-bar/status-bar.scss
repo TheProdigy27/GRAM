@@ -1,6 +1,7 @@
 .status {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px 16px;
   min-height: 34px;
   padding: 6px 20px;
@@ -9,38 +10,6 @@
   font-size: 12px;
   color: var(--g-muted);
   white-space: nowrap;
-}
-
-.hints {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-// Fenêtre étroite : les informations passent avant les rappels de raccourcis.
-@media (max-width: 1199px) {
-  .hint:nth-child(n + 3) {
-    display: none;
-  }
-}
-
-@media (max-width: 1099px) {
-  .hints {
-    display: none;
-  }
-}
-
-.spacer {
-  flex: 1;
 }
 
 .item {

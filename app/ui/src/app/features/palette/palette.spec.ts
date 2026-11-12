@@ -7,6 +7,7 @@ import { allByTestId, byTestId, click, press, text, typeInto } from '../../../te
 import { MODEL, makeDetail } from '../../../testing/fixtures';
 import type { DetailRequest } from '../../core/generated/DetailRequest';
 import type { RankRequest } from '../../core/generated/RankRequest';
+import { ThemeService } from '../../core/theme.service';
 import { DetailStore } from '../../state/detail.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from '../../state/ranking.store';
 import { Palette } from './palette';
@@ -72,7 +73,11 @@ async function openDetails(detail: DetailStore, ...repoIds: string[]) {
 }
 
 describe('Palette', () => {
-  afterEach(() => clearMocks());
+  afterEach(() => {
+    clearMocks();
+    localStorage.clear();
+    delete document.documentElement.dataset['theme'];
+  });
 
   it('sans saisie : fiches récentes avec leur rang actuel, puis les commandes principales', async () => {
     const p = await open({}, ({ detail }) =>
@@ -150,9 +155,7 @@ describe('Palette', () => {
     expect(text(filter.querySelector('kbd'))).toBe('Ctrl Entrée');
     expect(text(model.querySelector('.opt__rank'))).toBe('#3');
     expect(text(model.querySelector('.mode-badge'))).toBe('Hybride');
-    expect(text(byTestId('palette-status', p.el))).toBe(
-      'Rang dans le classement complet',
-    );
+    expect(text(byTestId('palette-status', p.el))).toBe('Rang dans le classement complet');
 
     await press(p.fixture, p.input, 'Enter', { ctrlKey: true });
     expect(p.ranking.search()).toBe('mistral');
@@ -229,7 +232,10 @@ describe('Palette', () => {
     expect(p.input.value).toBe('mistral');
     expect([p.input.selectionStart, p.input.selectionEnd]).toEqual([0, 7]);
 
-    // Ctrl K dans la palette sélectionne de nouveau la saisie.
+    // Ctrl F dans la palette sélectionne de nouveau la saisie ; Ctrl K aussi (ancien raccourci).
+    p.input.setSelectionRange(7, 7);
+    await press(p.fixture, p.input, 'f', { ctrlKey: true });
+    expect([p.input.selectionStart, p.input.selectionEnd]).toEqual([0, 7]);
     p.input.setSelectionRange(7, 7);
     await press(p.fixture, p.input, 'k', { ctrlKey: true });
     expect([p.input.selectionStart, p.input.selectionEnd]).toEqual([0, 7]);
@@ -241,6 +247,30 @@ describe('Palette', () => {
       p.options().find((o) => o.dataset['key'] === 'command:clear-search')!,
     );
     expect(p.ranking.search()).toBe('');
+  });
+
+  it('thème à la saisie : clair ou sombre, puis retour au thème du système', async () => {
+    const p = await open();
+    const theme = TestBed.inject(ThemeService);
+    expect(p.labels('command')).not.toContain('Passer au thème sombre');
+
+    await typeInto(p.fixture, p.input, 'theme');
+    expect(p.labels('command')).toEqual(['Passer au thème sombre']);
+    await click(
+      p.fixture,
+      p.options().find((o) => o.dataset['key'] === 'command:theme')!,
+    );
+    expect(p.closed()).toBe(1);
+    expect(theme.theme()).toBe('dark');
+
+    await typeInto(p.fixture, p.input, 'thème');
+    expect(p.labels('command')).toEqual(['Passer au thème clair', 'Suivre le thème du système']);
+    await click(
+      p.fixture,
+      p.options().find((o) => o.dataset['key'] === 'command:theme-system')!,
+    );
+    expect(theme.preference()).toBe('system');
+    expect(document.documentElement.dataset['theme']).toBeUndefined();
   });
 
   it('signale une recherche impossible', async () => {

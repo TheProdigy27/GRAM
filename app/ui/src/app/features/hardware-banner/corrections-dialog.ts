@@ -35,7 +35,7 @@ import { Tag, type TagTone } from '../../shared/ui/tag/tag';
 import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { HardwareStore } from '../../state/hardware.store';
-import { cpuIsa, ramChannels, ramSizeType, shortCpuName, shortGpuName } from './memory-card';
+import { cpuSpecs, ramChannels, ramSizeType, shortCpuName, shortGpuName } from './machine-cards';
 
 /** Aucune correction, aucune simulation : valeurs détectées. */
 export const NO_OVERRIDES: Overrides = {
@@ -198,7 +198,7 @@ export function detectedRows(d: HardwareProfile, o: Overrides): DetectedRow[] {
     key: 'cpu',
     label: 'Processeur',
     value: shortCpuName(c.name),
-    detail: `${c.coresPhysical} cœurs / ${c.coresLogical} threads · ${cpuIsa(d)}`,
+    detail: cpuSpecs(d),
     source: 'detected',
     detected: null,
     toConfirm: false,

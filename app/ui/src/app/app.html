@@ -97,6 +97,17 @@
 
     <span class="separator" aria-hidden="true"></span>
 
+    <button
+      gButton
+      variant="ghost"
+      icon
+      data-testid="toggle-theme"
+      [attr.aria-label]="themeLabel()"
+      [gTooltip]="themeLabel()"
+      (click)="theme.toggle()"
+    >
+      <g-icon [name]="theme.theme() === 'dark' ? 'sun' : 'moon'" [size]="18" />
+    </button>
     @if (updates.available(); as u) {
       <button
         gButton

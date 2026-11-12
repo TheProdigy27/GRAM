@@ -42,8 +42,9 @@
   flex: 1 1 auto;
   min-height: 0;
   max-height: 520px;
-  overflow-y: auto;
-  padding: 6px;
+  // Place de la barre réservée : la liste ne bouge pas quand les résultats débordent.
+  overflow-y: scroll;
+  padding: 6px 0 6px 6px;
 }
 
 .group__label {

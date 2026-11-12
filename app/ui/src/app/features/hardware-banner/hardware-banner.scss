@@ -1,11 +1,18 @@
 .machine {
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 14px 24px;
-  padding: 14px 20px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 20px 16px;
   background: var(--g-surface);
   border-bottom: 1px solid var(--g-line);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 30px;
 }
 
 .label {
@@ -17,53 +24,13 @@
   color: var(--g-muted);
 }
 
+.summary,
 .muted {
   color: var(--g-muted);
 }
 
-// --- Carte mémoire ----------------------------------------------------------------------------
-
-.memory {
-  flex: 999 1 600px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.memory__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  min-height: 24px;
-}
-
-.memory__about {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.memory__summary {
+.summary {
   font-size: 12px;
-  color: var(--g-muted);
-}
-
-.memory__info {
-  margin: -4px 0;
-  color: var(--g-muted);
-}
-
-.memory__unknown {
-  margin: 0;
-  padding: 14px 12px;
-  border-radius: 8px;
-  background: var(--g-surface-2);
-  border: 1px dashed var(--g-line);
-  font-size: 12px;
-  color: var(--g-muted);
 }
 
 .simulation {
@@ -72,204 +39,157 @@
   gap: 2px;
 }
 
-.map {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.map__zones {
-  position: relative;
-  display: flex;
-  gap: 3px;
-  height: 48px;
-}
-
-.zone {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-  padding: 7px 10px;
-  overflow: hidden;
-  background: var(--g-vram-zone);
-  color: var(--g-vram-fg);
-
-  // Les zones sont les seuls <div> (le repère de la mémoire unifiée est un <span>).
-  &:first-of-type {
-    border-radius: 8px 0 0 8px;
-  }
-
-  &:last-of-type {
-    border-radius: 0 8px 8px 0;
-  }
-
-  &:only-of-type {
-    border-radius: 8px;
-  }
-
-  // La zone VRAM garde sa largeur exacte (même échelle que l'empreinte) ; la RAM prend le reste.
-  &[data-kind='vram'] {
-    flex: none;
-  }
-
-  &[data-kind='ram'] {
-    flex: 1 1 0;
-    background: var(--g-ram-zone);
-    color: var(--g-ram-fg);
-  }
-}
-
-.zone__title,
-.zone__detail {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.zone__title {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.zone__detail {
-  font-size: 11px;
-}
-
-// Mémoire unifiée : limite de Metal, au-delà de laquelle le GPU ne calcule plus.
-.gpu-limit {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 2px dashed var(--g-vram-fg);
-  opacity: 0.8;
-}
-
-.gpu-limit__label {
-  position: absolute;
-  bottom: 7px;
-  left: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--g-vram-fg);
-  white-space: nowrap;
-}
-
-.gpu-limit--left .gpu-limit__label {
-  left: auto;
-  right: 8px;
-}
-
-.map__footprint {
-  position: relative;
-  height: 5px;
-}
-
-.fp {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  min-width: 3px;
-  border-radius: 3px;
-}
-
-.fp--gpu {
-  background: var(--g-gpu);
-}
-
-.fp--ram {
-  background: var(--g-hybrid);
-}
-
-.map__ticks {
-  position: relative;
-  height: 15px;
-  margin-top: 1px;
-  font-size: 10.5px;
-  color: var(--g-muted);
-}
-
-.tick {
-  position: absolute;
-  top: 0;
-  padding-top: 3px;
-  transform: translateX(-50%);
-  white-space: nowrap;
-
-  // Petit trait de graduation au-dessus du chiffre.
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    height: 3px;
-    border-left: 1px solid var(--g-input);
-  }
-
-  &[data-align='start'] {
-    transform: none;
-
-    &::before {
-      left: 0;
-    }
-  }
-
-  &[data-align='end'] {
-    transform: translateX(-100%);
-
-    &::before {
-      left: auto;
-      right: 0;
-    }
-  }
-}
-
-.selection {
-  margin: 0;
-  font-size: 12px;
-  color: var(--g-muted);
-
-  strong {
-    font-weight: 600;
-    color: var(--g-fg);
-  }
-}
-
-// --- Processeur, runtimes, actions -------------------------------------------------------------
-
-.side {
-  flex: 1 1 300px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  padding-left: 20px;
-  border-left: 1px solid var(--g-line-2);
-  font-size: 12.5px;
-  color: var(--g-fg-2);
-}
-
-.cpu {
-  margin: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-
-  strong {
-    font-weight: 600;
-    color: var(--g-fg);
-  }
-}
-
-.runtimes,
-.pills {
+.actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 14px;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+
+  .g-kbd {
+    height: 18px;
+    min-width: 18px;
+  }
+}
+
+.warning {
+  color: var(--g-warn);
+  border-radius: 4px;
+  cursor: help;
+}
+
+.failure {
+  flex: 1;
+}
+
+// --- Cartes : GPU, RAM, CPU, runtimes ---------------------------------------------------------
+
+// Quatre cartes, puis deux par ligne, puis une : jamais une carte seule sous trois autres.
+.cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
+
+  @media (max-width: 1180px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.card {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--g-line);
+  border-radius: var(--g-radius-card);
+  font-size: 12px;
+  color: var(--g-muted);
+}
+
+.card__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--g-accent-weak);
+  color: var(--g-accent-ink);
+
+  [data-kind='ram'] > & {
+    background: var(--g-ram-zone);
+    color: var(--g-ram-fg);
+  }
+
+  [data-kind='cpu'] > & {
+    background: var(--g-track);
+    color: var(--g-fg-2);
+  }
+
+  [data-kind='runtimes'] > & {
+    background: var(--g-ok-bg);
+    color: var(--g-ok);
+  }
+}
+
+.card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.card__head,
+.card__line,
+.usage {
+  margin: 0;
+}
+
+.card__title {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--g-fg);
+  overflow-wrap: anywhere;
+}
+
+// La barre reste en bas de la carte quand sa voisine a plus de lignes.
+.usage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  border-radius: 4px;
+}
+
+.usage__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--g-track);
+  overflow: hidden;
+}
+
+.usage__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--g-gpu);
+
+  [data-kind='ram'] & {
+    background: var(--g-hybrid);
+  }
+}
+
+.usage__label {
+  font-size: 11.5px;
+  color: var(--g-fg-2);
+  white-space: nowrap;
+}
+
+.runtimes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
 }
 
 .runtime {
@@ -305,49 +225,32 @@
   }
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-
-  .g-kbd {
-    height: 18px;
-    min-width: 18px;
-  }
-}
-
-.warning {
-  color: var(--g-warn);
-  border-radius: 4px;
-  cursor: help;
-}
-
-.failure {
-  flex: 1;
-}
-
 // --- Bande resserrée (fiche ouverte) ----------------------------------------------------------
 
 .machine--compact {
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
 }
 
 .pills {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 // Pastille globale `.g-pill` (styles.scss) ; ici, le chiffre en gras et le repère.
-.pill {
-  strong {
-    margin: 0 3px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--g-fg);
-  }
+.pill strong {
+  margin: 0 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--g-fg);
 }
 
 .pill__mark {
@@ -365,8 +268,4 @@
 .expand,
 .collapse {
   color: var(--g-muted);
-}
-
-.collapse {
-  margin-left: auto;
 }

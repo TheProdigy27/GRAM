@@ -5,12 +5,14 @@ import {
   ElementRef,
   Injector,
   afterNextRender,
+  computed,
   inject,
   linkedSignal,
   viewChild,
 } from '@angular/core';
 import { AppCommands } from './app-commands';
 import { ShortcutsService } from './core/shortcuts.service';
+import { ThemeService } from './core/theme.service';
 import { FiltersPanel } from './features/filters-panel/filters-panel';
 import { HardwareBanner } from './features/hardware-banner/hardware-banner';
 import { ModelDetailPanel } from './features/model-detail/model-detail';
@@ -29,8 +31,8 @@ import { SettingsStore } from './state/settings.store';
 import { UPDATE_CHECK_DELAY_MS, UpdateStore } from './state/update.store';
 
 /**
- * Coque de l'application : en-tête (déclencheur de la palette Ctrl K, qui affiche la recherche
- * active ; export, mise à jour, paramètres), bande
+ * Coque de l'application : en-tête (déclencheur de la palette Ctrl F, qui affiche la recherche
+ * active ; export, thème clair ou sombre, mise à jour, paramètres), bande
  * « Votre machine », classement et fiche, barre d'état. La fiche s'ancre à droite du classement,
  * qui reste cliquable : la bande machine passe en une ligne de pastilles, les filtres se replient
  * en un bouton « Filtres » qui les ouvre par-dessus le classement. Au lancement : matériel, paramètres et
@@ -63,6 +65,8 @@ export class App {
   protected readonly ranking = inject(RankingStore);
   protected readonly updates = inject(UpdateStore);
   protected readonly commands = inject(AppCommands);
+  /** Créé avec la coque : le thème choisi s'applique avant le premier rendu. */
+  protected readonly theme = inject(ThemeService);
   private readonly toast = inject(ToastService);
   private readonly shortcuts = inject(ShortcutsService);
   private readonly injector = inject(Injector);
@@ -82,9 +86,13 @@ export class App {
     source: this.detail.isOpen,
     computation: () => false,
   });
-  /** « Control+K » (« Meta+K » sur Mac) pour `aria-keyshortcuts`, « Ctrl K » à l'écran. */
-  protected readonly searchShortcut = this.shortcuts.isMac ? 'Meta+K' : 'Control+K';
-  protected readonly searchShortcutLabel = this.shortcuts.modShortcut('K');
+  /** « Control+F » (« Meta+F » sur Mac) pour `aria-keyshortcuts`, « Ctrl F » à l'écran. */
+  protected readonly searchShortcut = this.shortcuts.isMac ? 'Meta+F' : 'Control+F';
+  protected readonly searchShortcutLabel = this.shortcuts.modShortcut('F');
+  /** Bouton soleil ou lune : il dit le thème où il mène. */
+  protected readonly themeLabel = computed(() =>
+    this.theme.theme() === 'dark' ? 'Passer au thème clair' : 'Passer au thème sombre',
+  );
 
   constructor() {
     // Le classement part dès la création du store (injecté ci-dessus), sans attendre le reste.
@@ -98,9 +106,9 @@ export class App {
 
     destroyRef.onDestroy(
       this.shortcuts.register([
-        // Ctrl F reste accepté : c'était le raccourci de la recherche.
-        { key: 'k', mod: true, inInputs: true, run: () => this.commands.openPalette() },
+        // Ctrl K reste accepté : c'était le raccourci de la palette.
         { key: 'f', mod: true, inInputs: true, run: () => this.commands.openPalette() },
+        { key: 'k', mod: true, inInputs: true, run: () => this.commands.openPalette() },
         { key: 'e', run: () => this.openExportMenu() },
         { key: '?', run: () => this.commands.openShortcuts() },
         { key: 'Escape', inInputs: true, run: () => this.onEscape() },

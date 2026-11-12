@@ -74,11 +74,12 @@
 .body {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  // Place de la barre toujours réservée, et retirée de la marge droite (styles.scss).
+  overflow-y: scroll;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 16px 20px 28px;
+  padding: 16px calc(20px - var(--g-scrollbar-size)) 28px 20px;
 }
 
 .muted {

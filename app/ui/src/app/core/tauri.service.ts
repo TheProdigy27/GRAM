@@ -193,6 +193,17 @@ export class TauriService {
     return openUrl(url).catch(rethrow);
   }
 
+  // ── Fenêtre ──────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Thème de la fenêtre : barre de titre native et `prefers-color-scheme` de la WebView ;
+   * `null` : celui du système. Appel direct plutôt que `getCurrentWindow()`, qui alourdirait le
+   * bundle : `main` est la seule fenêtre (`tauri.conf.json`).
+   */
+  setWindowTheme(theme: 'light' | 'dark' | null): Promise<void> {
+    return this.call('plugin:window|set_theme', { label: 'main', value: theme });
+  }
+
   // ── Événements ───────────────────────────────────────────────────────────────────────────
 
   listen<K extends keyof GramEvents>(

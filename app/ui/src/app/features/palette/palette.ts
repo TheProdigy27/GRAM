@@ -16,6 +16,7 @@ import type { RankRequest } from '../../core/generated/RankRequest';
 import type { RunMode } from '../../core/generated/RunMode';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { TauriService } from '../../core/tauri.service';
+import { ThemeService } from '../../core/theme.service';
 import { CTX_STEPS, ctxK, fileSize, int, tokS } from '../../shared/format';
 import { MODE_LABELS, USE_CASES, USE_CASE_ICONS } from '../../shared/labels';
 import { Icon } from '../../shared/ui/icon/icon';
@@ -98,7 +99,7 @@ function optionKey(o: PaletteOption): string {
 }
 
 /**
- * Palette Ctrl K : recherche de modèles (même règle et même rang que le classement, calculés
+ * Palette Ctrl F : recherche de modèles (même règle et même rang que le classement, calculés
  * par le backend), commandes, et « Filtrer le classement » qui applique la saisie au classement
  * comme l'ancien champ de l'en-tête. Sans saisie : fiches ouvertes pendant la session et
  * commandes principales. Le focus reste dans le champ ; ↑ ↓ choisissent l'option active
@@ -118,6 +119,7 @@ export class Palette {
   private readonly detail = inject(DetailStore);
   private readonly catalog = inject(CatalogStore);
   private readonly commands = inject(AppCommands);
+  private readonly theme = inject(ThemeService);
   private readonly shortcuts = inject(ShortcutsService);
   private readonly debounceMs = inject(FILTER_DEBOUNCE_MS);
   private readonly injector = inject(Injector);
@@ -288,6 +290,29 @@ export class Palette {
         run: () => c.openShortcuts(),
       },
     );
+    const dark = this.theme.theme() === 'dark';
+    list.push({
+      id: 'theme',
+      label: dark ? 'Passer au thème clair' : 'Passer au thème sombre',
+      hint: 'apparence',
+      icon: dark ? 'sun' : 'moon',
+      keys: [],
+      keywords: 'thème mode clair sombre jour nuit couleurs',
+      searchOnly: true,
+      run: () => this.theme.toggle(),
+    });
+    if (this.theme.preference() !== 'system') {
+      list.push({
+        id: 'theme-system',
+        label: 'Suivre le thème du système',
+        hint: 'clair ou sombre selon le système',
+        icon: 'monitor',
+        keys: [],
+        keywords: 'thème mode apparence automatique clair sombre',
+        searchOnly: true,
+        run: () => this.theme.set('system'),
+      });
+    }
     const useCase = this.ranking.useCase();
     USE_CASES.forEach((u, i) =>
       list.push({
@@ -432,9 +457,11 @@ export class Palette {
         else if (active) this.run(active.option);
         break;
       }
+      case 'f':
+      case 'F':
       case 'k':
       case 'K':
-        // Ctrl K dans la palette : la saisie est sélectionnée, pour la remplacer.
+        // Ctrl F (ou Ctrl K) dans la palette : la saisie est sélectionnée, pour la remplacer.
         if (mod) {
           event.preventDefault();
           this.input().nativeElement.select();

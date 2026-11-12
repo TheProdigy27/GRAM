@@ -79,7 +79,13 @@ export class FiltersPanel {
     const status = this.hardware.runtimes();
     return status
       ? runtimeRows(status)
-      : RUNTIMES.map((r): RuntimeRow => ({ ...r, state: 'absent', stateLabel: '', tooltip: '' }));
+      : RUNTIMES.map((r): RuntimeRow => ({
+          ...r,
+          state: 'absent',
+          stateLabel: '',
+          version: null,
+          tooltip: '',
+        }));
   });
 
   protected readonly runtimesKnown = computed(() => this.hardware.runtimes() !== null);

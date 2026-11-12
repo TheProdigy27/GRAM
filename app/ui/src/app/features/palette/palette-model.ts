@@ -1,4 +1,4 @@
-// Contenu de la palette Ctrl K : correspondance des commandes, modèles trouvés, groupes.
+// Contenu de la palette Ctrl F : correspondance des commandes, modèles trouvés, groupes.
 
 import type { RankItem } from '../../core/generated/RankItem';
 import type { RankResponse } from '../../core/generated/RankResponse';

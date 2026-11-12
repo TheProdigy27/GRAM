@@ -78,157 +78,44 @@
       <g-icon name="chevron-down" [size]="14" />
     </button>
   } @else if (profile()) {
-    <div class="memory">
-      <div class="memory__head">
-        <h2 class="label" id="machine-title">Votre machine</h2>
-        @if (simulation(); as sim) {
-          <span class="simulation" data-testid="simulation">
-            <g-tag tone="warn" icon="warning" size="sm" [gTooltip]="sim.tooltip">
-              Simulation · {{ sim.label }}
-            </g-tag>
-            <button
-              gButton
-              variant="ghost"
-              size="sm"
-              data-testid="stop-simulation"
-              (click)="stopSimulation()"
-            >
-              Arrêter
-            </button>
-          </span>
-        }
-        <!-- Résumé, détails et avertissements passent à la ligne ensemble. -->
-        <span class="memory__about">
-          @if (card(); as c) {
-            <span class="memory__summary" data-testid="hw-usable">
-              {{ c.summary }}
-              @if (c.note) {
-                <span class="memory__note">· {{ c.note }}</span>
-              }
-            </span>
-          }
-          <button
-            gButton
-            variant="ghost"
-            size="sm"
-            icon
-            class="memory__info"
-            aria-label="Détails de la machine"
-            data-testid="machine-details"
-            gTooltipPosition="below"
-            [gTooltip]="details()"
-          >
-            <g-icon name="info" />
-          </button>
-          @if (warnings().length > 0) {
-            <g-icon
-              class="warning"
-              name="warning"
-              tabindex="0"
-              data-testid="hw-warnings"
-              gTooltipPosition="below"
-              [size]="16"
-              [label]="'Avertissements de détection (' + warnings().length + ')'"
-              [gTooltip]="warnings().join('\n')"
-            />
-          }
-        </span>
-        @if (compact()) {
-          <button
-            gButton
-            variant="ghost"
-            size="sm"
-            class="collapse"
-            data-testid="machine-collapse"
-            aria-expanded="true"
-            (click)="expanded.set(false)"
-          >
-            Réduire
-            <g-icon name="chevron-up" [size]="14" />
-          </button>
-        }
-      </div>
-
-      @if (card(); as c) {
-        <div class="map" role="img" data-testid="memory-card" [attr.aria-label]="c.ariaLabel">
-          <div class="map__zones">
-            @for (z of c.zones; track z.kind) {
-              <div class="zone" [attr.data-kind]="z.kind" [style.width.%]="z.width * 100">
-                <span class="zone__title">{{ z.title }}</span>
-                <span class="zone__detail mono">{{ z.detail }}</span>
-              </div>
-            }
-            @if (c.gpuLimit; as g) {
-              <span
-                class="gpu-limit"
-                [class.gpu-limit--left]="g.pos > 0.7"
-                [style.left.%]="g.pos * 100"
-                ><span class="gpu-limit__label">{{ g.label }}</span></span
-              >
-            }
-          </div>
-          <div class="map__footprint" data-testid="memory-footprint">
-            @if (c.footprint?.gpu; as s) {
-              <span
-                class="fp fp--gpu"
-                [style.left.%]="s.start * 100"
-                [style.width.%]="s.width * 100"
-              ></span>
-            }
-            @if (c.footprint?.ram; as s) {
-              <span
-                class="fp fp--ram"
-                [style.left.%]="s.start * 100"
-                [style.width.%]="s.width * 100"
-              ></span>
-            }
-          </div>
-          <div class="map__ticks mono">
-            @for (t of c.ticks; track t.pos) {
-              <span class="tick" [attr.data-align]="t.align" [style.left.%]="t.pos * 100">{{
-                t.label
-              }}</span>
-            }
-          </div>
-        </div>
-        @if (c.selection; as s) {
-          <!-- Déjà dit par l'aria-label de la carte. -->
-          <p class="selection" data-testid="memory-selection" aria-hidden="true">
-            {{ s.label }} : <strong>{{ s.model }}</strong> — {{ s.where }}
-          </p>
-        }
-      } @else if (ranking.error() && !ranking.response()) {
-        <p class="memory__unknown">
+    <div class="head">
+      <h2 class="label" id="machine-title">Votre machine</h2>
+      @if (summary(); as s) {
+        <span class="summary" data-testid="hw-usable">{{ s }}</span>
+      } @else if (!budgetPending()) {
+        <span class="summary" data-testid="hw-usable">
           Mémoire utilisable inconnue : elle est calculée avec le classement.
-        </p>
-      } @else {
-        <g-skeleton height="48px" radius="8px" />
-        <g-skeleton width="45%" height="12px" />
+        </span>
       }
-    </div>
-
-    <div class="side">
-      @if (cpu(); as c) {
-        <p class="cpu" data-testid="hw-cpu" [gTooltip]="c.full !== c.name ? c.full : ''">
-          <strong>{{ c.name }}</strong
-          ><span class="muted"> · {{ c.rest }}</span>
-        </p>
+      @if (simulation(); as sim) {
+        <span class="simulation" data-testid="simulation">
+          <g-tag tone="warn" icon="warning" size="sm" [gTooltip]="sim.tooltip">
+            Simulation · {{ sim.label }}
+          </g-tag>
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            data-testid="stop-simulation"
+            (click)="stopSimulation()"
+          >
+            Arrêter
+          </button>
+        </span>
       }
-      @if (runtimes(); as list) {
-        <ul class="runtimes" aria-label="Runtimes" data-testid="hw-runtimes">
-          @for (r of list; track r.label) {
-            <li class="runtime" [attr.data-state]="r.state" [gTooltip]="r.tooltip">
-              <span class="runtime__dot" aria-hidden="true"></span>
-              <strong>{{ r.label }}</strong>
-              <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
-              <span class="muted"> {{ r.stateLabel }}</span>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="runtimes muted" data-testid="hw-runtimes">Runtimes : détection…</p>
+      @if (warnings().length > 0) {
+        <g-icon
+          class="warning"
+          name="warning"
+          tabindex="0"
+          data-testid="hw-warnings"
+          gTooltipPosition="below"
+          [size]="16"
+          [label]="'Avertissements de détection (' + warnings().length + ')'"
+          [gTooltip]="warnings().join('\n')"
+        />
       }
-      <div class="actions">
+      <span class="actions">
         <button
           gButton
           variant="ghost"
@@ -254,10 +141,70 @@
           (click)="openCorrections()"
         >
           <g-icon name="edit" />
-          Corriger…
+          Corriger ou simuler…
         </button>
-      </div>
+        @if (compact()) {
+          <button
+            gButton
+            variant="ghost"
+            size="sm"
+            class="collapse"
+            data-testid="machine-collapse"
+            aria-expanded="true"
+            (click)="expanded.set(false)"
+          >
+            Réduire
+            <g-icon name="chevron-up" [size]="14" />
+          </button>
+        }
+      </span>
     </div>
+
+    <ul class="cards" aria-label="Matériel détecté">
+      @for (c of cards(); track c.kind) {
+        <li class="card" [attr.data-kind]="c.kind" [attr.data-testid]="'hw-' + c.kind">
+          <span class="card__icon" aria-hidden="true"><g-icon [name]="c.kind" [size]="20" /></span>
+          <div class="card__body">
+            <p class="card__head">
+              <strong class="card__title" [gTooltip]="c.fullName">{{ c.title }}</strong>
+              <span class="card__tag mono">{{ c.tag }}</span>
+            </p>
+            @for (line of c.lines; track $index) {
+              <p class="card__line">{{ line }}</p>
+            }
+            @if (c.usage; as u) {
+              <p class="usage" tabindex="0" [gTooltip]="u.tooltip">
+                <span class="usage__track" aria-hidden="true"
+                  ><span class="usage__fill" [style.width.%]="u.fraction * 100"></span
+                ></span>
+                <span class="usage__label mono">{{ u.label }}</span>
+              </p>
+            } @else if (c.metered && budgetPending()) {
+              <g-skeleton class="usage" height="12px" />
+            }
+          </div>
+        </li>
+      }
+      <li class="card" data-kind="runtimes">
+        <span class="card__icon" aria-hidden="true"><g-icon name="terminal" [size]="20" /></span>
+        @if (runtimes(); as list) {
+          <ul class="runtimes" aria-label="Runtimes" data-testid="hw-runtimes">
+            @for (r of list; track r.value) {
+              <li class="runtime" [attr.data-state]="r.state" [gTooltip]="r.tooltip">
+                <span class="runtime__dot" aria-hidden="true"></span>
+                <strong>{{ r.label }}</strong>
+                <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+                <span class="muted">
+                  {{ r.version ? r.stateLabel + ' · ' + r.version : r.stateLabel }}</span
+                >
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="runtimes muted" data-testid="hw-runtimes">Runtimes : détection…</p>
+        }
+      </li>
+    </ul>
   } @else if (error()) {
     <g-callout class="failure" kind="error" heading="Détection du matériel impossible" role="alert">
       {{ error() }}
@@ -274,15 +221,11 @@
     </g-callout>
   } @else {
     <span class="g-sr-only">Analyse du matériel…</span>
-    <div class="memory">
-      <g-skeleton width="220px" height="12px" />
-      <g-skeleton height="48px" radius="8px" />
-      <g-skeleton width="45%" height="12px" />
-    </div>
-    <div class="side">
-      <g-skeleton width="70%" height="12px" />
-      <g-skeleton width="85%" height="12px" />
-      <g-skeleton width="60%" height="30px" radius="8px" />
+    <div class="head"><g-skeleton width="220px" height="12px" /></div>
+    <div class="cards">
+      @for (i of [0, 1, 2, 3]; track i) {
+        <g-skeleton height="92px" radius="12px" />
+      }
     </div>
   }
 </section>

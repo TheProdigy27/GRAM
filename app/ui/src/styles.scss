@@ -7,15 +7,18 @@
 // --- Jetons ---------------------------------------------------------------------------------
 
 $light: (
-  // Surfaces et texte
-  bg: #f6f7f9,
+  // Surfaces et texte. Gris presque neutres. Fond assez sombre pour détacher les surfaces
+  // blanches (1,15:1) ; le texte secondaire y garde 5:1, et 4,54:1 sur le fond des onglets (`seg`).
+  bg: #eeeff1,
   surface: #ffffff,
-  surface-2: #fafbfc,
-  hover: #f7f9fc,
-  line: #e3e6eb,
-  line-2: #eef0f3,
-  input: #d0d5dd,
-  control: #98a2b3,
+  surface-2: #f8f8f9,
+  hover: #f4f4f6,
+  line: #dedfe3,
+  line-2: #eaebed,
+  input: #d1d3d8,
+  // Champ posé sur une surface blanche (recherche de l'en-tête)
+  field: #f3f3f5,
+  control: #9b9fa7,
   fg: #101828,
   fg-2: #344054,
   muted: #5d6679,
@@ -26,7 +29,7 @@ $light: (
   accent-weak: #eef4ff,
   accent-line: #b9ccf8,
   on-accent: #ffffff,
-  // Modes d'exécution et carte mémoire
+  // Modes d'exécution et mémoire (barres VRAM et RAM, zones des empreintes)
   gpu: #2563eb,
   hybrid: #c76a00,
   cpu: #0e9384,
@@ -35,15 +38,20 @@ $light: (
   vram-fg: #1e3a8a,
   ram-fg: #7a4300,
   // Commandes
-  track: #eef1f5,
-  seg: #eaedf1,
+  track: #e9eaed,
+  seg: #e3e4e7,
   kbd: #ffffff,
   chip-on: #101828,
   chip-on-fg: #ffffff,
   spark: #6b8fe0,
-  disabled-bg: #e4e7ec,
-  disabled-fg: #98a2b3,
+  disabled-bg: #e5e6e9,
+  disabled-fg: #9b9fa7,
   hover-overlay: rgba(16, 24, 40, 0.05),
+  // Pouce des barres de défilement : teinte (composantes RVB), opacité pendant le défilement et
+  // au survol.
+  scrollbar-rgb: 16 24 40,
+  scrollbar-on: 0.3,
+  scrollbar-hover: 0.48,
   // États
   ok: #0b6e63,
   ok-bg: #e6f6f4,
@@ -91,6 +99,7 @@ $dark: (
   line: #232836,
   line-2: #1a1e28,
   input: #2a3040,
+  field: #12151c,
   control: #5d6679,
   fg: #e6e9ef,
   fg-2: #c9cfdb,
@@ -117,6 +126,9 @@ $dark: (
   disabled-bg: #1f2430,
   disabled-fg: #5d6679,
   hover-overlay: rgba(255, 255, 255, 0.06),
+  scrollbar-rgb: 230 233 239,
+  scrollbar-on: 0.24,
+  scrollbar-hover: 0.42,
   ok: #8ff0c4,
   ok-bg: #0f2a22,
   warn: #f5c88a,
@@ -180,6 +192,8 @@ $dark: (
   --g-radius: 8px;
   --g-radius-card: 12px;
   --g-radius-dialog: 16px;
+  // Place réservée à une barre de défilement (largeur de la verticale, hauteur de l'horizontale).
+  --g-scrollbar-size: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -213,6 +227,63 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+// --- Barres de défilement -------------------------------------------------------------------
+//
+// Fines, sans flèches, invisibles au repos. Le pouce apparaît pendant le défilement (classe
+// `g-scrolling` posée par ScrollbarsService, retirée peu après la fin du défilement) puis
+// s'efface en fondu ; il apparaît aussi sous la souris. Leur place reste réservée : les
+// conteneurs qui défilent sont en `overflow-y: scroll` (pas `auto`), si bien que rien ne bouge
+// quand le pouce apparaît, ni quand le contenu se met à déborder. Ils retirent la largeur de la
+// barre (`--g-scrollbar-size`) de leur marge intérieure droite pour garder des marges égales.
+//
+// `::-webkit-scrollbar` est le seul moyen commun à WebView2, au WebKit de Safari 15 et à
+// WebKitGTK. Chromium l'ignore sur un élément qui pose `scrollbar-width` ou `scrollbar-color` (et
+// ses descendants, la seconde s'hérite) : ne pas les utiliser.
+
+// Opacité du pouce, animable pour le fondu. Sans `@property` (Safari < 16.4), pas de fondu.
+@property --g-scrollbar-alpha {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+::-webkit-scrollbar {
+  width: var(--g-scrollbar-size);
+  height: var(--g-scrollbar-size);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: transparent padding-box;
+}
+
+// Classe posée au premier défilement et gardée. L'opacité propre du conteneur (0 au repos) le
+// protège de celle, héritée, d'un conteneur parent qui défile.
+.g-scrollbar {
+  --g-scrollbar-alpha: 0;
+  transition: --g-scrollbar-alpha 0.6s ease-out;
+}
+
+.g-scrollbar.g-scrolling {
+  --g-scrollbar-alpha: var(--g-scrollbar-on);
+  transition-duration: 0.1s;
+}
+
+.g-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--g-scrollbar-rgb) / var(--g-scrollbar-alpha));
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: rgb(var(--g-scrollbar-rgb) / var(--g-scrollbar-hover));
+}
+
 // Anneau de focus de 2 px. `:where` le rend surchargeable par n'importe quel composant.
 :where(:focus-visible) {
   outline: 2px solid var(--g-accent);
@@ -235,7 +306,7 @@ kbd,
   font-variant-numeric: tabular-nums;
 }
 
-// Touche de clavier (raccourcis dans les infobulles, menus, barre d'état).
+// Touche de clavier (raccourcis dans les infobulles, menus, palette, aide).
 .g-kbd {
   display: inline-grid;
   place-items: center;

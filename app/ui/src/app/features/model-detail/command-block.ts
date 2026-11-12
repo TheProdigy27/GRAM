@@ -46,16 +46,18 @@ const COPIED_MS = 2000;
       font-family: var(--g-font-mono);
       color: var(--g-code-muted);
     }
-    // Une commande longue défile plutôt que d'être coupée.
+    // Une commande longue défile plutôt que d'être coupée. Place de la barre toujours réservée
+    // sous le texte (styles.scss), qui garde ainsi 8 px de chaque côté ; pouce clair sur le fond
+    // sombre.
     .code {
+      --g-scrollbar-size: 8px;
+      --g-scrollbar-rgb: 226 232 240;
       flex: 1;
       min-width: 0;
-      padding: 6px 0;
-      overflow-x: auto;
+      padding: 8px 0 0;
+      overflow-x: scroll;
       font-size: 12.5px;
       white-space: nowrap;
-      scrollbar-width: thin;
-      scrollbar-color: var(--g-code-muted) transparent;
       border-radius: 4px;
     }
     .code:focus-visible {

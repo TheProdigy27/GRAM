@@ -1,5 +1,5 @@
 import { BUDGET, GIB } from '../../testing/fixtures';
-import { footprint, memoryScale, scaleTicks } from './memory-scale';
+import { footprint, memoryScale } from './memory-scale';
 
 describe('memoryScale', () => {
   it('GPU dédié : VRAM puis RAM, sur une échelle de VRAM + RAM', () => {
@@ -60,16 +60,5 @@ describe('footprint', () => {
     expect(f.gpu).toEqual({ start: 0, width: 0.5 });
     expect(f.ram).toEqual({ start: 0.5, width: 0.25 });
     expect(f.overflow).toBe(false);
-  });
-});
-
-describe('scaleTicks', () => {
-  it('au plus cinq repères ronds', () => {
-    expect(scaleTicks(61.6)).toEqual([0, 20, 40, 60]);
-    expect(scaleTicks(12)).toEqual([0, 5, 10]);
-    expect(scaleTicks(16)).toEqual([0, 5, 10, 15]);
-    expect(scaleTicks(8)).toEqual([0, 2, 4, 6, 8]);
-    expect(scaleTicks(128)).toEqual([0, 50, 100]);
-    expect(scaleTicks(0)).toEqual([0]);
   });
 });

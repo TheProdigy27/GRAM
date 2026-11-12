@@ -12,7 +12,7 @@ const UNIFIED: MemoryBudget = {
 const CPU_ONLY: MemoryBudget = { ...BUDGET, vram: 0, gpuBandwidthGbs: null };
 
 describe('empreinte d’une ligne', () => {
-  it('échelle de la carte mémoire, en Go ronds', () => {
+  it('échelle mémoire commune, en Go ronds', () => {
     expect(scaleLabel(BUDGET)).toBe('0–62 Go');
     expect(scaleLabel(UNIFIED)).toBe('0–14 Go');
   });
