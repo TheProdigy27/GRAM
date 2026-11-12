@@ -1804,7 +1804,7 @@ dependencies = [
 
 [[package]]
 name = "gram"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "gram-core",
@@ -1829,7 +1829,7 @@ dependencies = [
 
 [[package]]
 name = "gram-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1847,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "gram-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "insta",
@@ -1858,7 +1858,7 @@ dependencies = [
 
 [[package]]
 name = "gram-hub"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "directories",
@@ -1876,7 +1876,7 @@ dependencies = [
 
 [[package]]
 name = "gram-hw"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gram-core",
  "gram-ollama",
@@ -1894,7 +1894,7 @@ dependencies = [
 
 [[package]]
 name = "gram-ollama"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gram-core",
  "reqwest",
