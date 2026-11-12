@@ -196,29 +196,52 @@ export class Field {
   }
 }
 
-/** Le `<input>` (ou `<textarea>`) natif d'un `g-field`. */
+/**
+ * Le `<input>` (ou `<textarea>`) natif d'un `g-field`.
+ *
+ * `sameValue` (champ numérique, par exemple `sameNumber`) : quand la valeur liée change pendant
+ * la frappe, la saisie est gardée si elle vaut la même chose (« 0, » pour 0, « 0,70 » pour 0,7),
+ * puis remise en forme à la validation (`change`).
+ */
 @Directive({
   selector: 'input[gInput], textarea[gInput]',
   host: {
     class: 'g-input',
     '[id]': 'id()',
-    '[value]': 'value() ?? ""',
+    '[value]': 'current()',
     '[disabled]': 'disabled()',
     '[attr.aria-describedby]': 'field?.describedBy() ?? null',
     '[attr.aria-invalid]': 'field?.error() ? "true" : null',
     '(input)': 'current.set(element.value)',
+    '(change)': 'onCommit()',
   },
 })
 export class FieldControl {
   readonly id = input(`g-input-${nextId++}`);
   readonly value = input<string | number | null | undefined>(undefined);
   readonly disabled = input(false, { transform: booleanAttribute });
+  readonly sameValue = input<((typed: string, bound: string) => boolean) | null>(null);
 
   protected readonly field = inject(Field, { optional: true });
   protected readonly element = inject<ElementRef<HTMLInputElement>>(ElementRef).nativeElement;
+  private readonly bound = computed(() => String(this.value() ?? ''));
   /** Valeur affichée : celle liée par `[value]`, puis ce que l'utilisateur tape. */
-  protected readonly current = linkedSignal(() => String(this.value() ?? ''));
+  protected readonly current = linkedSignal<string, string>({
+    source: this.bound,
+    computation: (bound, previous) => {
+      const same = this.sameValue();
+      return previous && same?.(previous.value, bound) ? previous.value : bound;
+    },
+  });
   readonly hasValue = computed(() => this.current() !== '');
+
+  /** Saisie validée : un champ numérique reprend la forme de la valeur liée. */
+  protected onCommit(): void {
+    if (!this.sameValue()) return;
+    // Écrit aussi l'élément : la liaison peut ne pas avoir changé depuis le dernier rendu.
+    this.element.value = this.bound();
+    this.current.set(this.bound());
+  }
 
   focus(): void {
     this.element.focus();

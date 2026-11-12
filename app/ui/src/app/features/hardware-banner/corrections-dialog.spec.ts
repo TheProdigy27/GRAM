@@ -1,34 +1,36 @@
+import { DialogRef } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
-import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
-import { MatDialogRef } from '@angular/material/dialog';
-import { MatInputHarness } from '@angular/material/input/testing';
-import { MatSelectHarness } from '@angular/material/select/testing';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { type Handler, argsOf, mockBackend } from '../../../testing/backend';
-import { GIB, HARDWARE, HARDWARE_OPTIONS } from '../../../testing/fixtures';
+import { byTestId, chooseOption, click, queryTestId, text, typeInto } from '../../../testing/dom';
+import { GIB, HARDWARE, HARDWARE_OPTIONS, MAC_HARDWARE } from '../../../testing/fixtures';
 import { HardwareStore } from '../../state/hardware.store';
-import { CorrectionsDialog, NO_OVERRIDES, groupGpus, parsePositive } from './corrections-dialog';
+import {
+  CorrectionsDialog,
+  NO_OVERRIDES,
+  detectedRows,
+  groupGpus,
+  parsePositive,
+} from './corrections-dialog';
 
 async function open(handlers: Record<string, Handler> = {}) {
   const calls = mockBackend(handlers);
   const closed: unknown[] = [];
   TestBed.configureTestingModule({
     imports: [CorrectionsDialog],
-    providers: [{ provide: MatDialogRef, useValue: { close: (v: unknown) => closed.push(v) } }],
+    providers: [
+      { provide: DialogRef, useValue: { config: {}, close: (v: unknown) => closed.push(v) } },
+    ],
   });
   const hardware = TestBed.inject(HardwareStore);
   await hardware.load();
   const fixture = TestBed.createComponent(CorrectionsDialog);
   await fixture.whenStable();
-  const loader = TestbedHarnessEnvironment.loader(fixture);
   const el = fixture.nativeElement as HTMLElement;
-  const select = (testId: string) =>
-    loader.getHarness(MatSelectHarness.with({ selector: `[data-testid="${testId}"]` }));
-  const click = async (testId: string) => {
-    (el.querySelector(`[data-testid="${testId}"]`) as HTMLElement).click();
-    await fixture.whenStable();
-  };
-  return { calls, closed, hardware, fixture, loader, el, select, click };
+  const row = (key: string) =>
+    el.querySelector<HTMLElement>(`[data-testid="fix-row"][data-key="${key}"]`)!;
+  const origin = (key: string) => text(byTestId('fix-origin', row(key)));
+  return { calls, closed, hardware, fixture, el, row, origin };
 }
 
 describe('CorrectionsDialog', () => {
@@ -46,25 +48,88 @@ describe('CorrectionsDialog', () => {
     expect(parsePositive('-3')).toBeNull();
   });
 
-  it('applique corrections et simulation ; le classement est recalculé', async () => {
-    const { calls, closed, hardware, select, click, fixture } = await open();
+  it('une ligne par valeur, avec son origine ; une correction rappelle la valeur détectée', () => {
+    const rows = detectedRows(HARDWARE, NO_OVERRIDES);
+    expect(rows.map((r) => r.key)).toEqual([
+      'gpu',
+      'gpuType',
+      'bandwidth',
+      'ram',
+      'channels',
+      'cpu',
+    ]);
+    const byKey = Object.fromEntries(rows.map((r) => [r.key, r]));
+    expect(byKey['gpu']).toMatchObject({ value: 'RTX 5080', source: 'detected', editable: false });
+    expect(byKey['bandwidth']).toMatchObject({ value: '≈960 Go/s', source: 'table' });
+    expect(byKey['ram']).toMatchObject({
+      value: '64 Go DDR5-6000',
+      detail: '2 barrettes sur 4 emplacements',
+      editable: false,
+    });
+    expect(byKey['channels']).toMatchObject({
+      value: '2 canaux',
+      source: 'estimated',
+      toConfirm: true,
+      detected: null,
+    });
+    expect(byKey['cpu'].detail).toBe('8 cœurs / 16 threads · AVX-512');
+
+    const corrected = detectedRows(HARDWARE, { ...NO_OVERRIDES, ramChannels: 4 });
+    expect(corrected.find((r) => r.key === 'channels')).toMatchObject({
+      value: '4 canaux',
+      source: 'manual',
+      detected: '2 canaux',
+      toConfirm: false,
+    });
+
+    // Mémoire unifiée : pas de « type de GPU » à corriger.
+    const mac = detectedRows(MAC_HARDWARE, NO_OVERRIDES).map((r) => r.key);
+    expect(mac).toEqual(['gpu', 'bandwidth', 'ram', 'channels', 'cpu']);
+  });
+
+  it('affiche les valeurs détectées ; les estimées sont surlignées « à confirmer »', async () => {
+    const { calls, row, origin } = await open();
     expect(argsOf(calls, 'hardware_options')).toHaveLength(1);
+    expect(origin('bandwidth')).toBe('table de référence');
+    expect(origin('channels')).toBe('estimée');
+    expect(row('channels').classList).toContain('kv__row--warn');
+    expect(text(row('channels'))).toContain('à confirmer');
+    expect(row('bandwidth').classList).not.toContain('kv__row--warn');
+    // Deux GPU détectés : la carte retenue se choisit ; le processeur ne se corrige pas.
+    expect(queryTestId('edit-gpu', row('gpu'))).not.toBeNull();
+    expect(queryTestId('edit-cpu', row('cpu'))).toBeNull();
+    expect(byTestId('fix-apply').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('applique corrections et simulation ; le classement est recalculé', async () => {
+    const { calls, closed, hardware, fixture, row, origin } = await open();
     const version = hardware.version();
 
-    // Deux GPU détectés : le choix du GPU retenu est proposé.
-    const gpuIndex = await select('fix-gpu-index');
-    expect(await gpuIndex.getValueText()).toBe('Automatique (le plus de VRAM)');
-    expect(await (await select('fix-channels')).getValueText()).toBe('Détecté (2)');
+    // Le crayon ouvre le correcteur de la ligne, focus sur son contrôle.
+    const edit = byTestId('edit-gpu', row('gpu'));
+    await click(fixture, edit);
+    expect(edit.getAttribute('aria-expanded')).toBe('true');
+    const gpuIndex = byTestId('fix-gpu-index', row('gpu'));
+    expect(text(gpuIndex.querySelector('button'))).toBe('Automatique (le plus de VRAM)');
+    expect(gpuIndex.contains(document.activeElement)).toBe(true);
 
-    await (await select('fix-channels')).clickOptions({ text: '4 canaux' });
-    const sim = await select('sim-gpu');
-    await sim.open();
-    expect((await sim.getOptionGroups()).length).toBe(3);
-    await sim.clickOptions({ text: /RTX 4090 24 Go/ });
-    await (await select('sim-ram')).clickOptions({ text: '128 Go' });
-    await fixture.whenStable();
+    await click(fixture, byTestId('edit-channels', row('channels')));
+    expect(queryTestId('fix-gpu-index')).toBeNull(); // un correcteur à la fois
+    await chooseOption(fixture, 'fix-channels', '4 canaux');
+    expect(origin('channels')).toBe('corrigée');
+    expect(text(row('channels'))).toContain('détectée : 2 canaux');
+    expect(row('channels').classList).not.toContain('kv__row--warn');
 
-    await click('fix-apply');
+    // GPU simulés regroupés par constructeur.
+    const sim = byTestId('sim-gpu').querySelector<HTMLElement>('[aria-haspopup="listbox"]')!;
+    await click(fixture, sim);
+    const list = document.getElementById(sim.getAttribute('aria-controls')!)!;
+    expect(list.querySelectorAll('[role="group"]')).toHaveLength(3);
+    await chooseOption(fixture, 'sim-gpu', 'NVIDIA GeForce RTX 4090 24 Go');
+    expect(text(byTestId('sim-gpu').parentElement)).toContain('ne s’appliquent pas au GPU simulé');
+    await chooseOption(fixture, 'sim-ram', '128 Go');
+
+    await click(fixture, 'fix-apply');
     expect(argsOf(calls, 'set_hardware_overrides')).toEqual([
       {
         overrides: {
@@ -80,21 +145,46 @@ describe('CorrectionsDialog', () => {
     expect(closed).toEqual([true]);
   });
 
-  it('bande passante corrigée, puis retour aux valeurs détectées', async () => {
+  it('bande passante corrigée, « Valeur détectée » d’une ligne, puis de toutes', async () => {
     const corrected = {
       ...HARDWARE,
       overrides: { ...NO_OVERRIDES, ramChannels: 1, gpuBandwidthGbs: 900 },
     };
-    const { calls, loader, click, fixture } = await open({ get_hardware: () => corrected });
+    const { calls, fixture, row, origin } = await open({ get_hardware: () => corrected });
+    expect(origin('bandwidth')).toBe('corrigée');
+    expect(text(row('bandwidth'))).toContain('≈900 Go/s');
+    expect(text(row('bandwidth'))).toContain('détectée : ≈960 Go/s');
 
-    const bw = await loader.getHarness(
-      MatInputHarness.with({ selector: '[data-testid="fix-bandwidth"]' }),
-    );
-    expect(await bw.getValue()).toBe('900');
-    await bw.setValue('');
-    await click('fix-reset');
-    await fixture.whenStable();
-    await click('fix-apply');
+    await click(fixture, byTestId('edit-bandwidth', row('bandwidth')));
+    const input = byTestId<HTMLInputElement>('fix-bandwidth', row('bandwidth'));
+    expect(input.value).toBe('900');
+    await typeInto(fixture, input, '');
+    expect(origin('bandwidth')).toBe('table de référence');
+
+    await click(fixture, byTestId('edit-channels', row('channels')));
+    await click(fixture, byTestId('fix-row-reset', row('channels')));
+    expect(origin('channels')).toBe('estimée');
+    await click(fixture, 'fix-apply');
     expect(argsOf(calls, 'set_hardware_overrides')).toEqual([{ overrides: NO_OVERRIDES }]);
+  });
+
+  it('« Valeurs détectées » efface corrections et simulation ; une erreur reste affichée', async () => {
+    const simulated = {
+      ...HARDWARE,
+      overrides: { ...NO_OVERRIDES, gpuIntegrated: true, simulatedRamTotal: 32 * GIB },
+    };
+    const { calls, closed, fixture, origin } = await open({
+      get_hardware: () => simulated,
+      set_hardware_overrides: () => {
+        throw 'corrections non enregistrées : accès refusé';
+      },
+    });
+    expect(origin('gpuType')).toBe('corrigée');
+    await click(fixture, 'fix-reset');
+    expect(origin('gpuType')).toBe('détectée');
+    await click(fixture, 'fix-apply');
+    expect(argsOf(calls, 'set_hardware_overrides')).toEqual([{ overrides: NO_OVERRIDES }]);
+    expect(text(document.querySelector('[role="alert"]'))).toContain('accès refusé');
+    expect(closed).toEqual([]);
   });
 });

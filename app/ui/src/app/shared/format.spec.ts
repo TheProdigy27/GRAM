@@ -5,8 +5,10 @@ import {
   fileSize,
   gb,
   params,
+  parseNumber,
   relativeTime,
   roundSize,
+  sameNumber,
   signedPercent,
   stepToCtx,
   tokS,
@@ -88,5 +90,19 @@ describe('format', () => {
     expect(ctxToStep(12288)).toBe(3); // au plus proche (échelle logarithmique)
     expect(ctxToStep(1_048_576)).toBe(6);
     expect(ctxToStep(100)).toBe(0);
+  });
+});
+
+describe('parseNumber', () => {
+  it('lit les nombres saisis à la française', () => {
+    expect(parseNumber('0,55')).toBe(0.55);
+    expect(parseNumber(' 12 ')).toBe(12);
+    expect(parseNumber('2 048')).toBe(2048);
+    expect(parseNumber('1.5')).toBe(1.5);
+    expect(parseNumber('')).toBeNull();
+    expect(parseNumber('abc')).toBeNull();
+    expect(sameNumber('0,70', '0,7')).toBe(true);
+    expect(sameNumber('0,', '0')).toBe(true);
+    expect(sameNumber('0,5', '0,7')).toBe(false);
   });
 });

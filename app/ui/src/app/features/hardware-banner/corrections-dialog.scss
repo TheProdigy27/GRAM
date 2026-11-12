@@ -1,33 +1,158 @@
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+:host {
+  display: block;
+  max-height: inherit;
 }
 
-h3 {
-  margin: 8px 0 0;
-  font: var(--mat-sys-title-small);
+.muted {
+  color: var(--g-muted);
+  font-weight: 400;
+}
+
+.section + .section {
+  margin-top: 24px;
+}
+
+.section__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .intro {
-  margin: 4px 0 12px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--g-muted);
 }
 
-.grid {
+// Une ligne par valeur : libellé | valeur | origine et crayon ; le correcteur s'ouvre dessous.
+.kv {
+  margin: 0;
+}
+
+.kv__row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 16px;
+  grid-template-columns: 136px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 44px;
+  padding: 6px 10px;
+  margin: 0 -10px;
+  border-top: 1px solid var(--g-line-2);
+
+  dd {
+    margin: 0;
+  }
 }
 
-mat-form-field {
-  width: 100%;
+.kv__row--warn {
+  border-top-color: transparent;
+  border-radius: var(--g-radius);
+  background: var(--g-warn-bg);
+
+  + .kv__row {
+    border-top-color: transparent;
+  }
 }
 
-.actions {
+.kv__label {
+  color: var(--g-muted);
+}
+
+.kv__value {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.kv__detail {
+  color: var(--g-fg-2);
+}
+
+.kv__confirm {
+  color: var(--g-warn);
+  font-weight: 500;
+}
+
+.kv__detected {
+  display: block;
+  font-size: 11.5px;
+  color: var(--g-muted);
+}
+
+.kv__meta {
   display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-.spacer {
-  flex: 1;
+.kv__editor {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 12px;
+  padding: 4px 0 6px;
+}
+
+.editor__control {
+  flex: 1 1 260px;
+  max-width: 380px;
+}
+
+.editor__control--narrow {
+  flex-basis: 160px;
+  max-width: 220px;
+}
+
+.editor__hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--g-muted);
+}
+
+.editor__reset {
+  margin-top: 3px;
+}
+
+.sim {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.sim__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  g-select {
+    display: flex;
+  }
+}
+
+.error {
+  margin-top: 16px;
+}
+
+// « Valeurs détectées » à gauche, les actions du dialogue à droite.
+.reset-all {
+  margin-right: auto;
+}
+
+@media (max-width: 560px) {
+  .kv__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .kv__label {
+    grid-column: 1 / -1;
+  }
+
+  .kv__editor {
+    grid-column: 1 / -1;
+  }
 }

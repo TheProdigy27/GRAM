@@ -1,19 +1,41 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
+import { DialogRef } from '@angular/cdk/dialog';
+import {
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
 import type { HardwareOptions } from '../../core/generated/HardwareOptions';
+import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import type { Overrides } from '../../core/generated/Overrides';
 import type { SimulationGpu } from '../../core/generated/SimulationGpu';
+import type { Source } from '../../core/generated/Source';
 import { TauriService, errorMessage } from '../../core/tauri.service';
-import { bandwidth, gbToBytes, roundSize } from '../../shared/format';
+import {
+  bandwidth,
+  decimal,
+  gbToBytes,
+  parseNumber,
+  roundSize,
+  sameNumber,
+} from '../../shared/format';
 import { SOURCE_LABELS } from '../../shared/labels';
+import { Button } from '../../shared/ui/button/button';
+import { Callout } from '../../shared/ui/callout/callout';
+import { GDialog } from '../../shared/ui/dialog/dialog';
+import { FIELD } from '../../shared/ui/field/field';
+import { Icon } from '../../shared/ui/icon/icon';
+import { Progress } from '../../shared/ui/progress/progress';
+import { Select, type SelectOption } from '../../shared/ui/select/select';
+import { Tag, type TagTone } from '../../shared/ui/tag/tag';
+import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
+import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { HardwareStore } from '../../state/hardware.store';
+import { cpuIsa, ramChannels, ramSizeType, shortCpuName, shortGpuName } from './memory-card';
 
 /** Aucune correction, aucune simulation : valeurs détectées. */
 export const NO_OVERRIDES: Overrides = {
@@ -43,43 +65,197 @@ export function groupGpus(gpus: SimulationGpu[]): { vendor: string; gpus: Simula
   return groups;
 }
 
-/** Nombre décimal saisi (virgule acceptée) ; vide ou invalide : `null`. */
+/** Nombre décimal saisi (virgule acceptée) ; vide, invalide ou négatif : `null`. */
 export function parsePositive(value: string): number | null {
-  const x = Number(value.trim().replace(',', '.'));
-  return value.trim() !== '' && Number.isFinite(x) && x > 0 ? x : null;
+  const x = parseNumber(value);
+  return x !== null && x > 0 ? x : null;
 }
 
+export type DetectedKey = 'gpu' | 'gpuType' | 'bandwidth' | 'ram' | 'channels' | 'cpu';
+
+/** Une valeur du matériel, sur une ligne du dialogue. */
+export interface DetectedRow {
+  key: DetectedKey;
+  label: string;
+  /** Valeur (en gras), puis ses précisions. */
+  value: string;
+  detail: string;
+  /** Origine, en étiquette : détectée, table de référence, estimée, corrigée. */
+  source: Source;
+  /** Valeur détectée, rappelée quand une correction la remplace. */
+  detected: string | null;
+  /** Estimée et non corrigée : surlignée, « à confirmer ». */
+  toConfirm: boolean;
+  /** Bouton crayon : la valeur se corrige. */
+  editable: boolean;
+}
+
+/** Les GPU détectés : celui retenu par défaut, puis les autres. */
+export function detectedGpus(d: HardwareProfile): GpuInfo[] {
+  return [...(d.gpu ? [d.gpu] : []), ...d.otherGpus];
+}
+
+/** GPU qui serait retenu avec ces corrections. */
+export function chosenGpu(d: HardwareProfile, o: Overrides): GpuInfo | null {
+  const all = detectedGpus(d);
+  const index = o.gpuIndex;
+  return (index !== null ? all.find((g) => g.index === index) : undefined) ?? all[0] ?? null;
+}
+
+const channels = (n: number) => `${n} ${n > 1 ? 'canaux' : 'canal'}`;
+
 /**
- * Dialogue « Corriger… » (§6.6) : corrections des valeurs détectées, enregistrées d'un
- * lancement à l'autre, et simulation d'un autre GPU ou d'une autre quantité de RAM, jusqu'à la
- * fermeture de l'application. Le profil qui en résulte est calculé en Rust.
+ * Valeurs détectées (`d`, sans corrections) et leur origine, avec les corrections `o` en cours :
+ * une valeur corrigée prend l'origine « corrigée » et rappelle la valeur détectée.
+ */
+export function detectedRows(d: HardwareProfile, o: Overrides): DetectedRow[] {
+  const rows: DetectedRow[] = [];
+  const gpus = detectedGpus(d);
+  const gpu = chosenGpu(d, o);
+  if (gpu) {
+    rows.push({
+      key: 'gpu',
+      label: 'Carte graphique',
+      value: shortGpuName(gpu.name),
+      detail: gpu.unifiedMemory
+        ? `mémoire unifiée, ${roundSize(gpu.vramTotal)} pour le GPU`
+        : `${roundSize(gpu.vramTotal)} de VRAM`,
+      source: o.gpuIndex !== null ? 'manual' : 'detected',
+      detected: o.gpuIndex !== null && d.gpu ? shortGpuName(d.gpu.name) : null,
+      toConfirm: false,
+      editable: gpus.length > 1,
+    });
+    if (!gpu.unifiedMemory) {
+      const integrated = o.gpuIntegrated ?? gpu.integrated;
+      rows.push({
+        key: 'gpuType',
+        label: 'Type de GPU',
+        value: integrated ? 'Intégré' : 'Dédié',
+        detail: integrated
+          ? 'compté comme du CPU : il partage la RAM'
+          : 'les couches du modèle vont dans sa VRAM',
+        source: o.gpuIntegrated !== null ? 'manual' : 'detected',
+        detected: o.gpuIntegrated !== null ? (gpu.integrated ? 'intégré' : 'dédié') : null,
+        toConfirm: false,
+        editable: true,
+      });
+    }
+    const bw = o.gpuBandwidthGbs ?? gpu.bandwidthGbs;
+    const detectedBw = gpu.bandwidthGbs ? bandwidth(gpu.bandwidthGbs) : 'inconnue';
+    rows.push({
+      key: 'bandwidth',
+      label: 'Bande passante GPU',
+      value: bw ? bandwidth(bw) : 'Inconnue',
+      detail: bw ? '' : 'fiche constructeur du GPU',
+      source: o.gpuBandwidthGbs !== null ? 'manual' : gpu.bandwidthSource,
+      detected: o.gpuBandwidthGbs !== null ? detectedBw : null,
+      toConfirm: o.gpuBandwidthGbs === null && gpu.bandwidthSource === 'estimated',
+      editable: true,
+    });
+  } else {
+    rows.push({
+      key: 'gpu',
+      label: 'Carte graphique',
+      value: 'Aucun GPU',
+      detail: 'calcul sur le CPU',
+      source: 'detected',
+      detected: null,
+      toConfirm: false,
+      editable: false,
+    });
+  }
+
+  const r = d.ram;
+  const modules =
+    r.modules > 0
+      ? `${r.modules} barrette${r.modules > 1 ? 's' : ''}` +
+        (r.slots ? ` sur ${r.slots} emplacements` : '')
+      : '';
+  rows.push({
+    key: 'ram',
+    label: 'Mémoire vive',
+    value: ramSizeType(r),
+    detail: modules,
+    source: 'detected',
+    detected: null,
+    toConfirm: false,
+    editable: false,
+  });
+  const ch = o.ramChannels ?? r.channels;
+  rows.push({
+    key: 'channels',
+    label: 'Canaux mémoire',
+    value: channels(ch),
+    detail: o.ramChannels === null && r.bandwidthGbs ? bandwidth(r.bandwidthGbs) : '',
+    source: o.ramChannels !== null ? 'manual' : r.channelsSource,
+    detected: o.ramChannels !== null ? ramChannels(r) : null,
+    toConfirm: o.ramChannels === null && r.channelsSource === 'estimated',
+    editable: true,
+  });
+
+  const c = d.cpu;
+  rows.push({
+    key: 'cpu',
+    label: 'Processeur',
+    value: shortCpuName(c.name),
+    detail: `${c.coresPhysical} cœurs / ${c.coresLogical} threads · ${cpuIsa(d)}`,
+    source: 'detected',
+    detected: null,
+    toConfirm: false,
+    editable: false,
+  });
+  return rows;
+}
+
+/** Teinte de l'étiquette d'origine : mesurée, table, estimée (attention), corrigée. */
+export function sourceTone(s: Source): TagTone {
+  switch (s) {
+    case 'detected':
+    case 'nvml':
+      return 'ok';
+    case 'estimated':
+      return 'warn';
+    case 'manual':
+      return 'accent';
+    default:
+      return 'neutral';
+  }
+}
+
+const EDIT_LABELS: Record<DetectedKey, string> = {
+  gpu: 'Choisir la carte graphique retenue',
+  gpuType: 'Corriger le type de GPU',
+  bandwidth: 'Corriger la bande passante du GPU',
+  ram: '',
+  channels: 'Corriger le nombre de canaux',
+  cpu: '',
+};
+
+type IntegratedChoice = 'auto' | 'yes' | 'no';
+
+/**
+ * Dialogue « Corriger… » (§6.6) : chaque valeur détectée sur une ligne avec son origine et un
+ * bouton crayon (corrections enregistrées d'un lancement à l'autre), puis la simulation d'un
+ * autre GPU ou d'une autre quantité de RAM, jusqu'à la fermeture de l'application. Le profil qui
+ * en résulte est calculé en Rust.
  */
 @Component({
   selector: 'app-corrections-dialog',
-  imports: [
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatIconModule,
-    MatInputModule,
-    MatProgressBarModule,
-    MatSelectModule,
-  ],
+  imports: [Button, Callout, FIELD, GDialog, Icon, Progress, Select, Tag, ToggleGroup, Tooltip],
   templateUrl: './corrections-dialog.html',
   styleUrl: './corrections-dialog.scss',
 })
 export class CorrectionsDialog {
   private readonly tauri = inject(TauriService);
   private readonly hardware = inject(HardwareStore);
-  private readonly dialogRef = inject(MatDialogRef<CorrectionsDialog>);
+  private readonly dialogRef = inject(DialogRef);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly injector = inject(Injector);
 
-  protected readonly ramChannels = RAM_CHANNELS;
-  protected readonly simulatedRam = SIMULATED_RAM_GB.map((gb) => ({
-    gb,
-    bytes: gbToBytes(gb),
-  }));
-  protected readonly bandwidth = bandwidth;
-  protected readonly roundSize = roundSize;
+  protected readonly sourceLabels = SOURCE_LABELS;
+  protected readonly sourceTone = sourceTone;
+  protected readonly editLabels = EDIT_LABELS;
+  protected readonly sameNumber = sameNumber;
 
   protected readonly options = signal<HardwareOptions | null>(null);
   protected readonly draft = signal<Overrides>({
@@ -88,25 +264,51 @@ export class CorrectionsDialog {
   });
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
+  /** Ligne dont le correcteur est ouvert (une à la fois). */
+  protected readonly editing = signal<DetectedKey | null>(null);
 
   protected readonly detected = computed(() => this.options()?.detected ?? null);
-  protected readonly gpuGroups = computed(() => groupGpus(this.options()?.gpus ?? []));
-
-  /** Tous les GPU détectés, pour choisir le GPU retenu (seulement s'il y en a plusieurs). */
-  protected readonly gpus = computed<GpuInfo[]>(() => {
+  protected readonly rows = computed(() => {
     const d = this.detected();
-    return d ? [...(d.gpu ? [d.gpu] : []), ...d.otherGpus] : [];
+    return d ? detectedRows(d, this.draft()) : [];
+  });
+  protected readonly chosen = computed(() => {
+    const d = this.detected();
+    return d ? chosenGpu(d, this.draft()) : null;
   });
 
-  /** GPU détecté qui serait retenu avec le choix courant (pour les rappels « détecté : … »). */
-  protected readonly chosenGpu = computed(() => {
-    const index = this.draft().gpuIndex;
-    const all = this.gpus();
-    return (index !== null ? all.find((g) => g.index === index) : undefined) ?? all[0] ?? null;
+  // ── Correcteurs ───────────────────────────────────────────────────────────────────────────
+
+  protected readonly gpuOptions = computed<SelectOption<number>[]>(() => {
+    const d = this.detected();
+    return [
+      { value: -1, label: 'Automatique (le plus de VRAM)' },
+      ...(d ? detectedGpus(d) : []).map((g) => ({
+        value: g.index,
+        label: g.name,
+        hint: roundSize(g.vramTotal),
+      })),
+    ];
   });
 
-  /** GPU à mémoire unifiée (Apple Silicon) : « GPU intégré » ne s'y applique pas. */
-  protected readonly unifiedGpu = computed(() => this.chosenGpu()?.unifiedMemory ?? false);
+  protected readonly integratedOptions = computed<ToggleOption<IntegratedChoice>[]>(() => [
+    { value: 'auto', label: `Détecté (${this.chosen()?.integrated ? 'intégré' : 'dédié'})` },
+    { value: 'yes', label: 'Intégré', tooltip: 'Compté comme du CPU : il partage la RAM' },
+    { value: 'no', label: 'Dédié', tooltip: 'Les couches du modèle vont dans sa VRAM' },
+  ]);
+
+  protected readonly integratedValue = computed<IntegratedChoice>(() => {
+    const v = this.draft().gpuIntegrated;
+    return v === null ? 'auto' : v ? 'yes' : 'no';
+  });
+
+  protected readonly channelOptions = computed<SelectOption<number>[]>(() => {
+    const r = this.detected()?.ram;
+    return [
+      { value: 0, label: r ? `Détecté (${r.channels})` : 'Détecté' },
+      ...RAM_CHANNELS.map((c) => ({ value: c, label: channels(c) })),
+    ];
+  });
 
   protected readonly channelsHint = computed(() => {
     const r = this.detected()?.ram;
@@ -116,11 +318,29 @@ export class CorrectionsDialog {
     return `${detected} · ${r.modules} barrette${r.modules > 1 ? 's' : ''}`;
   });
 
-  protected readonly bandwidthHint = computed(() => {
-    const g = this.chosenGpu();
-    if (!g?.bandwidthGbs) return '';
-    return `Détectée : ${bandwidth(g.bandwidthGbs)} (${SOURCE_LABELS[g.bandwidthSource]})`;
+  protected readonly bandwidthText = computed(() => {
+    const v = this.draft().gpuBandwidthGbs;
+    return v === null ? '' : decimal(v, 1);
   });
+
+  // ── Simulation ────────────────────────────────────────────────────────────────────────────
+
+  protected readonly simGpuOptions = computed<SelectOption<string>[]>(() => [
+    { value: '', label: 'Aucun (GPU réel)' },
+    ...groupGpus(this.options()?.gpus ?? []).flatMap((group) =>
+      group.gpus.map((g) => ({
+        value: g.label,
+        label: g.label,
+        hint: bandwidth(g.bandwidthGbs),
+        group: group.vendor,
+      })),
+    ),
+  ]);
+
+  protected readonly simRamOptions: SelectOption<number>[] = [
+    { value: 0, label: 'Aucune (RAM réelle)' },
+    ...SIMULATED_RAM_GB.map((gb) => ({ value: gbToBytes(gb), label: `${gb} Go` })),
+  ];
 
   protected readonly simulatingGpu = computed(() => this.draft().simulatedGpu !== null);
 
@@ -140,13 +360,55 @@ export class CorrectionsDialog {
     this.draft.update((d) => ({ ...d, ...patch }));
   }
 
+  /** Bouton crayon : ouvre le correcteur de la ligne (focus sur son contrôle) ou le referme. */
+  protected toggleEditor(key: DetectedKey): void {
+    if (this.editing() === key) {
+      this.editing.set(null);
+      return;
+    }
+    this.editing.set(key);
+    afterNextRender(
+      () => {
+        const editor = this.host.querySelector<HTMLElement>(`#fix-editor-${key}`);
+        const control =
+          editor?.querySelector<HTMLElement>('[aria-pressed="true"]') ??
+          editor?.querySelector<HTMLElement>('input, button');
+        control?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** La valeur détectée revient pour cette ligne (appliqué avec « Appliquer »). */
+  protected resetRow(key: DetectedKey): void {
+    switch (key) {
+      case 'gpu':
+        return this.patch({ gpuIndex: null });
+      case 'gpuType':
+        return this.patch({ gpuIntegrated: null });
+      case 'bandwidth':
+        return this.patch({ gpuBandwidthGbs: null });
+      case 'channels':
+        return this.patch({ ramChannels: null });
+    }
+  }
+
+  protected onIntegrated(choice: IntegratedChoice | null): void {
+    this.patch({ gpuIntegrated: choice === null || choice === 'auto' ? null : choice === 'yes' });
+  }
+
   protected onBandwidth(value: string): void {
     this.patch({ gpuBandwidthGbs: parsePositive(value) });
   }
 
-  /** Revient aux valeurs détectées (appliqué avec « Appliquer »). */
+  /** Revient aux valeurs détectées, sans simulation (appliqué avec « Appliquer »). */
   protected resetAll(): void {
     this.draft.set({ ...NO_OVERRIDES });
+    this.editing.set(null);
+  }
+
+  protected close(): void {
+    this.dialogRef.close();
   }
 
   protected async apply(): Promise<void> {

@@ -1,462 +1,472 @@
-<h2 mat-dialog-title>Paramètres</h2>
+<g-dialog heading="Paramètres" flush>
+  <g-field gDialogHeader class="search" clearable clearLabel="Effacer la recherche">
+    <g-icon gPrefix name="search" />
+    <input
+      gInput
+      autocomplete="off"
+      spellcheck="false"
+      placeholder="Chercher un réglage"
+      aria-label="Chercher un réglage"
+      data-testid="settings-search"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      (keydown.escape)="onSearchEscape($event)"
+    />
+  </g-field>
 
-<mat-dialog-content class="content">
-  @if (draft(); as d) {
-    <mat-tab-group animationDuration="0ms" mat-stretch-tabs="false">
-      <!-- ── Estimation ─────────────────────────────────────────────────────────────── -->
-      <mat-tab label="Estimation">
-        <div class="tab">
-          <p class="muted intro">
-            Mémoire réellement utilisable et vitesse estimée. Les estimations restent à ±30 % près ;
-            les efficacités et le temps fixe par token se recalibrent d’après des mesures réelles
-            avec Ollama (fiche d’un modèle installé).
-          </p>
-          <div class="grid">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Marge de sécurité VRAM</mat-label>
-              <input
-                #vram
-                matInput
-                type="number"
-                min="0"
-                max="90"
-                step="1"
-                data-testid="set-vram-margin"
-                [value]="pct(d.estimate.vramMargin)"
-                (input)="setEstimateNumber('vramMargin', vram.value, 0.01)"
-              />
-              <span matTextSuffix>%</span>
-              <mat-hint
-                >Affichage du système, applications ouvertes
-                @if (defaults(); as def) {
-                  · défaut {{ pct(def.estimate.vramMargin) }} %
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Part de RAM utilisable</mat-label>
-              <input
-                #ram
-                matInput
-                type="number"
-                min="10"
-                max="100"
-                step="5"
-                data-testid="set-ram-share"
-                [value]="pct(d.estimate.ramShare)"
-                (input)="setEstimateNumber('ramShare', ram.value, 0.01)"
-              />
-              <span matTextSuffix>%</span>
-              <mat-hint
-                >De la RAM totale, au plus la RAM libre
-                @if (defaults(); as def) {
-                  · défaut {{ pct(def.estimate.ramShare) }} %
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-checkbox
-              class="span"
-              data-testid="set-close-apps"
-              [checked]="d.estimate.closeApps"
-              (change)="setEstimate('closeApps', $event.checked)"
+  <div class="layout">
+    <nav class="nav" aria-label="Sections des paramètres" (keydown)="onNavKeydown($event)">
+      @for (s of sections; track s.id) {
+        <button
+          type="button"
+          class="nav__item"
+          [attr.data-testid]="'nav-' + s.id"
+          [attr.aria-current]="!searching() && section() === s.id ? 'page' : null"
+          [class.nav__item--dim]="searching() && !sectionHasMatch().has(s.id)"
+          (click)="goTo(s.id)"
+        >
+          <g-icon [name]="s.icon" />
+          <span class="nav__label">{{ s.label }}</span>
+          @if (s.id === 'estimate' && recalibrated()) {
+            <g-tag tone="ok" size="sm" data-testid="nav-recalibrated">recalibrée</g-tag>
+          }
+          @if (navBadges()[s.id]; as n) {
+            <g-tag
+              tone="warn"
+              size="sm"
+              data-testid="nav-modified"
+              [gTooltip]="n + (n > 1 ? ' réglages modifiés' : ' réglage modifié')"
+              ><span aria-hidden="true">{{ n }}</span
+              ><span class="g-sr-only"
+                >{{ n }} {{ n > 1 ? 'réglages modifiés' : 'réglage modifié' }}</span
+              ></g-tag
             >
-              Je ferme tout avant de lancer le modèle (RAM totale moins 4 Go, VRAM entière)
-            </mat-checkbox>
+          }
+        </button>
+      }
+      <p class="nav__note">
+        Les réglages modifiés portent un repère orange. Chaque valeur par défaut reste visible.
+      </p>
+    </nav>
 
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Surcoût du runtime</mat-label>
-              <input
-                #overhead
-                matInput
-                type="number"
-                min="0"
-                max="16"
-                step="0.1"
-                [value]="toGb(d.estimate.overheadBytes)"
-                (input)="setEstimateNumber('overheadBytes', overhead.value, gib)"
-              />
-              <span matTextSuffix>Go</span>
-              <mat-hint
-                >Contexte CUDA/Vulkan/Metal et buffers
-                @if (defaults(); as def) {
-                  · défaut {{ decimal(toGb(def.estimate.overheadBytes)) }} Go
-                }
-              </mat-hint>
-            </mat-form-field>
+    <div class="main">
+      @if (error(); as message) {
+        <g-callout kind="error" role="alert" class="error">{{ message }}</g-callout>
+      }
+      <div class="content" data-testid="settings-content">
+        @if (draft(); as d) {
+          @for (s of visibleSections(); track s.id) {
+            <section
+              class="section"
+              [attr.data-section]="s.id"
+              [attr.aria-labelledby]="'section-' + s.id"
+            >
+              <h3 class="section__title" [id]="'section-' + s.id">{{ s.label }}</h3>
+              @if (s.description && !searching()) {
+                <p class="section__intro">{{ s.description }}</p>
+              }
 
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Type de cache KV</mat-label>
-              <mat-select
-                data-testid="set-kv-cache"
-                [value]="d.estimate.kvCache"
-                (selectionChange)="setEstimate('kvCache', $event.value)"
-              >
-                @for (k of kvTypes; track k.value) {
-                  <mat-option [value]="k.value">{{ k.label }}</mat-option>
-                }
-              </mat-select>
-              <mat-hint>À régler aussi dans le runtime</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Efficacité GPU</mat-label>
-              <input
-                #gpuEff
-                matInput
-                type="number"
-                min="0.05"
-                max="2"
-                step="0.05"
-                data-testid="set-gpu-efficiency"
-                [value]="d.estimate.gpuEfficiency"
-                (input)="setEstimateNumber('gpuEfficiency', gpuEff.value)"
-              />
-              <mat-hint
-                >Part de la bande passante VRAM exploitée
-                @if (defaults(); as def) {
-                  · défaut {{ decimal(def.estimate.gpuEfficiency) }}
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Efficacité RAM</mat-label>
-              <input
-                #ramEff
-                matInput
-                type="number"
-                min="0.05"
-                max="2"
-                step="0.05"
-                data-testid="set-ram-efficiency"
-                [value]="d.estimate.ramEfficiency"
-                (input)="setEstimateNumber('ramEfficiency', ramEff.value)"
-              />
-              <mat-hint
-                >Part de la bande passante RAM exploitée (CPU, hybride)
-                @if (defaults(); as def) {
-                  · défaut {{ decimal(def.estimate.ramEfficiency) }}
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Temps fixe par token</mat-label>
-              <input
-                #fixed
-                matInput
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                [value]="d.estimate.tokenOverheadMs"
-                (input)="setEstimateNumber('tokenOverheadMs', fixed.value)"
-              />
-              <span matTextSuffix>ms</span>
-              <mat-hint
-                >Compte surtout pour les MoE et petits modèles
-                @if (defaults(); as def) {
-                  · défaut {{ decimal(def.estimate.tokenOverheadMs) }} ms
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Bits par poids minimum</mat-label>
-              <input
-                #bpw
-                matInput
-                type="number"
-                min="0"
-                max="16"
-                step="0.5"
-                [value]="d.estimate.minBpw"
-                (input)="setEstimateNumber('minBpw', bpw.value)"
-              />
-              <mat-hint
-                >En dessous, quantification non proposée
-                @if (defaults(); as def) {
-                  · défaut {{ decimal(def.estimate.minBpw) }}
-                }
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Contexte minimal</mat-label>
-              <input
-                #minCtx
-                matInput
-                type="number"
-                min="256"
-                max="131072"
-                step="1024"
-                [value]="d.estimate.minCtx"
-                (input)="setEstimateNumber('minCtx', minCtx.value)"
-              />
-              <span matTextSuffix>tokens</span>
-              <mat-hint
-                >Repli quand le contexte demandé ne tient pas
-                @if (defaults(); as def) {
-                  · défaut {{ int(def.estimate.minCtx) }}
-                }
-              </mat-hint>
-            </mat-form-field>
-          </div>
-        </div>
-      </mat-tab>
-
-      <!-- ── Cas d'usage ────────────────────────────────────────────────────────────── -->
-      <mat-tab label="Cas d’usage">
-        <div class="tab">
-          <p class="muted intro">
-            Contexte proposé par défaut, vitesse sous laquelle un modèle passe dans « Exécutable
-            mais lent », et poids des quatre axes du score (moyenne pondérée : leur somme est
-            libre).
-          </p>
-          <table class="use-cases">
-            <thead>
-              <tr>
-                <th scope="col">Cas d’usage</th>
-                <th scope="col">Contexte</th>
-                <th scope="col">Lent sous (tok/s)</th>
-                @for (w of weights; track w.key) {
-                  <th scope="col">{{ w.label }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (u of useCases; track u.value) {
-                @let p = d.useCases[u.value];
-                <tr [attr.data-testid]="'use-case-' + u.value">
-                  <th scope="row">{{ u.label }}</th>
-                  <td>
-                    <select
-                      class="cell"
-                      [attr.aria-label]="'Contexte par défaut : ' + u.label"
-                      [value]="p.ctx"
-                      (change)="setUseCase(u.value, { ctx: +$any($event.target).value })"
+              @if (s.id === 'estimate') {
+                @if (calibrationOffer(); as summary) {
+                  <g-callout icon="chart" class="callout" data-testid="calibration-offer">
+                    {{ summary }}
+                    <button
+                      gButton
+                      gCalloutAction
+                      size="sm"
+                      data-testid="use-calibration"
+                      (click)="applyCalibration()"
                     >
-                      @for (c of ctxOptions(); track c) {
-                        <option [value]="c" [selected]="c === p.ctx">{{ ctxK(c) }}</option>
-                      }
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      #slow
-                      class="cell"
-                      type="number"
-                      min="0"
-                      step="1"
-                      data-testid="slow"
-                      [attr.aria-label]="'Seuil de lenteur : ' + u.label"
-                      [value]="p.slowTokS"
-                      (input)="setSlow(u.value, slow.value)"
-                    />
-                  </td>
-                  @for (w of weights; track w.key) {
-                    <td>
-                      <input
-                        #weight
-                        class="cell"
-                        type="number"
-                        min="0"
-                        step="0.05"
-                        [attr.aria-label]="'Poids ' + w.label + ' : ' + u.label"
-                        [value]="p.weights[w.key]"
-                        (input)="setWeight(u.value, w.key, weight.value)"
-                      />
-                    </td>
+                      Utiliser ces valeurs
+                    </button>
+                  </g-callout>
+                }
+              }
+              @if (s.id === 'useCases') {
+                <g-toggle-group
+                  appearance="segmented"
+                  class="use-cases"
+                  data-testid="set-use-case"
+                  label="Cas d’usage modifié"
+                  [options]="useCaseOptions"
+                  [value]="useCase()"
+                  (valueChange)="$event && useCase.set($event)"
+                />
+              }
+
+              @for (r of rowsOf(s.id); track r.id) {
+                @switch (r.kind) {
+                  @case ('number') {
+                    <app-setting-row
+                      [row]="r.id"
+                      [heading]="r.heading"
+                      [help]="r.help"
+                      [labelFor]="r.testId!"
+                      [defaultText]="defaultNumber(r)"
+                      [marker]="marker(path(r))"
+                      (reset)="resetPath(path(r))"
+                    >
+                      <g-field class="num" [suffix]="r.unit ?? ''">
+                        <input
+                          gInput
+                          inputmode="decimal"
+                          autocomplete="off"
+                          [id]="r.testId!"
+                          [attr.data-testid]="r.testId"
+                          [value]="numberText(r)"
+                          [sameValue]="sameNumber"
+                          (input)="setNumber(r, $any($event.target).value)"
+                        />
+                      </g-field>
+                    </app-setting-row>
                   }
-                </tr>
+                  @case ('switch') {
+                    <app-setting-row
+                      [row]="r.id"
+                      [heading]="r.heading"
+                      [help]="r.help"
+                      [defaultText]="defaultText(r.path!, onOff)"
+                      [marker]="marker(r.path!)"
+                      (reset)="resetPath(r.path!)"
+                    >
+                      <g-switch
+                        [attr.data-testid]="r.testId"
+                        [ariaLabel]="r.heading"
+                        [checked]="value(r.path!)"
+                        (checkedChange)="set(r.path!, $event)"
+                      />
+                    </app-setting-row>
+                  }
+                  @case ('kvCache') {
+                    <app-setting-row
+                      [row]="r.id"
+                      [heading]="r.heading"
+                      [help]="r.help"
+                      [defaultText]="defaultText(r.path!, plain)"
+                      [marker]="marker(r.path!)"
+                      (reset)="resetPath(r.path!)"
+                    >
+                      <g-toggle-group
+                        appearance="segmented"
+                        [attr.data-testid]="r.testId"
+                        [label]="r.heading"
+                        [options]="kvTypes"
+                        [value]="value(r.path!)"
+                        (valueChange)="$event && set(r.path!, $event)"
+                      />
+                    </app-setting-row>
+                  }
+                  @default {
+                    @let p = path(r);
+                    @switch (r.id) {
+                      @case ('ctx') {
+                        <app-setting-row
+                          row="ctx"
+                          [heading]="r.heading"
+                          [help]="r.help"
+                          [defaultText]="defaultText(p, ctxK)"
+                          [marker]="marker(p)"
+                          (reset)="resetPath(p)"
+                        >
+                          <g-toggle-group
+                            class="ctx"
+                            data-testid="set-ctx"
+                            [label]="r.heading"
+                            [columns]="7"
+                            [options]="ctxOptions"
+                            [value]="value(p)"
+                            (valueChange)="$event && set(p, $event)"
+                          />
+                        </app-setting-row>
+                      }
+                      @case ('slow') {
+                        <app-setting-row
+                          row="slow"
+                          labelFor="set-slow"
+                          [heading]="r.heading"
+                          [help]="r.help"
+                          [defaultText]="defaultText(p, tokS)"
+                          [marker]="marker(p)"
+                          (reset)="resetPath(p)"
+                        >
+                          <span class="stepper">
+                            <button
+                              gButton
+                              variant="ghost"
+                              size="sm"
+                              icon
+                              aria-label="Un tok/s de moins"
+                              data-testid="slow-minus"
+                              (click)="stepSlow(-1)"
+                            >
+                              <g-icon name="minus" />
+                            </button>
+                            <input
+                              gInput
+                              id="set-slow"
+                              class="stepper__input"
+                              inputmode="decimal"
+                              autocomplete="off"
+                              data-testid="set-slow"
+                              [value]="decimalText(value(p))"
+                              [sameValue]="sameNumber"
+                              (input)="setSlow($any($event.target).value)"
+                              (keydown.arrowup)="stepSlow(1, $event)"
+                              (keydown.arrowdown)="stepSlow(-1, $event)"
+                            />
+                            <button
+                              gButton
+                              variant="ghost"
+                              size="sm"
+                              icon
+                              aria-label="Un tok/s de plus"
+                              data-testid="slow-plus"
+                              (click)="stepSlow(1)"
+                            >
+                              <g-icon name="plus" />
+                            </button>
+                          </span>
+                          <span class="muted">tok/s</span>
+                        </app-setting-row>
+                      }
+                      @case ('weights') {
+                        <app-setting-row
+                          row="weights"
+                          stacked
+                          [heading]="r.heading"
+                          [help]="r.help"
+                        >
+                          <app-weights-editor
+                            [weights]="weightsOf(d)!"
+                            [defaults]="weightsOf(defaults())"
+                            (weightChange)="setWeight($event)"
+                          />
+                        </app-setting-row>
+                      }
+                      @case ('cache') {
+                        <app-setting-row row="cache" [heading]="r.heading" [help]="r.help">
+                          <span class="cache">
+                            <span data-testid="cache-summary">{{ cacheSummary() }}</span>
+                            <code
+                              class="cache__path"
+                              gTooltipIfTruncated
+                              [gTooltip]="cache()?.path"
+                              >{{ cache()?.path }}</code
+                            >
+                          </span>
+                          <button
+                            gButton
+                            data-testid="clear-cache"
+                            [busy]="cacheBusy()"
+                            [disabled]="!cache()?.files"
+                            (click)="clearCache()"
+                          >
+                            <g-icon name="trash" />
+                            Vider le cache
+                          </button>
+                        </app-setting-row>
+                      }
+                      @case ('token') {
+                        <app-setting-row
+                          row="token"
+                          labelFor="token-input"
+                          [heading]="r.heading"
+                          [help]="r.help"
+                        >
+                          <span data-testid="token-status">
+                            @switch (hasToken()) {
+                              @case (true) {
+                                <g-tag tone="ok" size="sm" icon="check">configuré</g-tag>
+                              }
+                              @case (false) {
+                                <g-tag size="sm">non configuré</g-tag>
+                              }
+                              @default {
+                                <span class="muted">…</span>
+                              }
+                            }
+                          </span>
+                          <span class="token">
+                            <g-field class="token__field">
+                              <input
+                                gInput
+                                id="token-input"
+                                type="password"
+                                autocomplete="off"
+                                spellcheck="false"
+                                data-testid="token-input"
+                                [placeholder]="hasToken() ? 'Nouveau token hf_…' : 'hf_…'"
+                                [value]="token()"
+                                (input)="token.set($any($event.target).value)"
+                                (keydown.enter)="saveToken()"
+                              />
+                            </g-field>
+                            <button
+                              gButton
+                              data-testid="token-save"
+                              [busy]="tokenBusy()"
+                              [disabled]="!token().trim()"
+                              (click)="saveToken()"
+                            >
+                              {{ hasToken() ? 'Remplacer' : 'Enregistrer' }}
+                            </button>
+                            @if (hasToken()) {
+                              <button
+                                gButton
+                                variant="ghost"
+                                data-testid="token-clear"
+                                [disabled]="tokenBusy()"
+                                (click)="clearToken()"
+                              >
+                                Supprimer
+                              </button>
+                            }
+                          </span>
+                        </app-setting-row>
+                      }
+                      @case ('version') {
+                        <app-setting-row row="version" [heading]="r.heading">
+                          <span class="mono" data-testid="app-version"
+                            >GRAM {{ version() ?? '…' }}</span
+                          >
+                        </app-setting-row>
+                      }
+                      @case ('check') {
+                        <app-setting-row row="check" [heading]="r.heading" [help]="r.help">
+                          <span class="update" role="status" data-testid="update-state">
+                            @switch (updates.status()) {
+                              @case ('checking') {
+                                <g-spinner [size]="14" />
+                                Recherche…
+                              }
+                              @case ('upToDate') {
+                                <g-icon name="check" class="ok" />
+                                GRAM est à jour.
+                              }
+                              @case ('available') {
+                                <g-tag tone="accent" icon="update"
+                                  >GRAM {{ updates.available()?.version }} disponible</g-tag
+                                >
+                              }
+                              @case ('installing') {
+                                Installation en cours…
+                              }
+                              @case ('error') {
+                                <g-icon name="error" class="err" />
+                                {{ updates.error() }}
+                              }
+                            }
+                          </span>
+                          @if (updates.status() === 'available') {
+                            <button gButton data-testid="update-open" (click)="openUpdate()">
+                              <g-icon name="download" />
+                              Voir et installer
+                            </button>
+                          } @else {
+                            <button
+                              gButton
+                              data-testid="update-check"
+                              [busy]="updates.status() === 'checking'"
+                              [disabled]="updates.status() === 'installing'"
+                              (click)="checkUpdate()"
+                            >
+                              <g-icon name="refresh" />
+                              Rechercher
+                            </button>
+                          }
+                          <button
+                            gButton
+                            variant="ghost"
+                            data-testid="open-releases"
+                            (click)="openReleases()"
+                          >
+                            <g-icon name="external" />
+                            Page des releases
+                          </button>
+                        </app-setting-row>
+                      }
+                      @case ('about') {
+                        <div class="about" data-row="about">
+                          <div class="about__id">
+                            <img src="logo.svg" alt="" width="44" height="44" />
+                            <div>
+                              <strong class="about__name">GRAM</strong>
+                              <span class="muted"> · GPU &amp; RAM Aware Matcher</span>
+                              <div class="mono muted" data-testid="about-version">
+                                Version {{ version() ?? '…' }}
+                              </div>
+                            </div>
+                          </div>
+                          <p>
+                            Analyse le matériel de la machine et classe les modèles GGUF de Hugging
+                            Face exécutables en local&nbsp;: vitesse, mémoire et contexte estimés
+                            pour chaque quantification.
+                          </p>
+                          <p class="muted">
+                            Les estimations sont à ±30&nbsp;% près&nbsp;; une mesure réelle avec
+                            Ollama les recalibre. GRAM n’envoie rien&nbsp;: il télécharge seulement
+                            les listes publiques de modèles de Hugging Face et, pour les mises à
+                            jour, le manifeste des releases GitHub.
+                          </p>
+                          <div class="about__links">
+                            <button gButton data-testid="open-hf" (click)="openHuggingFace()">
+                              <g-icon name="external" />
+                              Modèles GGUF sur Hugging Face
+                            </button>
+                            <button gButton variant="ghost" (click)="openReleases()">
+                              <g-icon name="external" />
+                              Page des releases
+                            </button>
+                          </div>
+                        </div>
+                      }
+                    }
+                  }
+                }
               }
-            </tbody>
-          </table>
-        </div>
-      </mat-tab>
+            </section>
+          } @empty {
+            <p class="empty" data-testid="settings-empty">
+              Aucun réglage ne correspond à « {{ query().trim() }} ».
+            </p>
+          }
+        } @else {
+          <g-progress label="Chargement des paramètres" />
+        }
+      </div>
+    </div>
+  </div>
 
-      <!-- ── Catalogue ──────────────────────────────────────────────────────────────── -->
-      <mat-tab label="Catalogue">
-        <div class="tab">
-          <div class="grid">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Téléchargements minimum</mat-label>
-              <input
-                #downloads
-                matInput
-                type="number"
-                min="0"
-                step="100"
-                [value]="d.minDownloads"
-                (input)="setNumber('minDownloads', downloads.value)"
-              />
-              <mat-hint>Sauf dépôt en tendance · prochaine synchronisation</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Durée de vie du catalogue</mat-label>
-              <input
-                #ttl
-                matInput
-                type="number"
-                min="1"
-                max="720"
-                step="1"
-                data-testid="set-ttl"
-                [value]="d.catalogTtlHours"
-                (input)="setNumber('catalogTtlHours', ttl.value)"
-              />
-              <span matTextSuffix>h</span>
-              <mat-hint>Au-delà, le lancement resynchronise</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Modèles détaillés à la synchronisation</mat-label>
-              <input
-                #groups
-                matInput
-                type="number"
-                min="0"
-                max="400"
-                step="10"
-                [value]="d.detailGroups"
-                (input)="setNumber('detailGroups', groups.value)"
-              />
-              <mat-hint>Tailles réelles · au-delà de 150, token conseillé</mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Lignes affichées</mat-label>
-              <input
-                #rows
-                matInput
-                type="number"
-                min="5"
-                max="500"
-                step="5"
-                [value]="d.pageSize"
-                (input)="setNumber('pageSize', rows.value)"
-              />
-              <mat-hint>Avant « Voir plus »</mat-hint>
-            </mat-form-field>
-          </div>
-
-          <h3>Cache local</h3>
-          <div class="row">
-            <div class="cache">
-              <span data-testid="cache-summary">{{ cacheSummary() }}</span>
-              <code class="muted path">{{ cache()?.path }}</code>
-            </div>
-            <button
-              mat-stroked-button
-              type="button"
-              data-testid="clear-cache"
-              [disabled]="cacheBusy() || !cache()?.files"
-              (click)="clearCache()"
-            >
-              <mat-icon>delete_sweep</mat-icon>
-              Vider le cache
-            </button>
-          </div>
-          <p class="muted note">
-            Le catalogue affiché reste utilisable ; la prochaine synchronisation repartira de zéro.
-          </p>
-        </div>
-      </mat-tab>
-
-      <!-- ── Hugging Face ───────────────────────────────────────────────────────────── -->
-      <mat-tab label="Hugging Face">
-        <div class="tab">
-          <p class="muted intro">
-            Un token (lecture seule suffit) élargit les quotas de l’API Hugging Face. Il est rangé
-            dans le trousseau du système (Gestionnaire d’identifiants Windows, Trousseau d’accès
-            macOS) et n’est jamais affiché.
-          </p>
-          <p data-testid="token-status">
-            Token :
-            @switch (hasToken()) {
-              @case (true) {
-                <span class="tag ok">configuré</span>
-              }
-              @case (false) {
-                <span class="tag">non configuré</span>
-              }
-              @default {
-                <span class="muted">…</span>
-              }
-            }
-          </p>
-          <div class="row">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="token">
-              <mat-label>{{ hasToken() ? 'Remplacer le token' : 'Token' }}</mat-label>
-              <input
-                #tokenInput
-                matInput
-                type="password"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="hf_…"
-                data-testid="token-input"
-                [value]="token()"
-                (input)="token.set(tokenInput.value)"
-                (keydown.enter)="saveToken()"
-              />
-            </mat-form-field>
-            <button
-              mat-flat-button
-              type="button"
-              data-testid="token-save"
-              [disabled]="tokenBusy() || !token().trim()"
-              (click)="saveToken()"
-            >
-              Enregistrer
-            </button>
-            @if (hasToken()) {
-              <button
-                mat-button
-                type="button"
-                data-testid="token-clear"
-                [disabled]="tokenBusy()"
-                (click)="clearToken()"
-              >
-                Supprimer
-              </button>
-            }
-          </div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-
-    @if (error(); as message) {
-      <p class="error-box" role="alert">{{ message }}</p>
+  <div gDialogActions>
+    @if (resetLabel(); as label) {
+      <button
+        gButton
+        variant="ghost"
+        data-testid="settings-reset"
+        [disabled]="!defaults() || !draft()"
+        (click)="resetSection()"
+      >
+        <g-icon name="reset" />
+        {{ label }}
+      </button>
     }
-  } @else {
-    <mat-progress-bar mode="indeterminate" aria-label="Chargement des paramètres" />
-  }
-</mat-dialog-content>
-
-<mat-dialog-actions class="actions">
-  <button
-    mat-button
-    type="button"
-    data-testid="settings-reset"
-    [disabled]="!defaults() || !draft()"
-    (click)="resetDefaults()"
-  >
-    <mat-icon>restart_alt</mat-icon>
-    Valeurs par défaut
-  </button>
-  <span class="spacer"></span>
-  <button mat-button type="button" mat-dialog-close>Annuler</button>
-  <button
-    mat-flat-button
-    type="button"
-    data-testid="settings-save"
-    [disabled]="saving() || !changed()"
-    (click)="save()"
-  >
-    Enregistrer
-  </button>
-</mat-dialog-actions>
+    <span class="spacer"></span>
+    @if (unsaved(); as n) {
+      <span class="unsaved" data-testid="unsaved">
+        <span class="unsaved__dot" aria-hidden="true"></span>
+        {{ n }} {{ n > 1 ? 'modifications non enregistrées' : 'modification non enregistrée' }}
+      </span>
+    }
+    <button gButton (click)="close()">Annuler</button>
+    <button
+      gButton
+      variant="primary"
+      data-testid="settings-save"
+      [busy]="saving()"
+      [disabled]="!unsaved()"
+      (click)="save()"
+    >
+      Enregistrer
+    </button>
+  </div>
+</g-dialog>

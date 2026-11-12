@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { clearField, queryTestId, typeInto } from '../../../../testing/dom';
+import { decimal, parseNumber, sameNumber } from '../../format';
 import { Icon } from '../icon/icon';
 import { FIELD } from './field';
 
@@ -95,4 +96,60 @@ describe('Field', () => {
     await fixture.whenStable();
     expect(document.activeElement).toBe(input);
   });
+
+  it('champ numérique : la saisie en cours est gardée, remise en forme à la validation', async () => {
+    const fixture = TestBed.createComponent(NumberHost);
+    await fixture.whenStable();
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input')!;
+    const host = fixture.componentInstance;
+    expect(input.value).toBe('0,81');
+
+    // « 0, » vaut 0 : la virgule reste pendant la frappe.
+    input.value = '0,';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(host.value()).toBe(0);
+    expect(input.value).toBe('0,');
+    input.value = '0,70';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    expect(host.value()).toBe(0.7);
+    expect(input.value).toBe('0,70');
+
+    // Validation : la forme de la valeur liée revient ; un texte illisible est remplacé.
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(input.value).toBe('0,7');
+    input.value = 'abc';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    expect(input.value).toBe('0,7');
+
+    // Une valeur différente venue du parent remplace la saisie.
+    input.value = '0,5';
+    input.dispatchEvent(new Event('input'));
+    await fixture.whenStable();
+    host.value.set(0.81);
+    await fixture.whenStable();
+    expect(input.value).toBe('0,81');
+  });
 });
+
+@Component({
+  imports: [FIELD],
+  template: `<g-field>
+    <input gInput [value]="text()" [sameValue]="sameNumber" (input)="onInput($event)" />
+  </g-field>`,
+})
+class NumberHost {
+  readonly value = signal(0.81);
+  readonly sameNumber = sameNumber;
+  text(): string {
+    return decimal(this.value());
+  }
+  onInput(event: Event): void {
+    const x = parseNumber((event.target as HTMLInputElement).value);
+    if (x !== null) this.value.set(x);
+  }
+}

@@ -1,163 +1,202 @@
-<h2 mat-dialog-title>Corriger le matériel</h2>
-
-<mat-dialog-content class="content">
+<g-dialog heading="Corriger le matériel">
   @if (!options() && !error()) {
-    <mat-progress-bar mode="indeterminate" aria-label="Chargement du matériel détecté" />
+    <g-progress label="Chargement du matériel détecté" />
   }
 
-  <section aria-labelledby="corrections-title">
-    <h3 id="corrections-title">
-      Corrections <span class="muted">· gardées au prochain lancement</span>
+  <section class="section" aria-labelledby="corrections-title">
+    <h3 id="corrections-title" class="section__title">
+      Valeurs détectées <span class="muted">· corrections gardées au prochain lancement</span>
     </h3>
-    <p class="muted intro">
-      Pour corriger une valeur mal détectée (canaux d’une mémoire LPDDR soudée, GPU absent de la
-      table…). Le Gestionnaire des tâches (Performances → Mémoire) indique la vitesse et les
-      emplacements utilisés ; sur un Mac, la fiche technique de la puce donne sa bande passante.
+    <p class="intro">
+      Vérifiez les valeurs : une valeur fausse change tout le classement. Le Gestionnaire des tâches
+      (Performances → Mémoire) indique la vitesse et les emplacements utilisés ; sur un Mac, la
+      fiche technique de la puce donne sa bande passante.
     </p>
-    <div class="grid">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Canaux mémoire</mat-label>
-        <mat-select
-          data-testid="fix-channels"
-          [value]="draft().ramChannels ?? 0"
-          (selectionChange)="patch({ ramChannels: $event.value || null })"
-        >
-          <mat-option [value]="0"
-            >Détecté{{ detected() ? ' (' + detected()!.ram.channels + ')' : '' }}</mat-option
-          >
-          @for (c of ramChannels; track c) {
-            <mat-option [value]="c">{{ c }} {{ c > 1 ? 'canaux' : 'canal' }}</mat-option>
-          }
-        </mat-select>
-        <mat-hint>{{ channelsHint() }}</mat-hint>
-      </mat-form-field>
 
-      @if (gpus().length > 1) {
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>GPU retenu</mat-label>
-          <mat-select
-            data-testid="fix-gpu-index"
-            [value]="draft().gpuIndex ?? -1"
-            (selectionChange)="patch({ gpuIndex: $event.value < 0 ? null : $event.value })"
-          >
-            <mat-option [value]="-1">Automatique (le plus de VRAM)</mat-option>
-            @for (g of gpus(); track g.index) {
-              <mat-option [value]="g.index">{{ g.name }} · {{ roundSize(g.vramTotal) }}</mat-option>
+    <dl class="kv">
+      @for (row of rows(); track row.key) {
+        <div
+          class="kv__row"
+          data-testid="fix-row"
+          [attr.data-key]="row.key"
+          [class.kv__row--warn]="row.toConfirm"
+          [class.kv__row--open]="editing() === row.key"
+        >
+          <dt class="kv__label">{{ row.label }}</dt>
+          <dd class="kv__value">
+            <strong>{{ row.value }}</strong>
+            @if (row.detail) {
+              <span class="kv__detail"> · {{ row.detail }}</span>
             }
-          </mat-select>
-          <mat-hint>Un seul GPU est utilisé pour le calcul</mat-hint>
-        </mat-form-field>
+            @if (row.toConfirm) {
+              <span class="kv__confirm"> · à confirmer</span>
+            }
+            @if (row.detected) {
+              <span class="kv__detected">détectée : {{ row.detected }}</span>
+            }
+          </dd>
+          <dd class="kv__meta">
+            <g-tag
+              size="sm"
+              data-testid="fix-origin"
+              [tone]="sourceTone(row.source)"
+              [icon]="row.source === 'manual' ? 'edit' : undefined"
+              >{{ sourceLabels[row.source] }}</g-tag
+            >
+            @if (row.editable) {
+              <button
+                gButton
+                variant="ghost"
+                size="sm"
+                icon
+                [attr.data-testid]="'edit-' + row.key"
+                [attr.aria-label]="editLabels[row.key]"
+                [attr.aria-expanded]="editing() === row.key"
+                [attr.aria-controls]="'fix-editor-' + row.key"
+                [gTooltip]="editLabels[row.key]"
+                (click)="toggleEditor(row.key)"
+              >
+                <g-icon [name]="editing() === row.key ? 'chevron-up' : 'edit'" [size]="15" />
+              </button>
+            }
+          </dd>
+
+          @if (editing() === row.key) {
+            <dd class="kv__editor" [id]="'fix-editor-' + row.key">
+              @switch (row.key) {
+                @case ('gpu') {
+                  <g-select
+                    class="editor__control"
+                    data-testid="fix-gpu-index"
+                    ariaLabel="Carte graphique retenue"
+                    [options]="gpuOptions()"
+                    [value]="draft().gpuIndex ?? -1"
+                    (valueChange)="
+                      patch({ gpuIndex: $event === null || $event < 0 ? null : $event })
+                    "
+                  />
+                  <p class="editor__hint">Un seul GPU est utilisé pour le calcul.</p>
+                }
+                @case ('gpuType') {
+                  <g-toggle-group
+                    appearance="segmented"
+                    data-testid="fix-integrated"
+                    label="Type de GPU"
+                    [options]="integratedOptions()"
+                    [value]="integratedValue()"
+                    (valueChange)="onIntegrated($event)"
+                  />
+                  <p class="editor__hint">
+                    Un GPU intégré partage la RAM : il est compté comme du CPU.
+                  </p>
+                }
+                @case ('bandwidth') {
+                  <g-field
+                    class="editor__control editor__control--narrow"
+                    suffix="Go/s"
+                    hint="Fiche constructeur du GPU ; vide : valeur détectée"
+                  >
+                    <input
+                      gInput
+                      inputmode="decimal"
+                      autocomplete="off"
+                      data-testid="fix-bandwidth"
+                      aria-label="Bande passante du GPU"
+                      [placeholder]="chosen()?.bandwidthGbs?.toString() ?? ''"
+                      [value]="bandwidthText()"
+                      [sameValue]="sameNumber"
+                      (input)="onBandwidth($any($event.target).value)"
+                    />
+                  </g-field>
+                }
+                @case ('channels') {
+                  <g-select
+                    class="editor__control editor__control--narrow"
+                    data-testid="fix-channels"
+                    ariaLabel="Canaux mémoire"
+                    [options]="channelOptions()"
+                    [value]="draft().ramChannels ?? 0"
+                    (valueChange)="patch({ ramChannels: $event || null })"
+                  />
+                  <p class="editor__hint">{{ channelsHint() }}</p>
+                }
+              }
+              @if (row.source === 'manual') {
+                <button
+                  gButton
+                  variant="ghost"
+                  size="sm"
+                  class="editor__reset"
+                  data-testid="fix-row-reset"
+                  (click)="resetRow(row.key)"
+                >
+                  <g-icon name="reset" />
+                  Valeur détectée
+                </button>
+              }
+            </dd>
+          }
+        </div>
       }
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>GPU intégré</mat-label>
-        <mat-select
-          data-testid="fix-integrated"
-          [disabled]="!chosenGpu() || unifiedGpu()"
-          [value]="draft().gpuIntegrated === null ? 'auto' : draft().gpuIntegrated ? 'yes' : 'no'"
-          (selectionChange)="
-            patch({ gpuIntegrated: $event.value === 'auto' ? null : $event.value === 'yes' })
-          "
-        >
-          <mat-option value="auto"
-            >Détecté ({{ chosenGpu()?.integrated ? 'oui' : 'non' }})</mat-option
-          >
-          <mat-option value="yes">Oui : compté comme du CPU</mat-option>
-          <mat-option value="no">Non : GPU dédié</mat-option>
-        </mat-select>
-        <mat-hint>{{
-          unifiedGpu()
-            ? 'Mémoire unifiée : le GPU reçoit les couches'
-            : 'Un GPU intégré partage la RAM'
-        }}</mat-hint>
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Bande passante du GPU</mat-label>
-        <input
-          #bw
-          matInput
-          type="number"
-          min="1"
-          step="1"
-          inputmode="decimal"
-          data-testid="fix-bandwidth"
-          [disabled]="!chosenGpu()"
-          [placeholder]="chosenGpu()?.bandwidthGbs?.toString() ?? ''"
-          [value]="draft().gpuBandwidthGbs ?? ''"
-          (input)="onBandwidth(bw.value)"
-        />
-        <span matTextSuffix>Go/s</span>
-        <mat-hint>{{ bandwidthHint() || 'Fiche constructeur du GPU' }}</mat-hint>
-      </mat-form-field>
-    </div>
+    </dl>
   </section>
 
-  <section aria-labelledby="simulation-title">
-    <h3 id="simulation-title">Simulation <span class="muted">· jusqu’à la fermeture</span></h3>
-    <p class="muted intro">
-      « Et si je passais à… ? » : le classement est recalculé pour ce matériel.
-    </p>
-    <div class="grid">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>GPU simulé</mat-label>
-        <mat-select
+  <section class="section" aria-labelledby="simulation-title">
+    <h3 id="simulation-title" class="section__title">
+      Simulation <span class="muted">· jusqu’à la fermeture</span>
+    </h3>
+    <p class="intro">« Et si je passais à… ? » : le classement est recalculé pour ce matériel.</p>
+    <div class="sim">
+      <div class="sim__item">
+        <g-select
+          label="GPU simulé"
           data-testid="sim-gpu"
+          [options]="simGpuOptions()"
           [value]="draft().simulatedGpu ?? ''"
-          (selectionChange)="patch({ simulatedGpu: $event.value || null })"
-        >
-          <mat-option value="">Aucun (GPU réel)</mat-option>
-          @for (group of gpuGroups(); track group.vendor) {
-            <mat-optgroup [label]="group.vendor">
-              @for (g of group.gpus; track g.label) {
-                <mat-option [value]="g.label">
-                  {{ g.label }} <span class="muted">· {{ bandwidth(g.bandwidthGbs) }}</span>
-                </mat-option>
-              }
-            </mat-optgroup>
-          }
-        </mat-select>
-        @if (simulatingGpu()) {
-          <mat-hint>Les corrections du GPU réel ne s’appliquent pas au GPU simulé</mat-hint>
-        }
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>RAM simulée</mat-label>
-        <mat-select
+          (valueChange)="patch({ simulatedGpu: $event || null })"
+        />
+        <p class="editor__hint">
+          {{
+            simulatingGpu()
+              ? 'Les corrections du GPU réel ne s’appliquent pas au GPU simulé.'
+              : 'Un GPU de la table de référence, à la place du vôtre.'
+          }}
+        </p>
+      </div>
+      <div class="sim__item">
+        <g-select
+          label="RAM simulée"
           data-testid="sim-ram"
+          [options]="simRamOptions"
           [value]="draft().simulatedRamTotal ?? 0"
-          (selectionChange)="patch({ simulatedRamTotal: $event.value || null })"
-        >
-          <mat-option [value]="0">Aucune (RAM réelle)</mat-option>
-          @for (r of simulatedRam; track r.gb) {
-            <mat-option [value]="r.bytes">{{ r.gb }} Go</mat-option>
-          }
-        </mat-select>
-        <mat-hint>Même consommation actuelle, sur une RAM plus grande ou plus petite</mat-hint>
-      </mat-form-field>
+          (valueChange)="patch({ simulatedRamTotal: $event || null })"
+        />
+        <p class="editor__hint">
+          Même consommation actuelle, sur une RAM plus grande ou plus petite.
+        </p>
+      </div>
     </div>
   </section>
 
   @if (error(); as message) {
-    <p class="error-box" role="alert">{{ message }}</p>
+    <g-callout kind="error" role="alert" class="error">{{ message }}</g-callout>
   }
-</mat-dialog-content>
 
-<mat-dialog-actions class="actions">
-  <button mat-button type="button" data-testid="fix-reset" (click)="resetAll()">
-    <mat-icon>restart_alt</mat-icon>
-    Valeurs détectées
-  </button>
-  <span class="spacer"></span>
-  <button mat-button type="button" mat-dialog-close>Annuler</button>
-  <button
-    mat-flat-button
-    type="button"
-    data-testid="fix-apply"
-    [disabled]="busy() || !changed()"
-    (click)="apply()"
-  >
-    Appliquer
-  </button>
-</mat-dialog-actions>
+  <div gDialogActions>
+    <button gButton variant="ghost" class="reset-all" data-testid="fix-reset" (click)="resetAll()">
+      <g-icon name="reset" />
+      Valeurs détectées
+    </button>
+    <button gButton (click)="close()">Annuler</button>
+    <button
+      gButton
+      variant="primary"
+      data-testid="fix-apply"
+      [busy]="busy()"
+      [disabled]="!changed()"
+      (click)="apply()"
+    >
+      Appliquer
+    </button>
+  </div>
+</g-dialog>

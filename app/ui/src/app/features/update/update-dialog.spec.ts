@@ -1,8 +1,9 @@
+import { DialogRef } from '@angular/cdk/dialog';
 import { TestBed } from '@angular/core/testing';
-import { MatDialogRef } from '@angular/material/dialog';
 import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { type Handler, argsOf, mockBackend } from '../../../testing/backend';
+import { text } from '../../../testing/dom';
 import type { UpdateCheck } from '../../core/generated/UpdateCheck';
 import { RELEASES_URL, UpdateStore, noteBlocks } from '../../state/update.store';
 import { UpdateDialog, releaseDate } from './update-dialog';
@@ -18,10 +19,10 @@ const AVAILABLE: UpdateCheck = {
 
 async function open(handlers: Record<string, Handler> = {}) {
   const calls = mockBackend(handlers);
-  const dialogRef = { disableClose: false, close: () => undefined };
+  const dialogRef = { disableClose: false, config: {}, closed: 0, close: () => dialogRef.closed++ };
   TestBed.configureTestingModule({
     imports: [UpdateDialog],
-    providers: [{ provide: MatDialogRef, useValue: dialogRef }],
+    providers: [{ provide: DialogRef, useValue: dialogRef }],
   });
   const store = TestBed.inject(UpdateStore);
   const fixture = TestBed.createComponent(UpdateDialog);
@@ -38,8 +39,6 @@ async function open(handlers: Record<string, Handler> = {}) {
   };
   return { calls, dialogRef, store, fixture, el, find, click };
 }
-
-const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, ' ').trim();
 
 describe('UpdateDialog', () => {
   afterEach(() => clearMocks());
@@ -62,18 +61,29 @@ describe('UpdateDialog', () => {
   it('vérifie à l’ouverture : GRAM est à jour', async () => {
     const { calls, find } = await open();
     expect(argsOf(calls, 'check_update')).toHaveLength(1);
-    expect(text(find('update-uptodate'))).toBe('check_circle GRAM 0.1.0 est à jour.');
+    expect(text(find('update-uptodate'))).toBe('GRAM 0.1.0 est à jour.');
     expect(find('update-install')).toBeNull();
+  });
+
+  it('« Fermer » ferme le dialogue', async () => {
+    const { dialogRef, el, fixture } = await open();
+    const close = [...el.querySelectorAll('button')].find((b) => text(b) === 'Fermer')!;
+    close.click();
+    await fixture.whenStable();
+    expect(dialogRef.closed).toBe(1);
   });
 
   it('mise à jour disponible : notes, installation, progression ; fermeture bloquée', async () => {
     const { calls, dialogRef, fixture, find, click, el } = await open({
       check_update: () => AVAILABLE,
     });
-    expect(text(find('update-available')?.querySelector('span'))).toBe(
+    expect(text(find('update-available')?.querySelector('.state__text > span'))).toBe(
       'GRAM 0.2.0 est disponible (version actuelle : 0.1.0)',
     );
-    expect(el.textContent).toContain('Publiée le 11 novembre 2026');
+    expect(text(find('update-available')?.querySelector('.date'))).toBe(
+      'Publiée le 11 novembre 2026',
+    );
+    expect(find('dialog-close')).not.toBeNull();
     const notes = find('update-notes')!;
     expect(text(notes.querySelector('h3'))).toBe('Nouveautés');
     expect([...notes.querySelectorAll('.item')].map(text)).toEqual([
@@ -84,11 +94,17 @@ describe('UpdateDialog', () => {
     await click('update-install');
     expect(argsOf(calls, 'install_update')).toHaveLength(1);
     expect(dialogRef.disableClose).toBe(true);
+    // Ni ✕ ni bouton de fermeture pendant l'installation.
+    expect(find('dialog-close')).toBeNull();
+    expect(el.querySelector('.g-dialog__actions')?.textContent).not.toContain('Plus tard');
     expect(text(find('update-progress'))).toBe('Téléchargement de GRAM 0.2.0');
+    const bar = find('update-progress')!.querySelector('[role="progressbar"]')!;
+    expect(bar.hasAttribute('aria-valuenow')).toBe(false);
 
     await emit('update-progress', { downloaded: 3 * 2 ** 20, total: 9 * 2 ** 20 });
     fixture.detectChanges();
     expect(text(find('update-progress'))).toBe('Téléchargement de GRAM 0.2.0 : 3 Mo sur 9 Mo');
+    expect(Number(bar.getAttribute('aria-valuenow'))).toBeCloseTo(33.3, 1);
     await emit('update-progress', { downloaded: 9 * 2 ** 20, total: 9 * 2 ** 20 });
     fixture.detectChanges();
     expect(text(find('update-progress'))).toBe('Installation… GRAM va redémarrer.');
@@ -98,7 +114,7 @@ describe('UpdateDialog', () => {
     const calls = mockBackend({ check_update: () => AVAILABLE });
     TestBed.configureTestingModule({
       imports: [UpdateDialog],
-      providers: [{ provide: MatDialogRef, useValue: { disableClose: false } }],
+      providers: [{ provide: DialogRef, useValue: { disableClose: false, config: {} } }],
     });
     await TestBed.inject(UpdateStore).check(true);
     const fixture = TestBed.createComponent(UpdateDialog);

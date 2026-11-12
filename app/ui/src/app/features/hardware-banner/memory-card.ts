@@ -94,6 +94,12 @@ export function ramSizeType(r: RamInfo): string {
   return [roundSize(r.installed ?? r.total), type].filter(Boolean).join(' ');
 }
 
+/** Jeu d'instructions utile aux runtimes : AVX-512, AVX2… (ARM64 sur une puce Apple). */
+export function cpuIsa(p: HardwareProfile): string {
+  const c = p.cpu;
+  return c.arch === 'arm' ? 'ARM64' : c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
+}
+
 /** « 2 canaux », « 1 canal ». */
 export function ramChannels(r: RamInfo): string {
   return `${r.channels} ${r.channels > 1 ? 'canaux' : 'canal'}`;

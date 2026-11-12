@@ -22,6 +22,25 @@ export interface SelectOption<T> {
   /** Précision à droite (« non installé »). */
   hint?: string;
   disabled?: boolean;
+  /** Groupe (« NVIDIA ») : les options consécutives d'un même groupe sont réunies sous son titre. */
+  group?: string;
+}
+
+interface SelectSection<T> {
+  group: string | null;
+  options: SelectOption<T>[];
+}
+
+/** Options consécutives d'un même groupe réunies ; sans groupe, une section anonyme. */
+export function selectSections<T>(options: readonly SelectOption<T>[]): SelectSection<T>[] {
+  const sections: SelectSection<T>[] = [];
+  for (const o of options) {
+    const group = o.group ?? null;
+    const last = sections.at(-1);
+    if (last && last.group === group) last.options.push(o);
+    else sections.push({ group, options: [o] });
+  }
+  return sections;
 }
 
 let nextId = 0;
@@ -85,20 +104,45 @@ const POSITIONS: ConnectedPosition[] = [
         (cdkListboxValueChange)="pick($event.value[0])"
         (keydown)="onListKeydown($event)"
       >
-        @for (o of options(); track o.value) {
-          <li
-            class="g-select__option"
-            [cdkOption]="o.value"
-            [cdkOptionDisabled]="!!o.disabled"
-            [cdkOptionTypeaheadLabel]="o.label"
-            (click)="closeSoon()"
-          >
-            <span class="g-select__option-label">{{ o.label }}</span>
-            @if (o.hint) {
-              <span class="g-select__hint">{{ o.hint }}</span>
+        @for (s of sections(); track $index; let i = $index) {
+          @if (s.group) {
+            <li role="group" class="g-select__group" [attr.aria-labelledby]="listId + '-g' + i">
+              <div class="g-select__group-label" [id]="listId + '-g' + i">{{ s.group }}</div>
+              <ul role="none" class="g-select__group-list">
+                @for (o of s.options; track o.value) {
+                  <li
+                    class="g-select__option"
+                    [cdkOption]="o.value"
+                    [cdkOptionDisabled]="!!o.disabled"
+                    [cdkOptionTypeaheadLabel]="o.label"
+                    (click)="closeSoon()"
+                  >
+                    <span class="g-select__option-label">{{ o.label }}</span>
+                    @if (o.hint) {
+                      <span class="g-select__hint">{{ o.hint }}</span>
+                    }
+                    <g-icon class="g-select__check" name="check" />
+                  </li>
+                }
+              </ul>
+            </li>
+          } @else {
+            @for (o of s.options; track o.value) {
+              <li
+                class="g-select__option"
+                [cdkOption]="o.value"
+                [cdkOptionDisabled]="!!o.disabled"
+                [cdkOptionTypeaheadLabel]="o.label"
+                (click)="closeSoon()"
+              >
+                <span class="g-select__option-label">{{ o.label }}</span>
+                @if (o.hint) {
+                  <span class="g-select__hint">{{ o.hint }}</span>
+                }
+                <g-icon class="g-select__check" name="check" />
+              </li>
             }
-            <g-icon class="g-select__check" name="check" />
-          </li>
+          }
         }
       </ul>
     </ng-template>
@@ -168,6 +212,19 @@ const POSITIONS: ConnectedPosition[] = [
       font-family: var(--g-font-sans);
       outline: none;
     }
+    .g-select__group-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .g-select__group-label {
+      padding: 8px 10px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--g-muted);
+    }
     .g-select__option {
       display: flex;
       align-items: center;
@@ -235,6 +292,7 @@ export class Select<T> {
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly list = viewChild(CdkListbox);
 
+  protected readonly sections = computed(() => selectSections(this.options()));
   protected readonly selected = computed(() =>
     this.options().find((o) => Object.is(o.value, this.value())),
   );

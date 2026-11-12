@@ -8,8 +8,6 @@ import {
   input,
   linkedSignal,
 } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import type { GpuInfo } from '../../core/generated/GpuInfo';
 import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import type { Source } from '../../core/generated/Source';
@@ -20,15 +18,18 @@ import { SOURCE_LABELS } from '../../shared/labels';
 import { runtimeRows } from '../../shared/runtimes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
+import { DialogService } from '../../shared/ui/dialog/dialog';
 import { Icon } from '../../shared/ui/icon/icon';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Tag } from '../../shared/ui/tag/tag';
+import { ToastService } from '../../shared/ui/toast/toast';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { DetailStore } from '../../state/detail.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import {
   type MemorySelection,
+  cpuIsa,
   machinePills,
   memoryCard,
   ramChannels,
@@ -49,15 +50,13 @@ function sourceNote(s: Source): string | undefined {
   return s === 'detected' || s === 'nvml' ? undefined : SOURCE_LABELS[s];
 }
 
-/** Jeu d'instructions utile aux runtimes : AVX-512, AVX2… (ARM64 sur une puce Apple). */
-function isa(p: HardwareProfile): string {
-  const c = p.cpu;
-  return c.arch === 'arm' ? 'ARM64' : c.avx512 ? 'AVX-512' : c.avx2 ? 'AVX2' : 'sans AVX2';
-}
-
 export function cpuParts(p: HardwareProfile): BannerPart[] {
   const c = p.cpu;
-  return [{ text: c.name }, { text: `${c.coresPhysical}c/${c.coresLogical}t` }, { text: isa(p) }];
+  return [
+    { text: c.name },
+    { text: `${c.coresPhysical}c/${c.coresLogical}t` },
+    { text: cpuIsa(p) },
+  ];
 }
 
 export function ramParts(p: HardwareProfile): BannerPart[] {
@@ -154,8 +153,8 @@ export class HardwareBanner {
   protected readonly hardware = inject(HardwareStore);
   protected readonly ranking = inject(RankingStore);
   private readonly detail = inject(DetailStore);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialogs = inject(DialogService);
+  private readonly toast = inject(ToastService);
   private readonly pendingTasks = inject(PendingTasks);
 
   /** Fiche ouverte : bande resserrée en une ligne. */
@@ -209,7 +208,7 @@ export class HardwareBanner {
     return {
       name: shortCpuName(p.cpu.name),
       full: p.cpu.name,
-      rest: `${p.cpu.coresPhysical}c/${p.cpu.coresLogical}t · ${isa(p)}`,
+      rest: `${p.cpu.coresPhysical}c/${p.cpu.coresLogical}t · ${cpuIsa(p)}`,
     };
   });
 
@@ -251,7 +250,7 @@ export class HardwareBanner {
   /** Bouton « Ré-analyser » et touche R : nouvelle détection du matériel et des runtimes. */
   protected rescan(): void {
     this.hardware.rescan().catch((e: unknown) => {
-      this.snackBar.open(`Analyse impossible : ${errorMessage(e)}`, 'OK');
+      this.toast.show(`Analyse impossible : ${errorMessage(e)}`, { kind: 'error' });
     });
   }
 
@@ -259,13 +258,13 @@ export class HardwareBanner {
   protected openCorrections(): void {
     this.pendingTasks.run(async () => {
       const { CorrectionsDialog } = await import('./corrections-dialog');
-      this.dialog.open(CorrectionsDialog, { width: '720px', maxWidth: '92vw', autoFocus: false });
+      this.dialogs.open(CorrectionsDialog, { width: '720px' });
     });
   }
 
   protected stopSimulation(): void {
     this.hardware.stopSimulation().catch((e: unknown) => {
-      this.snackBar.open(`Simulation non arrêtée : ${errorMessage(e)}`, 'OK');
+      this.toast.show(`Simulation non arrêtée : ${errorMessage(e)}`, { kind: 'error' });
     });
   }
 }

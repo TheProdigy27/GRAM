@@ -67,6 +67,11 @@ $light: (
   axis-speed: #0e9384,
   axis-fit: #c76a00,
   axis-context: #c8417a,
+  // Texte dans les segments de la barre de répartition des poids (contraste ≥ 4,5:1)
+  axis-quality-fg: #ffffff,
+  axis-speed-fg: #101828,
+  axis-fit-fg: #101828,
+  axis-context-fg: #ffffff,
   // Projecteur vision de la barre mémoire (catégorie à part des trois bleus ordonnés)
   mem-vision: #0e9384,
   // Blocs de commande à copier : fond sombre dans les deux thèmes
@@ -79,14 +84,7 @@ $light: (
   shadow: 0 1px 2px rgba(16, 24, 40, 0.08),
   shadow-pop: 0 12px 28px rgba(16, 24, 40, 0.14),
   shadow-dialog: 0 24px 64px rgba(16, 24, 40, 0.22),
-  backdrop: rgba(16, 24, 40, 0.42),
-  // Anciennes couleurs des écrans Material, retirées à mesure qu'ils migrent
-  gram-ok: #1e7b3a,
-  gram-ok-bg: #d5f2dd,
-  gram-warn: #9a5300,
-  gram-warn-bg: #ffe2c2,
-  gram-neutral: #4b4f56,
-  gram-neutral-bg: #e3e5e9
+  backdrop: rgba(16, 24, 40, 0.42)
 );
 
 $dark: (
@@ -140,6 +138,10 @@ $dark: (
   axis-speed: #1fa996,
   axis-fit: #c98419,
   axis-context: #d6639a,
+  axis-quality-fg: #0b0d12,
+  axis-speed-fg: #0b0d12,
+  axis-fit-fg: #0b0d12,
+  axis-context-fg: #0b0d12,
   mem-vision: #1fa996,
   code-bg: #07090d,
   code-fg: #d7e2f0,
@@ -157,12 +159,6 @@ $dark: (
     0 24px 64px rgba(0, 0, 0, 0.55),
   ),
   backdrop: rgba(0, 0, 0, 0.6),
-  gram-ok: #7fd99a,
-  gram-ok-bg: #123d22,
-  gram-warn: #ffb870,
-  gram-warn-bg: #4a2a05,
-  gram-neutral: #c4c7ce,
-  gram-neutral-bg: #383b41,
 );
 
 @mixin tokens($map) {
@@ -221,14 +217,6 @@ $mat-colors: (
       density: 0,
     )
   );
-
-  --gram-ok: var(--g-gram-ok);
-  --gram-ok-bg: var(--g-gram-ok-bg);
-  --gram-warn: var(--g-gram-warn);
-  --gram-warn-bg: var(--g-gram-warn-bg);
-  --gram-neutral: var(--g-gram-neutral);
-  --gram-neutral-bg: var(--g-gram-neutral-bg);
-  --gram-mono: var(--g-font-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -364,34 +352,6 @@ kbd,
 }
 
 // --- Écrans Material (retirés à mesure de la migration) ----------------------------------
-
-.muted {
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.error {
-  color: var(--mat-sys-error);
-}
-
-.error-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: var(--mat-sys-on-error-container);
-  background: var(--mat-sys-error-container);
-}
-
-// Étiquettes (cas d'usage de la fiche, état du jeton dans les paramètres).
-.tag {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font: var(--mat-sys-label-medium);
-  color: var(--mat-sys-on-secondary-container);
-  background: var(--mat-sys-secondary-container);
-}
 
 // Infobulles sur plusieurs lignes (détail du score, avertissements).
 .gram-multiline-tooltip .mdc-tooltip__surface {

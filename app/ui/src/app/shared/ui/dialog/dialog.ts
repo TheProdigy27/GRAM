@@ -41,7 +41,8 @@ export class DialogService {
 
 /**
  * Coque d'un dialogue : titre, en-tête complémentaire (`[gDialogHeader]`), contenu qui défile,
- * pied d'actions (`[gDialogActions]`) et bouton Fermer.
+ * pied d'actions (`[gDialogActions]`, sur toute la largeur : un élément `flex: 1` y sépare les
+ * actions de gauche de celles de droite) et bouton Fermer.
  *
  * ```html
  * <g-dialog heading="Paramètres" width="1040px">
@@ -74,7 +75,11 @@ export class DialogService {
     <div class="g-dialog__body"><ng-content /></div>
     <footer class="g-dialog__actions"><ng-content select="[gDialogActions]" /></footer>
   `,
-  host: { class: 'g-dialog', '[style.width]': 'width()' },
+  host: {
+    class: 'g-dialog',
+    '[class.g-dialog--flush]': 'flush()',
+    '[style.width]': 'width()',
+  },
   // Sans encapsulation pour espacer les actions projetées. Tout est préfixé.
   encapsulation: ViewEncapsulation.None,
   styles: `
@@ -111,6 +116,9 @@ export class DialogService {
       padding: 20px;
       overflow: auto;
     }
+    .g-dialog--flush > .g-dialog__body {
+      padding: 0;
+    }
     .g-dialog__actions {
       display: flex;
       flex-wrap: wrap;
@@ -125,6 +133,7 @@ export class DialogService {
       display: none;
     }
     .g-dialog__actions > [gDialogActions] {
+      flex: 1;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -138,6 +147,8 @@ export class GDialog {
   /** Largeur souhaitée (« 520px ») ; le dialogue reste borné à la fenêtre. */
   readonly width = input<string | null>(null);
   readonly closable = input(true, { transform: booleanAttribute });
+  /** Contenu sans marge intérieure (navigation latérale des paramètres). */
+  readonly flush = input(false, { transform: booleanAttribute });
 
   private readonly ref = inject(DialogRef, { optional: true });
   protected readonly titleId = this.ref?.config.ariaLabelledBy ?? `g-dialog-${nextId++}-title`;

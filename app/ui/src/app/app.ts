@@ -11,8 +11,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import type { ExportFormat } from './core/generated/ExportFormat';
 import { ShortcutsService } from './core/shortcuts.service';
 import { TauriService, errorMessage } from './core/tauri.service';
@@ -21,10 +19,13 @@ import { HardwareBanner } from './features/hardware-banner/hardware-banner';
 import { ModelDetailPanel } from './features/model-detail/model-detail';
 import { RankingView } from './features/ranking/ranking-view';
 import { StatusBar } from './features/status-bar/status-bar';
+import { UpdateLauncher } from './features/update/update-launcher';
 import { Button } from './shared/ui/button/button';
+import { DialogService } from './shared/ui/dialog/dialog';
 import { FIELD } from './shared/ui/field/field';
 import { Icon } from './shared/ui/icon/icon';
 import { MENU } from './shared/ui/menu/menu';
+import { ToastService } from './shared/ui/toast/toast';
 import { Tooltip } from './shared/ui/tooltip/tooltip';
 import { CatalogStore } from './state/catalog.store';
 import { DetailStore } from './state/detail.store';
@@ -68,8 +69,9 @@ export class App {
   protected readonly ranking = inject(RankingStore);
   protected readonly updates = inject(UpdateStore);
   private readonly tauri = inject(TauriService);
-  private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialogs = inject(DialogService);
+  private readonly toast = inject(ToastService);
+  private readonly updateLauncher = inject(UpdateLauncher);
   private readonly pendingTasks = inject(PendingTasks);
   private readonly shortcuts = inject(ShortcutsService);
   private readonly injector = inject(Injector);
@@ -120,8 +122,8 @@ export class App {
   private async checkUpdate(): Promise<void> {
     const update = await this.updates.check(true);
     if (!update) return;
-    this.snackBar
-      .open(`GRAM ${update.version} est disponible.`, 'Voir', { duration: 10000 })
+    this.toast
+      .show(`GRAM ${update.version} est disponible.`, { action: 'Voir', duration: 10000 })
       .onAction()
       .subscribe(() => this.openUpdate());
   }
@@ -228,22 +230,19 @@ export class App {
   }
 
   /**
-   * Le dialogue (et les onglets Material) est chargé à la première ouverture ; le chargement
-   * compte comme une tâche en cours (l'application n'est pas « stable » avant l'ouverture).
+   * Le dialogue est chargé à la première ouverture ; le chargement compte comme une tâche en
+   * cours (l'application n'est pas « stable » avant l'ouverture).
    */
   protected openSettings(): void {
     this.pendingTasks.run(async () => {
       const { SettingsDialog } = await import('./features/settings/settings-dialog');
-      this.dialog.open(SettingsDialog, { width: '820px', maxWidth: '94vw', autoFocus: false });
+      this.dialogs.open(SettingsDialog, { width: '1040px' });
     });
   }
 
   /** Dialogue « Mise à jour », chargé à la première ouverture comme celui des paramètres. */
   protected openUpdate(): void {
-    this.pendingTasks.run(async () => {
-      const { UpdateDialog } = await import('./features/update/update-dialog');
-      this.dialog.open(UpdateDialog, { width: '560px', maxWidth: '94vw', autoFocus: false });
-    });
+    this.updateLauncher.open();
   }
 
   /**
@@ -255,9 +254,11 @@ export class App {
     this.exporting.set(true);
     try {
       const path = await this.tauri.exportRanking(format);
-      if (path) this.snackBar.open(`Classement exporté : ${path}`, 'OK', { duration: 6000 });
+      if (path) {
+        this.toast.show(`Classement exporté : ${path}`, { kind: 'success', duration: 6000 });
+      }
     } catch (e) {
-      this.snackBar.open(`Export impossible : ${errorMessage(e)}`, 'OK');
+      this.toast.show(`Export impossible : ${errorMessage(e)}`, { kind: 'error' });
     } finally {
       this.exporting.set(false);
     }

@@ -1,7 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { TestbedHarnessEnvironment } from '@angular/cdk/testing/testbed';
-import { MatDialogHarness } from '@angular/material/dialog/testing';
-import { MatSnackBarHarness } from '@angular/material/snack-bar/testing';
 import { emit } from '@tauri-apps/api/event';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { App } from './app';
@@ -45,6 +42,12 @@ async function start(updateCheckDelayMs = 60_000) {
 }
 
 const text = (el: Element | null | undefined) => el?.textContent?.replace(/\s+/g, ' ').trim();
+
+/** Toast affiché (région ajoutée au `<body>` par `ToastService`). */
+const toast = () => document.querySelector<HTMLElement>('g-toast-region .g-toast');
+/** Dialogues ouverts, le dernier en haut. */
+const dialogs = () => [...document.querySelectorAll<HTMLElement>('[role="dialog"]')];
+const dialogTitle = (d: HTMLElement | undefined) => text(d?.querySelector('h2'));
 
 /** Lignes d'une liste du classement (`table-items`, `table-slow`, `table-too-big`). */
 const rowsOf = (el: HTMLElement, table = 'table-items') => [
@@ -283,14 +286,13 @@ describe('App', () => {
   it('exporte le classement affiché depuis le menu', async () => {
     const calls = mockBackend();
     const fixture = await start();
-    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
 
     await chooseMenuItem(fixture, 'export', 'CSV');
 
     // Sans chemin : le backend ouvre le dialogue « Enregistrer sous ».
     expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'csv' }]);
-    const snack = await root.getHarness(MatSnackBarHarness);
-    expect(await snack.getMessage()).toBe(
+    expect(toast()?.dataset['kind']).toBe('success');
+    expect(text(toast()?.querySelector('.g-toast__message'))).toBe(
       'Classement exporté : C:\\Users\\x\\Documents\\classement-gram.csv',
     );
   });
@@ -298,10 +300,9 @@ describe('App', () => {
   it('un export annulé ne montre rien', async () => {
     const calls = mockBackend({ export_ranking: () => null });
     const fixture = await start();
-    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
     await chooseMenuItem(fixture, 'export', 'Markdown');
     expect(argsOf(calls, 'export_ranking')).toEqual([{ format: 'md' }]);
-    expect(await root.getAllHarnesses(MatSnackBarHarness)).toHaveLength(0);
+    expect(toast()).toBeNull();
   });
 
   it('simulation en cours : signalée dans le bandeau, arrêtée en gardant les corrections', async () => {
@@ -339,18 +340,17 @@ describe('App', () => {
     await new Promise((r) => setTimeout(r, 10)); // vérification différée, hors d'Angular
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
-    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
     expect(argsOf(calls, 'check_update')).toHaveLength(1);
 
-    const snack = await root.getHarness(MatSnackBarHarness);
-    expect(await snack.getMessage()).toBe('GRAM 0.2.0 est disponible.');
+    expect(text(toast()?.querySelector('.g-toast__message'))).toBe('GRAM 0.2.0 est disponible.');
     expect(text(el.querySelector('[data-testid="open-update"]'))).toBe('Mise à jour 0.2.0');
 
-    await snack.dismissWithAction();
-    await fixture.whenStable();
-    const dialog = await root.getHarness(MatDialogHarness);
-    expect(await dialog.getTitleText()).toBe('Mise à jour de GRAM');
-    expect(await dialog.getContentText()).toContain('GRAM 0.2.0 est disponible');
+    await click(fixture, byTestId('toast-action', toast()!));
+    expect(toast()).toBeNull();
+    const dialog = dialogs().at(-1);
+    expect(dialogTitle(dialog)).toBe('Mise à jour de GRAM');
+    expect(dialog?.getAttribute('aria-modal')).toBe('true');
+    expect(text(dialog)).toContain('GRAM 0.2.0 est disponible');
     // Déjà connue : pas de nouvelle vérification.
     expect(argsOf(calls, 'check_update')).toHaveLength(1);
   });
@@ -361,16 +361,14 @@ describe('App', () => {
     await new Promise((r) => setTimeout(r, 10));
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
-    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
     expect(argsOf(calls, 'check_update')).toHaveLength(1);
-    expect(await root.getAllHarnesses(MatSnackBarHarness)).toHaveLength(0);
+    expect(toast()).toBeNull();
 
     (el.querySelector('[data-testid="open-update"]') as HTMLButtonElement).click();
     await fixture.whenStable();
     await new Promise((r) => setTimeout(r));
     await fixture.whenStable();
-    const dialog = await root.getHarness(MatDialogHarness);
-    expect(await dialog.getContentText()).toContain('GRAM 0.1.0 est à jour.');
+    expect(text(dialogs().at(-1))).toContain('GRAM 0.1.0 est à jour.');
     expect(argsOf(calls, 'check_update')).toHaveLength(2);
   });
 
@@ -378,21 +376,27 @@ describe('App', () => {
     const calls = mockBackend();
     const fixture = await start();
     const el = fixture.nativeElement as HTMLElement;
-    const root = TestbedHarnessEnvironment.documentRootLoader(fixture);
 
-    (el.querySelector('[data-testid="open-settings"]') as HTMLButtonElement).click();
-    await fixture.whenStable();
-    let dialog = await root.getHarness(MatDialogHarness);
-    expect(await dialog.getTitleText()).toBe('Paramètres');
-    await dialog.close();
+    const settings = byTestId('open-settings', el);
+    settings.focus();
+    await click(fixture, settings);
+    let dialog = dialogs().at(-1)!;
+    expect(dialogTitle(dialog)).toBe('Paramètres');
+    // Focus sur le titre, relié au dialogue ; il revient au bouton à la fermeture.
+    expect(dialog.getAttribute('aria-labelledby')).toBe(dialog.querySelector('h2')!.id);
+    expect(document.activeElement).toBe(dialog.querySelector('h2'));
     expect(argsOf(calls, 'has_hf_token')).toHaveLength(1);
+    await click(fixture, byTestId('dialog-close', dialog));
+    expect(dialogs()).toHaveLength(0);
+    expect(document.activeElement).toBe(settings);
 
-    (el.querySelector('[data-testid="open-corrections"]') as HTMLButtonElement).click();
-    await fixture.whenStable();
-    // Le dialogue des paramètres peut être encore en train de se fermer.
-    dialog = (await root.getAllHarnesses(MatDialogHarness)).at(-1)!;
-    expect(await dialog.getTitleText()).toBe('Corriger le matériel');
+    await click(fixture, byTestId('open-corrections', el));
+    dialog = dialogs().at(-1)!;
+    expect(dialogTitle(dialog)).toBe('Corriger le matériel');
     expect(argsOf(calls, 'hardware_options')).toHaveLength(1);
+    // Échap ferme le dialogue.
+    await press(fixture, document.body, 'Escape');
+    expect(dialogs()).toHaveLength(0);
   });
 
   it('touche E : ouvre le menu Exporter, M exporte en Markdown', async () => {

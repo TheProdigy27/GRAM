@@ -1,5 +1,4 @@
 import { Component, DestroyRef, computed, inject } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Runtime } from '../../core/generated/Runtime';
 import type { UseCase } from '../../core/generated/UseCase';
 import { ShortcutsService } from '../../core/shortcuts.service';
@@ -11,6 +10,7 @@ import { FIELD } from '../../shared/ui/field/field';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
 import { Switch } from '../../shared/ui/switch/switch';
+import { ToastService } from '../../shared/ui/toast/toast';
 import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { DisplayStore } from '../../state/display.store';
@@ -44,7 +44,7 @@ export class FiltersPanel {
   protected readonly display = inject(DisplayStore);
   private readonly settings = inject(SettingsStore);
   private readonly hardware = inject(HardwareStore);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toast = inject(ToastService);
 
   protected readonly useCases = USE_CASES.map((u, i) => ({
     ...u,
@@ -144,7 +144,7 @@ export class FiltersPanel {
     this.ranking.setRuntime(runtime);
     if (!this.settings.settings()) return;
     this.settings.update({ runtime }).catch((e: unknown) => {
-      this.snackBar.open(`Runtime non enregistré : ${errorMessage(e)}`, 'OK');
+      this.toast.show(`Runtime non enregistré : ${errorMessage(e)}`, { kind: 'error' });
     });
   }
 

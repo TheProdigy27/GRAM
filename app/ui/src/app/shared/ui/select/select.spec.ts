@@ -10,16 +10,16 @@ type Runtime = 'ollama' | 'lmStudio' | 'llamaCpp';
   template: `<g-select
     data-testid="runtime"
     label="Runtime"
-    [options]="options"
+    [options]="options()"
     [(value)]="value"
   />`,
 })
 class Host {
-  readonly options: SelectOption<Runtime>[] = [
+  readonly options = signal<SelectOption<Runtime>[]>([
     { value: 'ollama', label: 'Ollama' },
     { value: 'lmStudio', label: 'LM Studio', hint: 'non installé' },
     { value: 'llamaCpp', label: 'llama.cpp', disabled: true },
-  ];
+  ]);
   readonly value = signal<Runtime | null>(null);
 }
 
@@ -94,5 +94,28 @@ describe('Select', () => {
     await fixture.whenStable();
     expect(list(trigger)).toBeNull();
     expect(host.value()).toBe('ollama');
+  });
+
+  it('options groupées sous un titre, flèches d’un groupe à l’autre', async () => {
+    const { fixture, trigger, host } = await render();
+    host.options.set([
+      { value: 'ollama', label: 'Ollama' },
+      { value: 'lmStudio', label: 'LM Studio', group: 'Interfaces' },
+      { value: 'llamaCpp', label: 'llama.cpp', group: 'Interfaces' },
+    ]);
+    await press(fixture, trigger, 'ArrowDown');
+    const listbox = list(trigger)!;
+    const groups = listbox.querySelectorAll('[role="group"]');
+    expect(groups).toHaveLength(1);
+    const title = document.getElementById(groups[0].getAttribute('aria-labelledby')!);
+    expect(text(title)).toBe('Interfaces');
+    expect(optionLabels(groups[0])).toEqual(['LM Studio', 'llama.cpp']);
+    const options = listbox.querySelectorAll('[role="option"]');
+    expect(options).toHaveLength(3);
+    await press(fixture, listbox, 'ArrowDown');
+    await press(fixture, listbox, 'ArrowDown');
+    await press(fixture, listbox, 'Enter');
+    await fixture.whenStable();
+    expect(host.value()).toBe('llamaCpp');
   });
 });

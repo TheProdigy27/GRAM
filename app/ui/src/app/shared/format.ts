@@ -84,6 +84,24 @@ export function decimal(x: number, digits = 2): string {
 }
 
 /**
+ * Nombre saisi : virgule ou point, espaces des milliers acceptés (« 2 048 », « 0,55 ») ; vide ou
+ * invalide : `null`.
+ */
+export function parseNumber(value: string): number | null {
+  const text = value.replace(/[\s  ]/g, '').replace(',', '.');
+  const x = Number(text);
+  return text !== '' && Number.isFinite(x) ? x : null;
+}
+
+/**
+ * Deux textes de même valeur numérique (« 0,70 » et « 0,7 ») : `sameValue` d'un champ
+ * `gInput`, qui garde alors la saisie en cours au lieu de la remettre en forme.
+ */
+export function sameNumber(typed: string, bound: string): boolean {
+  return parseNumber(typed) === parseNumber(bound);
+}
+
+/**
  * Écart relatif → « +9 % », « −12 % », « 0 % » ; « — » s'il est inconnu. Le signe moins est
  * le vrai signe typographique (U+2212).
  */
