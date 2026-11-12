@@ -35,6 +35,7 @@ pub use hardware::{
     Backends, CpuArch, CpuInfo, DEFAULT_GPU_BANDWIDTH_GBS, DEFAULT_RAM_BANDWIDTH_GBS, DiskInfo,
     GpuInfo, HardwareProfile, Os, Overrides, RamInfo, RamKind, Source, Vendor,
 };
+pub use harness::{HarnessAddRequest, InstallProgress, Preflight};
 pub use launch::{CommandLine, LaunchPlan, Runtime};
 pub use model::{ArchInfo, ArchSource, ModelEntry, Pipeline, QuantVariant, RepoRef, UseCase};
 pub use rank::{

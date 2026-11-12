@@ -4,10 +4,12 @@
 //! envoie des filtres. Au démarrage, le matériel, les runtimes et le catalogue (cache ou
 //! catalogue embarqué) sont chargés en parallèle ; `hardware-ready` signale la fin de la
 //! détection du matériel. Les mises à jour viennent des releases GitHub (`commands::update`).
+//! L'ajout d'un modèle à GRAM Harness passe par Ollama et le dossier partagé (`commands::harness`).
 
 mod commands;
 mod error;
 mod events;
+mod resolve;
 mod state;
 mod store;
 mod token;

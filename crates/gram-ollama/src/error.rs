@@ -20,4 +20,18 @@ pub enum OllamaError {
     Client(String),
 }
 
+impl OllamaError {
+    /// Échec d'un téléchargement depuis Hugging Face que l'utilisateur peut corriger (dépôt
+    /// protégé, quantification absente, modèle découpé), signalé au milieu du flux ou, sans
+    /// flux, par une erreur HTTP.
+    pub fn pull_failure(&self) -> Option<gram_core::harness::PullFailure> {
+        match self {
+            Self::Interrupted(message) | Self::Api { message, .. } => {
+                crate::api::pull_failure(message)
+            }
+            _ => None,
+        }
+    }
+}
+
 pub type Result<T> = std::result::Result<T, OllamaError>;

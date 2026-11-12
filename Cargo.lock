@@ -1810,6 +1810,7 @@ dependencies = [
  "gram-core",
  "gram-hub",
  "gram-hw",
+ "gram-link",
  "gram-ollama",
  "keyring",
  "serde",
@@ -1837,6 +1838,7 @@ dependencies = [
  "gram-core",
  "gram-hub",
  "gram-hw",
+ "gram-link",
  "gram-ollama",
  "serde",
  "serde_json",
@@ -1890,6 +1892,20 @@ dependencies = [
  "tracing",
  "windows",
  "wmi",
+]
+
+[[package]]
+name = "gram-link"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "gram-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
+ "ts-rs",
+ "url",
 ]
 
 [[package]]
@@ -5209,6 +5225,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",

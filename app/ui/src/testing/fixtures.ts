@@ -2,17 +2,21 @@
 // fixtures ne compilent plus, ce qui oblige à mettre les tests à jour.
 // Valeurs inspirées de la machine de développement (Ryzen 7 9800X3D, RTX 5080, 64 Go DDR5).
 
+import type { AddOutcome } from '../app/core/generated/AddOutcome';
 import type { CacheInfo } from '../app/core/generated/CacheInfo';
 import type { Calibration } from '../app/core/generated/Calibration';
 import type { Estimate } from '../app/core/generated/Estimate';
 import type { HardwareOptions } from '../app/core/generated/HardwareOptions';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
+import type { HarnessStatus } from '../app/core/generated/HarnessStatus';
+import type { InstallProgress } from '../app/core/generated/InstallProgress';
 import type { LaunchPlan } from '../app/core/generated/LaunchPlan';
 import type { Measurement } from '../app/core/generated/Measurement';
 import type { MemoryBudget } from '../app/core/generated/MemoryBudget';
 import type { ModelDetail } from '../app/core/generated/ModelDetail';
 import type { ModelEntry } from '../app/core/generated/ModelEntry';
 import type { PickKind } from '../app/core/generated/PickKind';
+import type { Preflight } from '../app/core/generated/Preflight';
 import type { RankItem } from '../app/core/generated/RankItem';
 import type { RankPick } from '../app/core/generated/RankPick';
 import type { RankResponse } from '../app/core/generated/RankResponse';
@@ -20,6 +24,7 @@ import type { RunMode } from '../app/core/generated/RunMode';
 import type { RuntimesStatus } from '../app/core/generated/RuntimesStatus';
 import type { Score } from '../app/core/generated/Score';
 import type { Settings } from '../app/core/generated/Settings';
+import type { SharedModel } from '../app/core/generated/SharedModel';
 import type { SyncSummary } from '../app/core/generated/SyncSummary';
 import type { VariantDetail } from '../app/core/generated/VariantDetail';
 
@@ -547,3 +552,77 @@ export const SYNC_SUMMARY: SyncSummary = {
   durationMs: 12,
   warnings: [],
 };
+
+// ── GRAM Harness ──────────────────────────────────────────────────────────────────────────────
+
+/** Ajout de Q4_K_M (fiche `makeDetail`), déjà dans Ollama (`RUNTIMES`) : rien à télécharger. */
+export const PREFLIGHT: Preflight = {
+  repoId: 'Qwen/Qwen3-8B-GGUF',
+  displayName: 'Qwen3-8B',
+  label: 'Q4_K_M',
+  ollamaName: 'gram/qwen3-8b:q4_k_m',
+  baseName: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+  baseInstalled: true,
+  size: 4.7 * GIB,
+  download: 0,
+  disk: { mount: 'C:\\', available: 1062 * GIB, needed: 0, enough: true },
+  ctx: 8192,
+  kvCache: 'f16',
+  estimatedTokS: 95,
+  vision: false,
+  warnings: [],
+  blocked: null,
+};
+
+/** Ajout de Q8_0, à télécharger. */
+export const PREFLIGHT_DOWNLOAD: Preflight = {
+  ...PREFLIGHT,
+  label: 'Q8_0',
+  ollamaName: 'gram/qwen3-8b:q8_0',
+  baseName: 'hf.co/Qwen/Qwen3-8B-GGUF:Q8_0',
+  baseInstalled: false,
+  size: 8.1 * GIB,
+  download: 8.1 * GIB,
+  disk: { mount: 'C:\\', available: 1062 * GIB, needed: 8.91 * GIB, enough: true },
+  estimatedTokS: 62,
+};
+
+/** Q4_K_M ajouté à GRAM Harness (base déjà installée, donc gardée au retrait). */
+export const SHARED_MODEL: SharedModel = {
+  ollamaName: 'gram/qwen3-8b:q4_k_m',
+  baseName: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+  baseInstalledByGram: false,
+  displayName: 'Qwen3-8B',
+  repoId: 'Qwen/Qwen3-8B-GGUF',
+  quant: 'Q4_K_M',
+  size: 4.7 * GIB,
+  ctx: 8192,
+  kvCache: 'f16',
+  useCase: 'general',
+  vision: false,
+  estimatedTokS: 95,
+  measuredTokS: 83,
+  addedAt: '2026-11-12T18:00:00Z',
+};
+
+export const HARNESS_STATUS_EMPTY: HarnessStatus = { models: [], install: null, presence: null };
+
+export const HARNESS_STATUS_ADDED: HarnessStatus = {
+  models: [{ model: SHARED_MODEL, baseRemovable: false }],
+  install: null,
+  presence: null,
+};
+
+/** Téléchargement de Q8_0 en cours (événement `harness-progress`). */
+export const INSTALL_PROGRESS: InstallProgress = {
+  repoId: 'Qwen/Qwen3-8B-GGUF',
+  displayName: 'Qwen3-8B',
+  label: 'Q8_0',
+  ollamaName: 'gram/qwen3-8b:q8_0',
+  phase: 'downloading',
+  completed: 3.1 * GIB,
+  total: 8.1 * GIB,
+  bytesPerS: 38 * 2 ** 20,
+};
+
+export const ADD_OUTCOME: AddOutcome = { model: SHARED_MODEL, warnings: [] };

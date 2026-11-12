@@ -5,6 +5,7 @@
 //! inconnus sont ignorés.
 
 use crate::error::{OllamaError, Result};
+use gram_core::harness::PullFailure;
 use gram_core::{LoadedModel, OllamaModel};
 use serde::{Deserialize, Serialize};
 
@@ -244,6 +245,26 @@ pub fn parse_pull_line(line: &[u8]) -> Result<PullEvent> {
     match line.error {
         Some(error) => Err(OllamaError::Interrupted(error)),
         None => Ok(line.event),
+    }
+}
+
+/// Reconnaît, dans le message d'erreur d'un téléchargement depuis Hugging Face, un échec que
+/// l'utilisateur peut corriger (textes d'Ollama 0.40.16, dans `pull-error-*.ndjson`) :
+///
+/// - `realm host "huggingface.co" does not match original host "hf.co"` (dépôt protégé ou
+///   inexistant depuis `hf.co/`) et `401: {"error":"Invalid username or password."}` (depuis
+///   `huggingface.co/`, clé d'Ollama non enregistrée) ;
+/// - `400: {"error":"The specified tag is not a valid quantization scheme…"}` ;
+/// - `400: {"error":"This repository only contains sharded GGUF files…"}`.
+pub fn pull_failure(message: &str) -> Option<PullFailure> {
+    if message.contains("does not match original host") || message.contains("manifest: 401") {
+        Some(PullFailure::Unauthorized)
+    } else if message.contains("not a valid quantization scheme") {
+        Some(PullFailure::UnknownQuant)
+    } else if message.contains("sharded GGUF") {
+        Some(PullFailure::Sharded)
+    } else {
+        None
     }
 }
 
@@ -620,6 +641,28 @@ mod tests {
         assert!(
             error(fixture!("pull-error-sharded.ndjson"))
                 .contains("This repository only contains sharded GGUF files")
+        );
+        // Échecs reconnus, pour un message qui dit quoi faire.
+        let failure = |text: &[u8]| pull_failure(&error(text));
+        assert_eq!(
+            failure(fixture!("pull-error-quant.ndjson")),
+            Some(PullFailure::UnknownQuant)
+        );
+        assert_eq!(
+            failure(fixture!("pull-error-gated.ndjson")),
+            Some(PullFailure::Unauthorized)
+        );
+        assert_eq!(
+            failure(fixture!("pull-error-gated-key.ndjson")),
+            Some(PullFailure::Unauthorized)
+        );
+        assert_eq!(
+            failure(fixture!("pull-error-sharded.ndjson")),
+            Some(PullFailure::Sharded)
+        );
+        assert_eq!(
+            pull_failure("pull model manifest: file does not exist"),
+            None
         );
         assert!(matches!(
             parse_pull_line(b"<html>"),

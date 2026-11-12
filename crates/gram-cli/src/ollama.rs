@@ -91,7 +91,7 @@ pub fn run(args: OllamaArgs) -> Result<()> {
         bail!(
             "{} n'est pas installé dans Ollama : {}",
             variant.label,
-            gram_core::launch::ollama_pull_command(variant)
+            gram_core::launch::ollama_pull_command(variant, model.repo_gated(&variant.repo_id))
         );
     };
     let work = Workload {

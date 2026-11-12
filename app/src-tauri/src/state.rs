@@ -7,7 +7,10 @@
 //! - Le catalogue est chargé hors ligne au démarrage (cache, sinon catalogue embarqué), puis
 //!   remplacé par `sync_catalog`. Les fiches enrichies à la demande y sont reportées.
 //! - Les modèles installés dans Ollama sont relus avec les runtimes ; les mesures réelles
-//!   (phase 7) sont enregistrées d'un lancement à l'autre.
+//!   (phase 7) sont enregistrées d'un lancement à l'autre, et reportées dans le manifeste de
+//!   GRAM Harness (`models.json` du dossier partagé).
+//! - Un seul ajout à GRAM Harness à la fois : sa progression est gardée ici, pour qu'une
+//!   interface rechargée la retrouve, avec de quoi l'annuler.
 //! - Les dépendances au système (détection, trousseau, réseau, Ollama) sont injectables pour
 //!   les tests.
 
@@ -16,18 +19,19 @@ use crate::events::{self, HARDWARE_READY};
 use crate::store::{self, CORRECTIONS_FILE, MEASUREMENTS_FILE, SETTINGS_FILE};
 use crate::token::{KeyringStore, TokenStore};
 use gram_core::{
-    DataSource, HardwareProfile, Measurement, ModelEntry, OllamaModel, Overrides, RankRequest,
-    RuntimesStatus, Settings,
+    DataSource, HardwareProfile, InstallProgress, Measurement, ModelEntry, OllamaModel, Overrides,
+    RankRequest, RuntimesStatus, Settings,
 };
 use gram_hub::{Cache, HfToken};
 use gram_hw::RawHardware;
 use gram_ollama::OllamaClient;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
 use tauri::{AppHandle, Manager, Runtime};
+use tokio::sync::oneshot;
 
 type Collect = Arc<dyn Fn() -> RawHardware + Send + Sync>;
 type DetectRuntimes = Arc<dyn Fn() -> RuntimesStatus + Send + Sync>;
@@ -63,6 +67,10 @@ pub struct Config {
     /// API locale d'Ollama (`OLLAMA_HOST`) ; `None` si l'adresse n'est pas utilisable, ou dans
     /// les tests qui n'en ont pas besoin.
     pub ollama: Option<OllamaClient>,
+    /// Dossier partagé avec GRAM Harness (`fr.gram.shared`) : `models.json`, `harness.json`.
+    pub shared_dir: PathBuf,
+    /// Dossier des modèles d'Ollama (place sur le disque avant un ajout) ; `None` si inconnu.
+    pub models_dir: Option<PathBuf>,
 }
 
 pub struct AppState {
@@ -87,6 +95,11 @@ pub struct AppState {
     pub(crate) measure_lock: tokio::sync::Mutex<()>,
     /// Mesures réelles, la plus récente d'abord (`measurements.json`).
     measurements: Mutex<Vec<Measurement>>,
+    /// Un seul ajout à GRAM Harness à la fois (`harness_add`).
+    pub(crate) install_lock: tokio::sync::Mutex<()>,
+    /// Ajout en cours : dernière progression, et de quoi l'annuler.
+    install: Mutex<Option<InstallProgress>>,
+    install_cancel: Mutex<Option<oneshot::Sender<()>>>,
     /// Création de l'état (≈ lancement de l'application) et premier classement servi.
     started: Instant,
     first_rank_served: AtomicBool,
@@ -120,21 +133,28 @@ impl AppState {
             sync_lock: tokio::sync::Mutex::new(()),
             measure_lock: tokio::sync::Mutex::new(()),
             measurements: Mutex::new(measurements),
+            install_lock: tokio::sync::Mutex::new(()),
+            install: Mutex::new(None),
+            install_cancel: Mutex::new(None),
             started: Instant::now(),
             first_rank_served: AtomicBool::new(false),
         }
     }
 
-    /// Dossier de l'application (dossier temporaire à défaut), vraie détection, trousseau du
-    /// système.
+    /// Dossiers de l'application et partagé (dossier temporaire à défaut), vraie détection,
+    /// trousseau du système.
     pub fn production() -> Self {
         let dir = gram_hub::cache::app_dir()
             .unwrap_or_else(|| std::env::temp_dir().join(gram_hub::cache::APP_ID));
+        let shared_dir = gram_link::shared_dir()
+            .unwrap_or_else(|| std::env::temp_dir().join(gram_link::SHARED_DIR_NAME));
         Self::new(
             Config {
                 dir,
                 network: true,
                 ollama: OllamaClient::from_env(),
+                shared_dir,
+                models_dir: gram_ollama::models_dir(),
             },
             Arc::new(gram_hw::collect),
             Arc::new(gram_hw::detect_runtimes),
@@ -152,6 +172,24 @@ impl AppState {
 
     pub fn ollama(&self) -> Option<&OllamaClient> {
         self.config.ollama.as_ref()
+    }
+
+    /// Client d'Ollama, ou l'erreur à afficher si son adresse n'est pas utilisable.
+    pub fn require_ollama(&self) -> CmdResult<OllamaClient> {
+        self.ollama().cloned().ok_or_else(|| {
+            CommandError::msg(
+                "API d'Ollama inaccessible : la variable OLLAMA_HOST désigne une adresse non \
+                 prise en charge (HTTPS ou hôte inconnu).",
+            )
+        })
+    }
+
+    pub fn shared_dir(&self) -> &Path {
+        &self.config.shared_dir
+    }
+
+    pub fn models_dir(&self) -> Option<&Path> {
+        self.config.models_dir.as_deref()
     }
 
     // ── Matériel ────────────────────────────────────────────────────────────────────────────
@@ -375,13 +413,24 @@ impl AppState {
 
     /// Ajoute une mesure (elle remplace celle du même modèle au même contexte), puis enregistre
     /// la liste. Un échec de l'enregistrement est journalisé : la mesure reste en mémoire.
+    ///
+    /// Une mesure fiable est reportée dans le manifeste de GRAM Harness, sur les modèles
+    /// dérivés dont la base est le modèle mesuré.
     pub fn record_measurement(&self, m: Measurement) {
+        let (model, tok_s, reliable) = (m.ollama_model.clone(), m.tok_s, m.reliable);
         let list = {
             let mut list = self.measurements.lock().expect("verrou");
             gram_core::calibration::record(&mut list, m);
             list.clone()
         };
         self.save_measurements(&list);
+        if reliable
+            && let Err(e) = gram_link::update_manifest(self.shared_dir(), |manifest| {
+                manifest.record_measurement(&model, tok_s)
+            })
+        {
+            tracing::warn!("mesure non reportée dans le manifeste de GRAM Harness : {e}");
+        }
     }
 
     pub fn clear_measurements(&self) {
@@ -394,6 +443,35 @@ impl AppState {
         if let Err(e) = store::save(&path, &list) {
             tracing::warn!(path = %path.display(), "mesures non enregistrées : {e}");
         }
+    }
+
+    // ── Ajout à GRAM Harness ────────────────────────────────────────────────────────────────
+
+    /// Progression de l'ajout en cours.
+    pub fn install_progress(&self) -> Option<InstallProgress> {
+        self.install.lock().expect("verrou").clone()
+    }
+
+    pub fn set_install_progress(&self, progress: InstallProgress) {
+        *self.install.lock().expect("verrou") = Some(progress);
+    }
+
+    /// Note le début d'un ajout ; la fin (le garde rendu détruit) efface sa progression.
+    /// `cancel` reçoit l'annulation demandée par `harness_cancel`.
+    pub fn begin_install(
+        &self,
+        progress: InstallProgress,
+        cancel: oneshot::Sender<()>,
+    ) -> InstallGuard<'_> {
+        self.set_install_progress(progress);
+        *self.install_cancel.lock().expect("verrou") = Some(cancel);
+        InstallGuard(self)
+    }
+
+    /// Demande l'annulation de l'ajout en cours ; `false` s'il n'y en a pas.
+    pub fn cancel_install(&self) -> bool {
+        let sender = self.install_cancel.lock().expect("verrou").take();
+        sender.is_some_and(|s| s.send(()).is_ok())
     }
 
     pub fn remember_rank(&self, request: &RankRequest) {
@@ -411,6 +489,16 @@ impl AppState {
             let ms = u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
             tracing::info!(ms, "premier classement servi depuis le lancement");
         }
+    }
+}
+
+/// Ajout à GRAM Harness en cours ; sa destruction efface la progression et l'annulation.
+pub struct InstallGuard<'a>(&'a AppState);
+
+impl Drop for InstallGuard<'_> {
+    fn drop(&mut self) {
+        *self.0.install.lock().expect("verrou") = None;
+        *self.0.install_cancel.lock().expect("verrou") = None;
     }
 }
 

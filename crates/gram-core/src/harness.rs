@@ -1,16 +1,339 @@
-//! Ajout d'un modèle à GRAM Harness, partie pure : progression du téléchargement dans Ollama et
-//! place sur le disque. Les requêtes à Ollama sont dans `gram-ollama` (`install`).
+//! Ajout d'un modèle à GRAM Harness, partie pure : nom du modèle dérivé, vérifications avant
+//! l'ajout, progression du téléchargement dans Ollama et place sur le disque. Les requêtes à
+//! Ollama sont dans `gram-ollama` (`install`), le manifeste partagé dans `gram-link`.
 
+use crate::estimate::{Estimate, KvCacheType, RunMode};
+use crate::fmt::{ctx_k, gb, thousands, tok_s};
 use crate::hardware::DiskInfo;
+use crate::launch::ollama_name;
+use crate::model::{ModelEntry, QuantVariant, UseCase};
+use crate::runtime::{OllamaModel, installed_variant};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::time::Duration;
+use ts_rs::TS;
+
+// ── Nom du modèle dérivé ────────────────────────────────────────────────────────────────────
+
+/// Espace des modèles dérivés de GRAM dans Ollama : `gram/qwen3-8b:q4_k_m`.
+pub const ALIAS_PREFIX: &str = "gram/";
+/// Longueur maximale du nom (hors préfixe et étiquette).
+const ALIAS_MAX_CHARS: usize = 60;
+
+/// Nom du modèle dérivé d'une quantification : `gram/` + nom affiché du modèle en minuscules,
+/// sans accents, où toute suite d'autres caractères que `a-z`, `0-9` et `.` devient `-` (sans
+/// `-` ni `.` aux deux bouts, 60 caractères au plus ; à défaut, le nom du dépôt), puis `:` et
+/// l'étiquette de la quantification en minuscules.
+///
+/// Un nom `gram/…` n'a pas de dépôt Hugging Face pour [`OllamaModel`] : il ne compte pas comme
+/// une quantification installée (sa base, si).
+pub fn alias_name(model: &ModelEntry, variant: &QuantVariant) -> String {
+    let mut name = slug(&model.display_name);
+    if name.is_empty() {
+        let repo = model.repo_id.rsplit('/').next().unwrap_or_default();
+        name = slug(repo);
+    }
+    if name.is_empty() {
+        name = "modele".into();
+    }
+    let tag: String = variant
+        .label
+        .to_ascii_lowercase()
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-') {
+                c
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    format!("{ALIAS_PREFIX}{name}:{tag}")
+}
+
+fn slug(text: &str) -> String {
+    let mut out = String::new();
+    let mut gap = false;
+    for c in text.to_lowercase().chars() {
+        let folded = fold_accent(c);
+        let chars: Vec<char> = match folded {
+            Some(s) => s.chars().collect(),
+            None => vec![c],
+        };
+        for c in chars {
+            if c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' {
+                if gap && !out.is_empty() {
+                    out.push('-');
+                }
+                gap = false;
+                out.push(c);
+            } else {
+                gap = true;
+            }
+        }
+    }
+    let capped: String = out.chars().take(ALIAS_MAX_CHARS).collect();
+    capped.trim_matches(['-', '.']).to_string()
+}
+
+/// Lettre latine accentuée (déjà en minuscule) → lettres sans accent ; diacritique combinant →
+/// rien.
+fn fold_accent(c: char) -> Option<&'static str> {
+    Some(match c {
+        '\u{300}'..='\u{36f}' => "",
+        'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ą' => "a",
+        'ç' | 'ć' | 'č' => "c",
+        'ď' => "d",
+        'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ę' | 'ě' => "e",
+        'ì' | 'í' | 'î' | 'ï' | 'ī' => "i",
+        'ł' => "l",
+        'ñ' | 'ń' | 'ň' => "n",
+        'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' => "o",
+        'ř' => "r",
+        'ś' | 'š' => "s",
+        'ť' => "t",
+        'ù' | 'ú' | 'û' | 'ü' | 'ū' | 'ů' => "u",
+        'ý' | 'ÿ' => "y",
+        'ź' | 'ż' | 'ž' => "z",
+        'æ' => "ae",
+        'œ' => "oe",
+        'ß' => "ss",
+        _ => return None,
+    })
+}
+
+// ── Vérifications avant l'ajout ─────────────────────────────────────────────────────────────
+
+/// Commandes `harness_preflight` et `harness_add` : une quantification d'un modèle du
+/// catalogue, avec les filtres de la fiche détail (les champs de `MeasureRequest`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", default)]
+#[ts(export, optional_fields)]
+pub struct HarnessAddRequest {
+    /// Dépôt canonique du modèle.
+    pub repo_id: String,
+    pub label: String,
+    pub use_case: UseCase,
+    /// Contexte souhaité ; absent : celui du cas d'usage.
+    pub ctx: Option<u32>,
+}
+
+/// Ce que fera l'ajout d'une quantification à GRAM Harness, vérifié avant de le lancer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Preflight {
+    /// Dépôt canonique du modèle (celui de la fiche).
+    pub repo_id: String,
+    pub display_name: String,
+    pub label: String,
+    /// Modèle dérivé, qui porte le contexte : `gram/qwen3-8b:q4_k_m`.
+    pub ollama_name: String,
+    /// Base du modèle dérivé : son nom exact dans Ollama si elle y est déjà (éventuellement
+    /// depuis un autre dépôt du modèle), sinon le nom à télécharger (`hf.co/{dépôt}:{quant}`).
+    pub base_name: String,
+    /// La base est déjà dans Ollama : rien à télécharger.
+    pub base_installed: bool,
+    /// Taille de la quantification, en octets.
+    pub size: u64,
+    /// Octets à télécharger : la quantification et son projecteur de vision ; 0 si la base est
+    /// déjà là.
+    pub download: u64,
+    /// Place sur le disque des modèles d'Ollama ; absente si ce disque est inconnu.
+    pub disk: Option<DiskSpace>,
+    /// Contexte réglé dans le modèle dérivé : celui retenu par l'estimation.
+    pub ctx: u32,
+    /// Cache KV avec lequel le contexte a été calculé (réglage global d'Ollama).
+    pub kv_cache: KvCacheType,
+    /// Vitesse estimée sur la machine réelle.
+    pub estimated_tok_s: f32,
+    /// Le catalogue annonce la vision (projecteur `mmproj` ou étiquette du dépôt).
+    pub vision: bool,
+    /// Précautions, en français.
+    pub warnings: Vec<String>,
+    /// Pourquoi l'ajout est refusé (trop gros, place insuffisante) ; absent s'il est possible.
+    pub blocked: Option<String>,
+}
+
+/// Ce dont [`preflight`] a besoin.
+#[derive(Debug, Clone, Copy)]
+pub struct PreflightInput<'a> {
+    pub model: &'a ModelEntry,
+    pub variant: &'a QuantVariant,
+    /// Estimation sur la machine réelle (simulation ignorée), au contexte souhaité.
+    pub estimate: &'a Estimate,
+    pub kv_cache: KvCacheType,
+    /// Seuil de lenteur du cas d'usage, en tok/s.
+    pub slow_tok_s: f32,
+    /// Modèles installés dans Ollama.
+    pub installed: &'a [OllamaModel],
+    pub disks: &'a [DiskInfo],
+    /// Dossier des modèles d'Ollama ; inconnu : la place n'est pas vérifiée.
+    pub models_dir: Option<&'a str>,
+}
+
+/// Vérifie l'ajout d'une quantification : téléchargement nécessaire, place sur le disque,
+/// contexte réglé, précautions et refus.
+pub fn preflight(i: &PreflightInput) -> Preflight {
+    let (model, variant, est) = (i.model, i.variant, i.estimate);
+    let gated = model.repo_gated(&variant.repo_id);
+    let installed = installed_variant(i.installed, model, &variant.repo_id, &variant.label);
+    let base_installed = installed.is_some();
+    let base_name = installed.map_or_else(|| ollama_name(variant, gated), |om| om.name.clone());
+    let download = if base_installed {
+        0
+    } else {
+        variant
+            .size_bytes
+            .saturating_add(model.mmproj_bytes.unwrap_or(0))
+    };
+    let disk = i
+        .models_dir
+        .and_then(|dir| disk_check(i.disks, dir, download));
+
+    let mut warnings = Vec::new();
+    if !base_installed && gated {
+        warnings.push(
+            "Dépôt protégé : accepter ses conditions sur Hugging Face, puis ajouter la clé \
+             publique d'Ollama (fichier .ollama/id_ed25519.pub de votre dossier personnel) aux \
+             clés SSH de votre compte Hugging Face."
+                .to_string(),
+        );
+    }
+    if !base_installed && variant.files.len() > 1 {
+        warnings.push(format!(
+            "Modèle découpé en {} fichiers : Hugging Face ne sert pas ces modèles à Ollama, \
+             l'ajout risque d'échouer. Préférer une quantification en un seul fichier, ou \
+             llama.cpp.",
+            variant.files.len()
+        ));
+    }
+    if i.kv_cache != KvCacheType::F16 {
+        warnings.push(format!(
+            "Contexte de {} calculé avec un cache KV {} : c'est un réglage global d'Ollama, que \
+             GRAM ne change pas (commandes dans « Lancer avec »). Sans lui, ce contexte occupe \
+             plus de mémoire.",
+            ctx_k(est.ctx_used),
+            i.kv_cache.label()
+        ));
+    }
+    if est.mode != RunMode::TooBig && est.tok_s < i.slow_tok_s {
+        warnings.push(format!(
+            "Lent sur cette machine : {} tok/s estimés.",
+            tok_s(est.tok_s)
+        ));
+    }
+
+    let blocked = if est.mode == RunMode::TooBig {
+        Some(format!(
+            "{} ne tient pas en mémoire sur cette machine : ajout refusé (le système risquerait \
+             de saturer).",
+            variant.label
+        ))
+    } else {
+        disk.as_ref().filter(|d| !d.enough).map(|d| {
+            format!(
+                "Pas assez de place sur {} : {} libres, {} nécessaires ({} à télécharger, plus \
+                 10 % de marge).",
+                d.mount,
+                gb(d.available),
+                gb(d.needed),
+                gb(download)
+            )
+        })
+    };
+
+    Preflight {
+        repo_id: model.repo_id.clone(),
+        display_name: model.display_name.clone(),
+        label: variant.label.clone(),
+        ollama_name: alias_name(model, variant),
+        base_name,
+        base_installed,
+        size: variant.size_bytes,
+        download,
+        disk,
+        ctx: est.ctx_used,
+        kv_cache: i.kv_cache,
+        estimated_tok_s: est.tok_s,
+        vision: model.use_cases.contains(&UseCase::Vision),
+        warnings,
+        blocked,
+    }
+}
+
+/// Avertissements après l'ajout, d'après ce qu'Ollama annonce du modèle dérivé : capacité
+/// `vision` et contexte réglé.
+pub fn added_warnings(p: &Preflight, has_vision: bool, num_ctx: Option<u32>) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if p.vision && !has_vision {
+        warnings.push(format!(
+            "Vision attendue mais absente dans Ollama : {} ne fournit sans doute pas de \
+             projecteur (mmproj). GRAM Harness ne pourra pas envoyer d'images à ce modèle.",
+            p.base_name
+        ));
+    }
+    if num_ctx != Some(p.ctx) {
+        let found = num_ctx.map_or("aucun contexte".into(), |n| {
+            format!("un contexte de {}", thousands(u64::from(n)))
+        });
+        warnings.push(format!(
+            "Ollama annonce {found} pour {}, au lieu de {} : le modèle dérivé n'a peut-être \
+             pas été réglé.",
+            p.ollama_name,
+            thousands(u64::from(p.ctx))
+        ));
+    }
+    warnings
+}
+
+/// Échec d'un téléchargement depuis Hugging Face, reconnu dans l'erreur d'Ollama
+/// (`gram-ollama` fait la reconnaissance).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PullFailure {
+    /// Accès refusé : dépôt protégé, ou inexistant (Hugging Face répond la même chose).
+    Unauthorized,
+    /// Quantification que Hugging Face ne propose pas à Ollama pour ce dépôt.
+    UnknownQuant,
+    /// Quantification découpée en plusieurs fichiers, refusée dès le manifeste.
+    Sharded,
+}
+
+impl PullFailure {
+    /// Message pour l'utilisateur, avec ce qu'il peut faire.
+    pub fn message(self, repo_id: &str, label: &str, gated: bool) -> String {
+        match self {
+            Self::Unauthorized if gated => format!(
+                "Hugging Face a refusé le téléchargement : {repo_id} est un dépôt protégé. \
+                 Accepter ses conditions sur huggingface.co, puis ajouter la clé publique \
+                 d'Ollama (fichier .ollama/id_ed25519.pub de votre dossier personnel) aux clés \
+                 SSH de votre compte Hugging Face, et réessayer."
+            ),
+            Self::Unauthorized => format!(
+                "Hugging Face a refusé le téléchargement de {repo_id} : dépôt introuvable ou \
+                 devenu protégé. Synchroniser le catalogue, puis réessayer."
+            ),
+            Self::UnknownQuant => format!(
+                "Hugging Face ne propose pas {label} de {repo_id} à Ollama : choisir une autre \
+                 quantification."
+            ),
+            Self::Sharded => format!(
+                "{label} de {repo_id} est découpé en plusieurs fichiers, que Hugging Face ne sert \
+                 pas à Ollama : choisir une quantification en un seul fichier, ou lancer le modèle \
+                 avec llama.cpp."
+            ),
+        }
+    }
+}
+
+// ── Progression ─────────────────────────────────────────────────────────────────────────────
 
 /// Étape de l'ajout, dans l'ordre où elles se suivent.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize, TS,
 )]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub enum InstallPhase {
     /// Modèles installés, puis manifeste du dépôt.
     #[default]
@@ -25,8 +348,9 @@ pub enum InstallPhase {
 }
 
 /// Avancement de l'ajout à un instant donné.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct PullProgress {
     pub phase: InstallPhase,
     /// Octets sur le disque, y compris ceux d'un téléchargement repris.
@@ -142,9 +466,74 @@ impl PullTracker {
     }
 }
 
-/// Place sur le disque qui recevra un téléchargement.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Événement `harness-progress` : avancement de l'ajout en cours.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct InstallProgress {
+    /// Dépôt canonique du modèle (celui de la fiche).
+    pub repo_id: String,
+    pub display_name: String,
+    pub label: String,
+    /// Modèle dérivé en cours d'ajout.
+    pub ollama_name: String,
+    pub phase: InstallPhase,
+    /// Octets sur le disque, y compris ceux d'un téléchargement repris.
+    pub completed: u64,
+    /// Taille des couches annoncées jusqu'ici.
+    pub total: u64,
+    pub bytes_per_s: Option<u64>,
+}
+
+impl InstallProgress {
+    pub fn new(p: &Preflight, progress: PullProgress) -> Self {
+        Self {
+            repo_id: p.repo_id.clone(),
+            display_name: p.display_name.clone(),
+            label: p.label.clone(),
+            ollama_name: p.ollama_name.clone(),
+            phase: progress.phase,
+            completed: progress.completed,
+            total: progress.total,
+            bytes_per_s: progress.bytes_per_s,
+        }
+    }
+}
+
+/// Intervalle minimal entre deux nouvelles de la progression.
+pub const PROGRESS_INTERVAL: Duration = Duration::from_millis(200);
+
+/// Limite les nouvelles de la progression (Ollama envoie une ligne toutes les 60 ms) : au plus
+/// une par [`PROGRESS_INTERVAL`], sauf un changement d'étape, transmis aussitôt.
+#[derive(Debug, Clone, Default)]
+pub struct ProgressThrottle {
+    last: Option<(Duration, InstallPhase)>,
+}
+
+impl ProgressThrottle {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Faut-il transmettre cette nouvelle ? `now` : même origine que pour [`PullTracker`].
+    pub fn ready(&mut self, phase: InstallPhase, now: Duration) -> bool {
+        let ready = match self.last {
+            None => true,
+            Some((at, last_phase)) => {
+                phase != last_phase || now.saturating_sub(at) >= PROGRESS_INTERVAL
+            }
+        };
+        if ready {
+            self.last = Some((now, phase));
+        }
+        ready
+    }
+}
+
+/// Place sur le disque qui recevra un téléchargement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct DiskSpace {
     /// Point de montage du disque (« C:\ », « / »…).
     pub mount: String,
@@ -198,9 +587,326 @@ fn is_windows_path(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::estimate::{FitLevel, MemoryBreakdown};
+    use crate::model::{Pipeline, RepoRef};
 
     fn ms(n: u64) -> Duration {
         Duration::from_millis(n)
+    }
+
+    const GIB: u64 = 1 << 30;
+
+    fn variant(repo: &str, label: &str, files: usize) -> QuantVariant {
+        QuantVariant {
+            label: label.into(),
+            repo_id: repo.into(),
+            files: (1..=files).map(|i| format!("{label}-{i}.gguf")).collect(),
+            size_bytes: 5 * GIB,
+            bpw: 4.9,
+            exact: true,
+        }
+    }
+
+    fn model(display_name: &str) -> ModelEntry {
+        ModelEntry {
+            repo_id: "Qwen/Qwen3-8B-GGUF".into(),
+            sha: String::new(),
+            base_model: Some("Qwen/Qwen3-8B".into()),
+            display_name: display_name.into(),
+            params_total: 8_190_000_000,
+            params_active: None,
+            arch: None,
+            ctx_train: 40_960,
+            pipeline: Pipeline::TextGeneration,
+            use_cases: vec![UseCase::General],
+            downloads: 0,
+            likes: 0,
+            created_at: None,
+            last_modified: None,
+            gated: false,
+            variants: vec![variant("Qwen/Qwen3-8B-GGUF", "Q4_K_M", 1)],
+            mmproj_bytes: None,
+            alternatives: vec![RepoRef {
+                repo_id: "unsloth/Qwen3-8B-GGUF".into(),
+                sha: String::new(),
+                downloads: 0,
+                gated: true,
+            }],
+        }
+    }
+
+    fn estimate(mode: RunMode, tok_s: f32) -> Estimate {
+        Estimate {
+            mode,
+            mem_gpu: 0,
+            mem_cpu: 0,
+            breakdown: MemoryBreakdown {
+                weights: 5 * GIB,
+                kv: GIB,
+                overhead: GIB / 2,
+                vision: 0,
+            },
+            kv_per_token: 144 << 10,
+            mem_usage: 0.6,
+            ctx_used: 16_384,
+            ctx_max: 32_768,
+            tok_s,
+            fit: FitLevel::Perfect,
+            approximate: false,
+            warnings: vec![],
+        }
+    }
+
+    #[test]
+    fn nom_du_modele_derive() {
+        let q4 = variant("Qwen/Qwen3-8B-GGUF", "Q4_K_M", 1);
+        assert_eq!(alias_name(&model("Qwen3 8B"), &q4), "gram/qwen3-8b:q4_k_m");
+        let ud = variant("unsloth/Qwen3-8B-GGUF", "UD-Q4_K_XL", 1);
+        assert_eq!(
+            alias_name(&model("Qwen3-8B"), &ud),
+            "gram/qwen3-8b:ud-q4_k_xl"
+        );
+        // Accents retirés, suites d'autres caractères réduites à un `-`, rien aux deux bouts.
+        assert_eq!(
+            alias_name(&model("  Mistral Pétit — Édition « Spéciale » 2.5! "), &q4),
+            "gram/mistral-petit-edition-speciale-2.5:q4_k_m"
+        );
+        assert_eq!(
+            alias_name(&model("Œuvre_Straße Ünï"), &q4),
+            "gram/oeuvre-strasse-uni:q4_k_m"
+        );
+        assert_eq!(alias_name(&model(".v1."), &q4), "gram/v1:q4_k_m");
+        // 60 caractères au plus, sans `-` final après la coupe.
+        let long = format!("{} b", "a".repeat(59));
+        let name = alias_name(&model(&long), &q4);
+        assert_eq!(name, format!("gram/{}:q4_k_m", "a".repeat(59)));
+        // Nom affiché inutilisable : le nom du dépôt.
+        assert_eq!(
+            alias_name(&model("通义千问"), &q4),
+            "gram/qwen3-8b-gguf:q4_k_m"
+        );
+        // Étiquette assainie.
+        let odd = variant("Qwen/Qwen3-8B-GGUF", "Q4 K/M", 1);
+        assert_eq!(alias_name(&model("Qwen3 8B"), &odd), "gram/qwen3-8b:q4-k-m");
+    }
+
+    #[test]
+    fn nom_derive_non_compte_comme_installe() {
+        // `gram/…` n'a pas de dépôt : seule la base compte pour la fiche et la mesure.
+        let alias = OllamaModel::new("gram/qwen3-8b:q4_k_m", 1, Some("Q4_K_M"));
+        assert_eq!(alias.repo_id, None);
+        let m = model("Qwen3 8B");
+        assert!(installed_variant(&[alias], &m, "Qwen/Qwen3-8B-GGUF", "Q4_K_M").is_none());
+    }
+
+    fn input<'a>(
+        m: &'a ModelEntry,
+        v: &'a QuantVariant,
+        est: &'a Estimate,
+        installed: &'a [OllamaModel],
+        disks: &'a [DiskInfo],
+    ) -> PreflightInput<'a> {
+        PreflightInput {
+            model: m,
+            variant: v,
+            estimate: est,
+            kv_cache: KvCacheType::F16,
+            slow_tok_s: 5.0,
+            installed,
+            disks,
+            models_dir: Some("C:\\Users\\gram\\.ollama\\models"),
+        }
+    }
+
+    #[test]
+    fn preflight_a_telecharger() {
+        let mut m = model("Qwen3 8B");
+        m.mmproj_bytes = Some(GIB / 4);
+        m.use_cases.push(UseCase::Vision);
+        let v = m.variants[0].clone();
+        let est = estimate(RunMode::Gpu, 40.0);
+        let disks = [disk("C:\\", 100 * GIB)];
+        let p = preflight(&input(&m, &v, &est, &[], &disks));
+        assert_eq!(p.ollama_name, "gram/qwen3-8b:q4_k_m");
+        assert_eq!(p.base_name, "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M");
+        assert!(!p.base_installed);
+        // La quantification et son projecteur.
+        assert_eq!((p.size, p.download), (5 * GIB, 5 * GIB + GIB / 4));
+        let disk = p.disk.as_ref().unwrap();
+        assert_eq!(disk.mount, "C:\\");
+        assert!(disk.enough);
+        assert_eq!((p.ctx, p.estimated_tok_s), (16_384, 40.0));
+        assert!(p.vision);
+        assert!(p.warnings.is_empty(), "{:?}", p.warnings);
+        assert_eq!(p.blocked, None);
+
+        // Camel case pour l'interface.
+        let json = serde_json::to_value(&p).unwrap();
+        assert_eq!(json["ollamaName"], "gram/qwen3-8b:q4_k_m");
+        assert_eq!(json["kvCache"], "f16");
+        assert_eq!(json["disk"]["available"], 100 * GIB);
+    }
+
+    #[test]
+    fn preflight_base_deja_installee() {
+        let m = model("Qwen3 8B");
+        let v = m.variants[0].clone();
+        let est = estimate(RunMode::Gpu, 40.0);
+        // Installée depuis un autre dépôt du modèle, avec une autre casse : reprise telle quelle.
+        let installed = [OllamaModel::new(
+            "hf.co/unsloth/qwen3-8b-gguf:q4_k_m",
+            5 * GIB,
+            None,
+        )];
+        // Disque plein : sans téléchargement, rien ne bloque.
+        let disks = [disk("C:\\", 0)];
+        let p = preflight(&input(&m, &v, &est, &installed, &disks));
+        assert!(p.base_installed);
+        assert_eq!(p.base_name, "hf.co/unsloth/qwen3-8b-gguf:q4_k_m");
+        assert_eq!(p.download, 0);
+        assert!(p.disk.unwrap().enough);
+        assert_eq!(p.blocked, None);
+    }
+
+    #[test]
+    fn preflight_avertissements() {
+        let m = model("Qwen3 8B");
+        // Dépôt protégé (alternative d'unsloth), découpé en 2 fichiers.
+        let v = variant("unsloth/Qwen3-8B-GGUF", "Q8_0", 2);
+        let est = estimate(
+            RunMode::Hybrid {
+                gpu_layers: 20,
+                layers: 36,
+            },
+            3.2,
+        );
+        let mut i = input(&m, &v, &est, &[], &[]);
+        i.kv_cache = KvCacheType::Q8_0;
+        i.models_dir = None;
+        let p = preflight(&i);
+        assert_eq!(p.base_name, "huggingface.co/unsloth/Qwen3-8B-GGUF:Q8_0");
+        assert_eq!(p.disk, None, "dossier inconnu : place non vérifiée");
+        assert_eq!(p.blocked, None);
+        assert_eq!(p.kv_cache, KvCacheType::Q8_0);
+        assert_eq!(p.warnings.len(), 4, "{:?}", p.warnings);
+        assert!(p.warnings[0].starts_with("Dépôt protégé"));
+        assert!(p.warnings[1].starts_with("Modèle découpé en 2 fichiers"));
+        assert!(p.warnings[2].contains("16k") && p.warnings[2].contains("q8_0"));
+        assert_eq!(
+            p.warnings[3],
+            "Lent sur cette machine : ~3,2 tok/s estimés."
+        );
+
+        // Base déjà là : ni dépôt protégé ni découpage ne comptent plus.
+        let installed = [OllamaModel::new(
+            "huggingface.co/unsloth/Qwen3-8B-GGUF:Q8_0",
+            1,
+            None,
+        )];
+        let p = preflight(&input(&m, &v, &est, &installed, &[]));
+        assert_eq!(p.warnings.len(), 1, "{:?}", p.warnings);
+    }
+
+    #[test]
+    fn preflight_refus() {
+        let m = model("Qwen3 8B");
+        let v = m.variants[0].clone();
+        let too_big = estimate(RunMode::TooBig, 0.0);
+        let p = preflight(&input(&m, &v, &too_big, &[], &[]));
+        assert_eq!(
+            p.blocked.as_deref(),
+            Some(
+                "Q4_K_M ne tient pas en mémoire sur cette machine : ajout refusé (le système \
+                 risquerait de saturer)."
+            )
+        );
+        assert!(
+            p.warnings.is_empty(),
+            "pas de « lent » pour un modèle refusé"
+        );
+
+        let est = estimate(RunMode::Gpu, 40.0);
+        let disks = [disk("C:\\", 5 * GIB)];
+        let p = preflight(&input(&m, &v, &est, &[], &disks));
+        assert_eq!(
+            p.blocked.as_deref(),
+            Some(
+                "Pas assez de place sur C:\\ : 5,0 Go libres, 5,5 Go nécessaires (5,0 Go à \
+                 télécharger, plus 10 % de marge)."
+            )
+        );
+    }
+
+    #[test]
+    fn avertissements_apres_l_ajout() {
+        let mut m = model("Qwen3 8B");
+        m.use_cases.push(UseCase::Vision);
+        let v = m.variants[0].clone();
+        let est = estimate(RunMode::Gpu, 40.0);
+        let p = preflight(&input(&m, &v, &est, &[], &[]));
+        assert!(added_warnings(&p, true, Some(16_384)).is_empty());
+        let w = added_warnings(&p, false, Some(8192));
+        assert_eq!(w.len(), 2);
+        assert!(w[0].starts_with("Vision attendue mais absente dans Ollama"));
+        assert!(w[1].contains("un contexte de 8 192") && w[1].contains("16 384"));
+        assert!(added_warnings(&p, true, None)[0].contains("aucun contexte"));
+    }
+
+    #[test]
+    fn messages_des_echecs_de_telechargement() {
+        let msg = |f: PullFailure, gated| f.message("Org/Repo-GGUF", "Q4_K_M", gated);
+        assert!(msg(PullFailure::Unauthorized, true).contains("dépôt protégé"));
+        assert!(msg(PullFailure::Unauthorized, true).contains("id_ed25519.pub"));
+        assert!(msg(PullFailure::Unauthorized, false).contains("introuvable"));
+        assert!(
+            msg(PullFailure::UnknownQuant, false).starts_with("Hugging Face ne propose pas Q4_K_M")
+        );
+        assert!(msg(PullFailure::Sharded, false).contains("llama.cpp"));
+    }
+
+    #[test]
+    fn progression_limitee() {
+        let mut t = ProgressThrottle::new();
+        let d = InstallPhase::Downloading;
+        assert!(t.ready(InstallPhase::Preparing, ms(0)));
+        // Changement d'étape : aussitôt.
+        assert!(t.ready(d, ms(10)));
+        assert!(!t.ready(d, ms(70)));
+        assert!(!t.ready(d, ms(209)));
+        assert!(t.ready(d, ms(210)));
+        assert!(!t.ready(d, ms(270)));
+        assert!(t.ready(InstallPhase::Verifying, ms(280)));
+        assert!(t.ready(InstallPhase::Creating, ms(281)));
+    }
+
+    #[test]
+    fn evenement_de_progression() {
+        let m = model("Qwen3 8B");
+        let v = m.variants[0].clone();
+        let est = estimate(RunMode::Gpu, 40.0);
+        let p = preflight(&input(&m, &v, &est, &[], &[]));
+        let e = InstallProgress::new(
+            &p,
+            PullProgress {
+                phase: InstallPhase::Downloading,
+                completed: 1,
+                total: 2,
+                bytes_per_s: None,
+            },
+        );
+        assert_eq!(
+            serde_json::to_value(e).unwrap(),
+            serde_json::json!({
+                "repoId": "Qwen/Qwen3-8B-GGUF",
+                "displayName": "Qwen3 8B",
+                "label": "Q4_K_M",
+                "ollamaName": "gram/qwen3-8b:q4_k_m",
+                "phase": "downloading",
+                "completed": 1,
+                "total": 2,
+                "bytesPerS": null,
+            })
+        );
     }
 
     #[test]

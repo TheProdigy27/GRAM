@@ -5,16 +5,13 @@
 //! en cours est ignorée.
 
 use crate::error::{CmdResult, CommandError};
+use crate::resolve::{Resolved, resolve};
 use crate::state::AppState;
 use chrono::Utc;
 use gram_core::calibration::{calibrate, measurement};
-use gram_core::estimate::{candidate_variants, estimate};
 use gram_core::launch::ollama_pull_command;
 use gram_core::runtime::installed_variant;
-use gram_core::{
-    Calibration, MeasureRequest, Measurement, MemoryBudget, QuantTable, RunMode, Settings, UseCase,
-    Workload,
-};
+use gram_core::{Calibration, MeasureRequest, Measurement, MemoryBudget, RunMode, Settings};
 use tauri::{AppHandle, Runtime, State};
 
 /// Mesures enregistrées et réglages qu'elles suggèrent, pour la machine réelle et les
@@ -29,7 +26,8 @@ async fn calibration<R: Runtime>(app: &AppHandle<R>, state: &AppState) -> CmdRes
 /// Mesure une quantification déjà installée dans Ollama, au contexte retenu par l'estimation :
 /// chargement, génération de 128 tokens, mémoire occupée (`/api/ps`). La mesure est enregistrée
 /// (`measurements.json`) et comparée à l'estimation. Quelques secondes à quelques minutes
-/// selon la taille du modèle ; une seule mesure à la fois.
+/// selon la taille du modèle ; une seule mesure à la fois. Une mesure fiable est reportée dans
+/// le manifeste de GRAM Harness (`measuredTokS` des modèles dérivés de ce modèle).
 #[tauri::command]
 pub async fn ollama_measure<R: Runtime>(
     app: AppHandle<R>,
@@ -40,48 +38,25 @@ pub async fn ollama_measure<R: Runtime>(
         .measure_lock
         .try_lock()
         .map_err(|_| CommandError::msg("Une mesure est déjà en cours."))?;
-    let client = state.ollama().cloned().ok_or_else(|| {
-        CommandError::msg(
-            "API d'Ollama inaccessible : la variable OLLAMA_HOST désigne une adresse non prise \
-             en charge (HTTPS ou hôte inconnu).",
-        )
-    })?;
+    let client = state.require_ollama()?;
     // Liste fraîche : le modèle vient peut-être d'être installé.
     let installed = client.tags().await?;
     state.set_ollama_models(installed.clone()).await;
 
-    let catalog = state.catalog().await?;
-    let model = catalog
-        .models
-        .iter()
-        .find(|m| m.repo_id == request.repo_id)
-        .cloned()
-        .ok_or_else(|| {
-            CommandError::msg(format!(
-                "Modèle « {} » absent du catalogue.",
-                request.repo_id
-            ))
-        })?;
-    drop(catalog);
-
-    let hw = state.real_profile(&app).await?;
-    let settings = state.settings();
-    let params = &settings.estimate;
-    let budget = MemoryBudget::from_profile(&hw, params);
-    let work = Workload {
-        ctx: settings.ctx_for(request.use_case, request.ctx),
-        vision: request.use_case == UseCase::Vision,
-    };
-    let variant = candidate_variants(&model, params, QuantTable::embedded())
-        .into_iter()
-        .find(|v| v.label == request.label)
-        .ok_or_else(|| {
-            CommandError::msg(format!(
-                "Quantification {} inconnue pour {}.",
-                request.label, model.display_name
-            ))
-        })?;
-    let est = estimate(&model, &variant, &budget, work, params);
+    let Resolved {
+        model,
+        variant,
+        estimate: est,
+        ..
+    } = resolve(
+        &app,
+        &state,
+        &request.repo_id,
+        &request.label,
+        request.use_case,
+        request.ctx,
+    )
+    .await?;
     if est.mode == RunMode::TooBig {
         return Err(CommandError::msg(format!(
             "{} ne tient pas en mémoire d'après l'estimation : mesure non lancée (le système \
@@ -95,7 +70,7 @@ pub async fn ollama_measure<R: Runtime>(
             CommandError::msg(format!(
                 "{} n'est pas installé dans Ollama. L'installer avec : {}",
                 variant.label,
-                ollama_pull_command(&variant)
+                ollama_pull_command(&variant, model.repo_gated(&variant.repo_id))
             ))
         })?;
 

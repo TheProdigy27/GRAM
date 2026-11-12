@@ -30,6 +30,9 @@ pub const PULL_RESUME_TOTAL: u64 = 175_054_528 + 103_769_856 + 475;
 /// `POST /api/pull` d'une quantification qui n'existe pas : erreur au milieu du flux.
 pub const PULL_ERROR_QUANT: &str =
     include_str!("../../../tests/fixtures/ollama/pull-error-quant.ndjson");
+/// `POST /api/pull` d'un dépôt protégé depuis `hf.co/` : erreur au milieu du flux.
+pub const PULL_ERROR_GATED: &str =
+    include_str!("../../../tests/fixtures/ollama/pull-error-gated.ndjson");
 pub const CREATE: &str = include_str!("../../../tests/fixtures/ollama/create.json");
 /// `POST /api/show` du modèle dérivé de Qwen3 1.7B, réglé à 16 384 tokens.
 pub const SHOW_ALIAS: &str = include_str!("../../../tests/fixtures/ollama/show-alias.json");

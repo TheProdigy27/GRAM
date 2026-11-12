@@ -1,0 +1,21 @@
+[package]
+name = "gram-link"
+description = "Formats partagés par GRAM et GRAM Harness : manifeste, présence, lien profond, JSON atomique."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+gram-core.workspace = true
+chrono.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+ts-rs.workspace = true
+# Analyse stricte et encodage du lien profond (`gram-harness://open?model=…`).
+url = "2.5.8"
+
+[lints]
+workspace = true

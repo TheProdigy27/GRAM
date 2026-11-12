@@ -20,6 +20,7 @@ gram-core.workspace = true
 gram-hw.workspace = true
 gram-hub.workspace = true
 gram-ollama.workspace = true
+gram-link.workspace = true
 tauri.workspace = true
 serde.workspace = true
 serde_json.workspace = true

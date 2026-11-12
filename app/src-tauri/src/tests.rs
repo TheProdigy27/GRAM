@@ -55,14 +55,22 @@ fn runtimes() -> RuntimesStatus {
 }
 
 fn state_in(dir: &Path, ollama: Option<OllamaClient>) -> AppState {
+    state_with(dir, ollama, raw_hardware())
+}
+
+/// Avec un autre matériel enregistré (place sur le disque…).
+fn state_with(dir: &Path, ollama: Option<OllamaClient>, raw: gram_hw::RawHardware) -> AppState {
     AppState::new(
         // Cache vide : le catalogue vient du catalogue embarqué.
         Config {
             dir: dir.to_path_buf(),
             network: false,
             ollama,
+            shared_dir: dir.join("shared"),
+            // Sur le disque C:\ de la machine enregistrée.
+            models_dir: Some(PathBuf::from(r"C:\Users\gram\.ollama\models")),
         },
-        Arc::new(raw_hardware),
+        Arc::new(move || raw.clone()),
         Arc::new(runtimes),
         Box::new(MemoryStore::default()),
     )
@@ -82,9 +90,13 @@ impl Harness {
 
     /// Avec l'API d'Ollama (un faux serveur, `gram_ollama::testing`).
     fn with_ollama(dir: &TempDir, ollama: Option<OllamaClient>) -> Self {
+        Self::with_state(dir, state_in(&dir.0, ollama))
+    }
+
+    fn with_state(dir: &TempDir, state: AppState) -> Self {
         Self::build(
             dir,
-            mock_builder().manage(state_in(&dir.0, ollama)),
+            mock_builder().manage(state),
             mock_context(noop_assets()),
         )
     }
@@ -125,24 +137,7 @@ impl Harness {
 
     /// `invoke(cmd, args)` tel que l'appelle le frontend.
     fn invoke(&self, cmd: &str, args: Value) -> Result<Value, Value> {
-        let url = if cfg!(windows) {
-            "http://tauri.localhost"
-        } else {
-            "tauri://localhost"
-        };
-        tauri::test::get_ipc_response(
-            &self.webview,
-            InvokeRequest {
-                cmd: cmd.into(),
-                callback: CallbackFn(0),
-                error: CallbackFn(1),
-                url: url.parse().unwrap(),
-                body: InvokeBody::Json(args),
-                headers: Default::default(),
-                invoke_key: INVOKE_KEY.to_string(),
-            },
-        )
-        .map(|body| body.deserialize::<Value>().unwrap())
+        invoke(&self.webview, cmd, args)
     }
 
     fn ok(&self, cmd: &str, args: Value) -> Value {
@@ -161,6 +156,28 @@ impl Harness {
         });
         seen
     }
+}
+
+/// `invoke(cmd, args)` tel que l'appelle le frontend, depuis n'importe quel thread.
+fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
+    let url = if cfg!(windows) {
+        "http://tauri.localhost"
+    } else {
+        "tauri://localhost"
+    };
+    tauri::test::get_ipc_response(
+        webview,
+        InvokeRequest {
+            cmd: cmd.into(),
+            callback: CallbackFn(0),
+            error: CallbackFn(1),
+            url: url.parse().unwrap(),
+            body: InvokeBody::Json(args),
+            headers: Default::default(),
+            invoke_key: INVOKE_KEY.to_string(),
+        },
+    )
+    .map(|body| body.deserialize::<Value>().unwrap())
 }
 
 const GIB: f64 = (1u64 << 30) as f64;
@@ -745,6 +762,461 @@ fn mesures_refusees() {
         e.as_str().unwrap().starts_with("API d'Ollama inaccessible"),
         "{e}"
     );
+}
+
+// ── Ajout à GRAM Harness ─────────────────────────────────────────────────────────────────────
+
+const ALIAS: &str = "gram/qwen3-8b:q4_k_m";
+const BASE_Q4: &str = "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M";
+const BASE_Q8: &str = "hf.co/Qwen/Qwen3-8B-GGUF:Q8_0";
+
+fn add_args(label: &str, ctx: u32) -> Value {
+    json!({ "request": { "repoId": QWEN, "label": label, "useCase": "code", "ctx": ctx } })
+}
+
+/// Faux Ollama qui tient la liste de ses modèles : `pull` et `create` en ajoutent, `delete` en
+/// retire.
+struct OllamaModels {
+    fake: FakeOllama,
+    names: Arc<Mutex<Vec<String>>>,
+}
+
+impl OllamaModels {
+    /// `appears` : le modèle téléchargé apparaît dans la liste.
+    fn start(initial: &[&str], pull: gram_ollama::testing::Reply, appears: bool) -> Self {
+        use gram_ollama::testing::{CREATE, NOT_FOUND, Reply, SHOW_ALIAS, tags_json};
+        let names = Arc::new(Mutex::new(
+            initial.iter().map(|n| n.to_string()).collect::<Vec<_>>(),
+        ));
+        let list = Arc::clone(&names);
+        let fake = FakeOllama::streaming(move |r| {
+            let model = r.json()["model"].as_str().unwrap_or_default().to_string();
+            let mut names = list.lock().unwrap();
+            match (r.method.as_str(), r.path.as_str()) {
+                ("GET", "/api/tags") => {
+                    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+                    Reply::new(200, tags_json(&refs))
+                }
+                ("POST", "/api/pull") => {
+                    if appears {
+                        names.push(model);
+                    }
+                    pull.clone()
+                }
+                ("POST", "/api/create") => {
+                    if !names.contains(&model) {
+                        names.push(model);
+                    }
+                    Reply::new(200, CREATE)
+                }
+                ("POST", "/api/show") => Reply::new(200, SHOW_ALIAS),
+                ("DELETE", "/api/delete") => match names.iter().position(|n| *n == model) {
+                    Some(i) => {
+                        names.remove(i);
+                        Reply::new(200, "")
+                    }
+                    None => Reply::new(404, NOT_FOUND),
+                },
+                _ => gram_ollama::testing::standard_response(r).into(),
+            }
+        });
+        Self { fake, names }
+    }
+
+    fn client(&self) -> Option<OllamaClient> {
+        client(&self.fake)
+    }
+
+    fn names(&self) -> Vec<String> {
+        self.names.lock().unwrap().clone()
+    }
+
+    fn calls(&self, path: &str) -> Vec<Value> {
+        self.fake
+            .requests()
+            .into_iter()
+            .filter(|r| r.path == path)
+            .map(|r| r.json())
+            .collect()
+    }
+}
+
+fn manifest(dir: &TempDir) -> Value {
+    serde_json::from_slice(&std::fs::read(dir.0.join("shared").join("models.json")).unwrap())
+        .unwrap()
+}
+
+#[test]
+fn ajout_depuis_une_base_installee() {
+    let ollama = OllamaModels::start(
+        &[BASE_Q4, "qwen3:8b"],
+        gram_ollama::testing::Reply::new(500, "{}"),
+        false,
+    );
+    let dir = TempDir::new("harness-installee");
+    let h = Harness::with_ollama(&dir, ollama.client());
+    let progress = h.record(crate::events::HARNESS_PROGRESS);
+    let done = h.record(crate::events::HARNESS_DONE);
+
+    // Une mesure de la base existe déjà : l'entrée la reprend.
+    let m = h.ok("ollama_measure", measure_args("Q4_K_M"));
+    let measured = m["tokS"].as_f64().unwrap();
+
+    let p = h.ok("harness_preflight", add_args("Q4_K_M", 16_384));
+    assert_eq!(p["ollamaName"], ALIAS);
+    assert_eq!(p["baseName"], BASE_Q4);
+    assert_eq!(p["baseInstalled"], true);
+    assert_eq!(p["download"], 0);
+    assert_eq!(p["ctx"], 16_384);
+    assert_eq!(p["disk"]["mount"], "C:\\");
+    assert_eq!(p["disk"]["enough"], true);
+    assert_eq!(p["blocked"], Value::Null);
+    assert_eq!(p["warnings"], json!([]));
+
+    let added = h.ok("harness_add", add_args("Q4_K_M", 16_384));
+    assert_eq!(added["warnings"], json!([]));
+    let model = &added["model"];
+    assert_eq!(model["ollamaName"], ALIAS);
+    assert_eq!(model["baseName"], BASE_Q4);
+    assert_eq!(model["baseInstalledByGram"], false);
+    assert_eq!(model["displayName"], "Qwen3-8B");
+    assert_eq!(
+        (model["quant"].as_str(), model["ctx"].as_u64()),
+        (Some("Q4_K_M"), Some(16_384))
+    );
+    assert_eq!(model["useCase"], "code");
+    assert_eq!(model["measuredTokS"].as_f64(), Some(measured));
+    // Rien à télécharger ; le modèle dérivé reprend la base au contexte de l'estimation.
+    assert!(ollama.calls("/api/pull").is_empty());
+    assert_eq!(
+        ollama.calls("/api/create"),
+        [
+            json!({ "model": ALIAS, "from": BASE_Q4, "parameters": { "num_ctx": 16_384 }, "stream": false })
+        ]
+    );
+    let mut phases: Vec<Value> = progress
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p["phase"].clone())
+        .collect();
+    phases.dedup();
+    assert_eq!(phases, [json!("preparing"), json!("creating")]);
+    assert_eq!(progress.lock().unwrap()[0]["displayName"], "Qwen3-8B");
+    let done = done.lock().unwrap().clone();
+    assert_eq!(done.len(), 1);
+    assert_eq!(done[0]["ollamaName"], ALIAS);
+    assert_eq!(
+        done[0]["result"],
+        json!({ "kind": "added", "warnings": [] })
+    );
+
+    // Manifeste partagé, lisible par GRAM Harness.
+    let file = manifest(&dir);
+    assert_eq!(file["version"], 1);
+    assert_eq!(file["models"][0]["ollamaName"], ALIAS);
+
+    let status = h.ok("harness_status", json!({}));
+    assert_eq!(status["models"].as_array().unwrap().len(), 1);
+    assert_eq!(status["models"][0]["model"]["ollamaName"], ALIAS);
+    assert_eq!(status["models"][0]["baseRemovable"], false);
+    assert_eq!(status["install"], Value::Null);
+    assert_eq!(status["presence"], Value::Null);
+
+    // `gram/…` ne compte pas comme quantification installée : la fiche garde la base.
+    let d = h.ok("get_model_detail", json!({ "request": { "repoId": QWEN } }));
+    let installed: Vec<&Value> = d["variants"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|v| v.get("ollamaModel").filter(|m| !m.is_null()))
+        .collect();
+    assert_eq!(installed, [&json!(BASE_Q4)]);
+
+    // Retirer : la base, que GRAM n'a pas téléchargée, reste même si on le demande.
+    let r = h.ok(
+        "harness_remove",
+        json!({ "ollamaName": ALIAS, "removeBase": true }),
+    );
+    assert_eq!(r, json!({ "removed": true, "baseRemoved": false }));
+    assert_eq!(ollama.calls("/api/delete"), [json!({ "model": ALIAS })]);
+    assert_eq!(ollama.names(), [BASE_Q4, "qwen3:8b"]);
+    assert_eq!(manifest(&dir)["models"], json!([]));
+
+    // Jamais un modèle qu'il n'a pas ajouté.
+    assert_eq!(
+        h.invoke(
+            "harness_remove",
+            json!({ "ollamaName": BASE_Q4, "removeBase": false })
+        )
+        .unwrap_err(),
+        format!("{BASE_Q4} n'a pas été ajouté par GRAM : le supprimer depuis Ollama.")
+    );
+}
+
+#[test]
+fn ajout_avec_telechargement_remplacement_et_retrait() {
+    let ollama = OllamaModels::start(
+        &[BASE_Q4],
+        gram_ollama::testing::Reply::ndjson(gram_ollama::testing::PULL_RESUME),
+        true,
+    );
+    let dir = TempDir::new("harness-telechargement");
+    let h = Harness::with_ollama(&dir, ollama.client());
+    let progress = h.record(crate::events::HARNESS_PROGRESS);
+    let alias = "gram/qwen3-8b:q8_0";
+
+    let p = h.ok("harness_preflight", add_args("Q8_0", 16_384));
+    assert_eq!(p["baseInstalled"], false);
+    assert_eq!(p["baseName"], BASE_Q8);
+    assert_eq!(p["download"], 8_709_518_112u64);
+    assert_eq!(p["blocked"], Value::Null);
+
+    let added = h.ok("harness_add", add_args("Q8_0", 16_384));
+    assert_eq!(added["model"]["baseInstalledByGram"], true);
+    assert_eq!(
+        ollama.calls("/api/pull"),
+        [json!({ "model": BASE_Q8, "stream": true })]
+    );
+    // Les étapes dans l'ordre (les lignes arrivent d'un coup : peu de nouvelles par étape).
+    let mut phases: Vec<Value> = progress
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|p| p["phase"].clone())
+        .collect();
+    phases.dedup();
+    assert_eq!(
+        phases,
+        [
+            json!("preparing"),
+            json!("downloading"),
+            json!("verifying"),
+            json!("creating")
+        ]
+    );
+    let status = h.ok("harness_status", json!({}));
+    assert_eq!(status["models"][0]["baseRemovable"], true);
+
+    // Rajouté avec un autre contexte : sans téléchargement, la base reste « téléchargée par
+    // GRAM ». Ollama annonce le contexte de sa réponse enregistrée (16 384) : avertissement.
+    let again = h.ok("harness_add", add_args("Q8_0", 8192));
+    assert_eq!(ollama.calls("/api/pull").len(), 1);
+    assert_eq!(again["model"]["ctx"], 8192);
+    assert_eq!(again["model"]["baseInstalledByGram"], true);
+    let warnings = again["warnings"].as_array().unwrap();
+    assert_eq!(warnings.len(), 1);
+    assert!(
+        warnings[0].as_str().unwrap().contains("au lieu de 8 192"),
+        "{warnings:?}"
+    );
+    assert_eq!(manifest(&dir)["models"].as_array().unwrap().len(), 1);
+
+    // Retirer avec la base : les deux disparaissent d'Ollama.
+    let r = h.ok(
+        "harness_remove",
+        json!({ "ollamaName": alias, "removeBase": true }),
+    );
+    assert_eq!(r, json!({ "removed": true, "baseRemoved": true }));
+    assert_eq!(
+        ollama.calls("/api/delete"),
+        [json!({ "model": alias }), json!({ "model": BASE_Q8 })]
+    );
+    assert_eq!(ollama.names(), [BASE_Q4]);
+    assert_eq!(manifest(&dir)["models"], json!([]));
+}
+
+#[test]
+fn modeles_disparus_et_mesure_reportee() {
+    let ollama = OllamaModels::start(
+        &[BASE_Q4, ALIAS],
+        gram_ollama::testing::Reply::new(500, "{}"),
+        false,
+    );
+    let dir = TempDir::new("harness-manifeste");
+    let entry = |alias: &str| {
+        json!({
+            "ollamaName": alias, "baseName": BASE_Q4, "baseInstalledByGram": true,
+            "displayName": "Qwen3-8B", "repoId": QWEN, "quant": "Q4_K_M", "size": 5_027_783_488u64,
+            "ctx": 16_384, "kvCache": "f16", "useCase": "general", "vision": false,
+            "estimatedTokS": 130.0, "measuredTokS": null, "addedAt": "2026-01-01T00:00:00Z"
+        })
+    };
+    let shared = dir.0.join("shared");
+    std::fs::create_dir_all(&shared).unwrap();
+    let file = json!({
+        "version": 1, "updatedAt": "2026-11-12T10:00:00Z",
+        "models": [entry(ALIAS), entry("gram/supprime-avec-ollama-rm:q4_k_m")]
+    });
+    std::fs::write(shared.join("models.json"), file.to_string()).unwrap();
+    let h = Harness::with_ollama(&dir, ollama.client());
+
+    // Le modèle dérivé disparu d'Ollama est retiré du manifeste.
+    let status = h.ok("harness_status", json!({}));
+    let names: Vec<&Value> = status["models"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| &e["model"]["ollamaName"])
+        .collect();
+    assert_eq!(names, [&json!(ALIAS)]);
+    // Seul modèle à utiliser sa base, téléchargée par GRAM : supprimable.
+    assert_eq!(status["models"][0]["baseRemovable"], true);
+    assert_eq!(manifest(&dir)["models"].as_array().unwrap().len(), 1);
+
+    // La mesure de la base est reportée sur le modèle dérivé.
+    let m = h.ok("ollama_measure", measure_args("Q4_K_M"));
+    assert_eq!(manifest(&dir)["models"][0]["measuredTokS"], m["tokS"]);
+}
+
+#[test]
+fn ajout_annule() {
+    use gram_ollama::testing::{PULL_RESUME, Reply};
+    let head: String = PULL_RESUME
+        .lines()
+        .take(10)
+        .map(|l| format!("{l}\n"))
+        .collect();
+    let reply = Reply::ndjson(&head)
+        .pause(std::time::Duration::from_secs(10))
+        .lines(PULL_RESUME);
+    let ollama = OllamaModels::start(&[], reply, true);
+    let dir = TempDir::new("harness-annule");
+    let h = Harness::with_ollama(&dir, ollama.client());
+    let done = h.record(crate::events::HARNESS_DONE);
+    let handle = h.app.handle().clone();
+    let webview = h.webview.clone();
+
+    let start = std::time::Instant::now();
+    let added = std::thread::scope(|scope| {
+        scope.spawn(|| {
+            // Attend le téléchargement, sans requête à Ollama (le faux serveur répond à une
+            // connexion à la fois).
+            let state = handle.state::<AppState>();
+            while state
+                .install_progress()
+                .is_none_or(|p| p.phase != gram_core::harness::InstallPhase::Downloading)
+            {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            let busy = invoke(&webview, "harness_add", add_args("Q4_K_M", 16_384)).unwrap_err();
+            assert_eq!(
+                busy,
+                "Ajout de Qwen3-8B Q8_0 déjà en cours : attendre sa fin, ou l'annuler."
+            );
+            let remove = json!({ "ollamaName": "gram/qwen3-8b:q8_0", "removeBase": false });
+            let err = invoke(&webview, "harness_remove", remove).unwrap_err();
+            assert_eq!(
+                err,
+                "gram/qwen3-8b:q8_0 est en cours d'ajout : annuler l'ajout d'abord."
+            );
+            assert_eq!(invoke(&webview, "harness_cancel", json!({})).unwrap(), true);
+        });
+        h.ok("harness_add", add_args("Q8_0", 16_384))
+    });
+    assert_eq!(added, Value::Null);
+    assert!(
+        start.elapsed() < std::time::Duration::from_secs(5),
+        "{:?}",
+        start.elapsed()
+    );
+    assert!(
+        ollama.calls("/api/create").is_empty(),
+        "aucun modèle dérivé créé"
+    );
+    let state = h.app.state::<AppState>();
+    assert!(state.install_progress().is_none());
+    assert!(!dir.0.join("shared").join("models.json").exists());
+    assert_eq!(
+        done.lock().unwrap()[0]["result"],
+        json!({ "kind": "cancelled" })
+    );
+    assert_eq!(
+        h.ok("harness_cancel", json!({})),
+        false,
+        "plus rien à annuler"
+    );
+}
+
+#[test]
+fn ajouts_refuses() {
+    use gram_ollama::testing::{PULL_ERROR_GATED, Reply};
+    // Hugging Face refuse le dépôt : message qui dit quoi faire.
+    let ollama = OllamaModels::start(&[BASE_Q4], Reply::ndjson(PULL_ERROR_GATED), false);
+    let dir = TempDir::new("harness-refus");
+    let h = Harness::with_ollama(&dir, ollama.client());
+    let done = h.record(crate::events::HARNESS_DONE);
+    let err = h
+        .invoke("harness_add", add_args("Q8_0", 16_384))
+        .unwrap_err();
+    assert_eq!(
+        err,
+        "Hugging Face a refusé le téléchargement de Qwen/Qwen3-8B-GGUF : dépôt introuvable ou \
+         devenu protégé. Synchroniser le catalogue, puis réessayer."
+    );
+    assert_eq!(done.lock().unwrap()[0]["result"]["kind"], "failed");
+    assert_eq!(done.lock().unwrap()[0]["result"]["message"], err);
+    assert!(h.ok("harness_status", json!({}))["install"].is_null());
+
+    // Pas assez de place sur le disque des modèles d'Ollama.
+    let mut raw = raw_hardware();
+    raw.disks[0].available = 4 << 30;
+    let small = TempDir::new("harness-disque");
+    let h = Harness::with_state(&small, state_with(&small.0, ollama.client(), raw));
+    let p = h.ok("harness_preflight", add_args("Q8_0", 16_384));
+    let reason = p["blocked"].as_str().unwrap().to_string();
+    assert!(
+        reason.starts_with("Pas assez de place sur C:\\ : 4,0 Go libres"),
+        "{reason}"
+    );
+    assert_eq!(
+        h.invoke("harness_add", add_args("Q8_0", 16_384))
+            .unwrap_err(),
+        reason
+    );
+    assert_eq!(
+        ollama.calls("/api/pull").len(),
+        1,
+        "aucun nouveau téléchargement"
+    );
+    // La base déjà là : rien à télécharger, rien ne bloque.
+    let p = h.ok("harness_preflight", add_args("Q4_K_M", 16_384));
+    assert!(p["blocked"].is_null());
+
+    // Ollama arrêté : l'ajout est refusé, l'état reste lisible.
+    let addr = std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap();
+    let stopped = TempDir::new("harness-arrete");
+    let h = Harness::with_ollama(&stopped, Some(OllamaClient::for_addr(addr).unwrap()));
+    let message = format!("Ollama ne répond pas sur http://{addr} : le lancer, puis réessayer");
+    assert_eq!(
+        h.invoke("harness_preflight", add_args("Q4_K_M", 16_384))
+            .unwrap_err(),
+        message
+    );
+    assert_eq!(
+        h.invoke("harness_add", add_args("Q4_K_M", 16_384))
+            .unwrap_err(),
+        message
+    );
+    assert_eq!(
+        h.ok("harness_status", json!({})),
+        json!({ "models": [], "install": null, "presence": null })
+    );
+
+    // Adresse d'Ollama inutilisable.
+    let none = TempDir::new("harness-aucun");
+    let h = Harness::new(&none);
+    let e = h
+        .invoke("harness_add", add_args("Q4_K_M", 16_384))
+        .unwrap_err();
+    assert!(
+        e.as_str().unwrap().starts_with("API d'Ollama inaccessible"),
+        "{e}"
+    );
+    assert_eq!(h.ok("harness_status", json!({}))["models"], json!([]));
 }
 
 // ── Mises à jour ─────────────────────────────────────────────────────────────────────────────

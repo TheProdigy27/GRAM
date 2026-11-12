@@ -77,13 +77,19 @@ pub fn hf_url(repo_id: &str) -> String {
 
 /// Nom d'une quantification dans Ollama quand on l'installe depuis Hugging Face :
 /// `hf.co/{dépôt}:{quantification}`.
-pub fn ollama_name(variant: &QuantVariant) -> String {
-    format!("hf.co/{}:{}", variant.repo_id, variant.label)
+///
+/// Pour un dépôt protégé, `huggingface.co/…` : avec ce préfixe, Ollama signe ses requêtes avec
+/// sa clé (`~/.ollama/id_ed25519.pub`), que l'utilisateur peut enregistrer sur Hugging Face.
+/// Avec `hf.co/`, il ne sait pas s'authentifier (`realm host "huggingface.co" does not match
+/// original host "hf.co"`, constaté avec Ollama 0.40.16).
+pub fn ollama_name(variant: &QuantVariant, gated: bool) -> String {
+    let host = if gated { "huggingface.co" } else { "hf.co" };
+    format!("{host}/{}:{}", variant.repo_id, variant.label)
 }
 
 /// Commande qui installe une quantification dans Ollama sans la lancer (mesure réelle).
-pub fn ollama_pull_command(variant: &QuantVariant) -> String {
-    format!("ollama pull {}", ollama_name(variant))
+pub fn ollama_pull_command(variant: &QuantVariant, gated: bool) -> String {
+    format!("ollama pull {}", ollama_name(variant, gated))
 }
 
 /// Commande qui définit une variable d'environnement lue par Ollama au démarrage :
@@ -119,7 +125,7 @@ pub fn launch_plan(
 ) -> LaunchPlan {
     let ctx = estimate.ctx_used;
     let tag = format!("{}:{}", variant.repo_id, variant.label);
-    let ollama = ollama_name(variant);
+    let ollama = ollama_name(variant, gated);
     let mut commands = Vec::new();
     let mut open_url = None;
     let mut notes = Vec::new();
@@ -579,9 +585,27 @@ mod tests {
     #[test]
     fn installation_dans_ollama() {
         assert_eq!(
-            ollama_pull_command(&variant(1)),
+            ollama_pull_command(&variant(1), false),
             "ollama pull hf.co/bartowski/Qwen_Qwen3-8B-GGUF:Q4_K_M"
         );
+        // Dépôt protégé : le préfixe avec lequel Ollama s'authentifie.
+        assert_eq!(
+            ollama_pull_command(&variant(1), true),
+            "ollama pull huggingface.co/bartowski/Qwen_Qwen3-8B-GGUF:Q4_K_M"
+        );
+        let gated = launch_plan(
+            Runtime::Ollama,
+            &variant(1),
+            &estimate(RunMode::Gpu),
+            true,
+            KvCacheType::F16,
+            Os::Windows,
+        );
+        assert_eq!(
+            commands(&gated)[0],
+            "ollama run huggingface.co/bartowski/Qwen_Qwen3-8B-GGUF:Q4_K_M"
+        );
+        assert!(gated.notes.iter().any(|n| n.contains("clé SSH d'Ollama")));
     }
 
     #[test]

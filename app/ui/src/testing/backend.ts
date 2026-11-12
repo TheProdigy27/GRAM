@@ -8,11 +8,14 @@ import type { RankRequest } from '../app/core/generated/RankRequest';
 import type { RankResponse } from '../app/core/generated/RankResponse';
 import { matchesWords, searchWords } from '../app/features/palette/palette-model';
 import {
+  ADD_OUTCOME,
   CACHE_INFO,
   CALIBRATION_EMPTY,
   HARDWARE,
   HARDWARE_OPTIONS,
+  HARNESS_STATUS_EMPTY,
   MEASUREMENT,
+  PREFLIGHT,
   RANKING,
   RUNTIMES,
   SETTINGS,
@@ -60,6 +63,11 @@ const DEFAULTS: Record<string, Handler> = {
   ollama_measure: () => MEASUREMENT,
   apply_calibration: () => ({ ...SETTINGS, estimate: { ...SETTINGS.estimate, gpuEfficiency: 0.48 } }),
   clear_measurements: () => CALIBRATION_EMPTY,
+  harness_status: () => HARNESS_STATUS_EMPTY,
+  harness_preflight: () => PREFLIGHT,
+  harness_add: () => ADD_OUTCOME,
+  harness_cancel: () => false,
+  harness_remove: () => ({ removed: true, baseRemoved: false }),
   check_update: () => ({ currentVersion: '0.1.0', update: null }),
   install_update: () => new Promise(() => undefined), // l'application redémarre
   'plugin:clipboard-manager|write_text': () => null,

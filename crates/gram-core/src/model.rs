@@ -43,6 +43,17 @@ pub struct ModelEntry {
     pub alternatives: Vec<RepoRef>,
 }
 
+impl ModelEntry {
+    /// Le dépôt `repo_id` (canonique ou alternatif) est protégé ; un dépôt inconnu prend la
+    /// valeur du dépôt canonique.
+    pub fn repo_gated(&self, repo_id: &str) -> bool {
+        self.alternatives
+            .iter()
+            .find(|a| a.repo_id.eq_ignore_ascii_case(repo_id))
+            .map_or(self.gated, |a| a.gated)
+    }
+}
+
 /// Un dépôt GGUF alternatif d'un modèle.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

@@ -637,13 +637,13 @@ pub fn model_detail(m: &ModelEntry, req: &DetailRequest, cx: &RankContext) -> Mo
                 &r.ve.variant.label,
             )
             .map(|om| om.name.clone()),
-            ollama_pull: ollama_pull_command(&r.ve.variant),
+            ollama_pull: ollama_pull_command(&r.ve.variant, m.repo_gated(&r.ve.variant.repo_id)),
             explanation: explain(&r.ve, &s.budget, s.work.ctx, m.ctx_train),
             launch: launch_plan(
                 runtime,
                 &r.ve.variant,
                 &r.ve.estimate,
-                m.gated,
+                m.repo_gated(&r.ve.variant.repo_id),
                 s.params.kv_cache,
                 cx.hardware.os,
             ),

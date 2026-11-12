@@ -7,6 +7,7 @@
 pub mod calibration;
 pub mod catalog;
 pub mod hardware;
+pub mod harness;
 pub mod ranking;
 pub mod settings;
 pub mod system;
@@ -42,6 +43,11 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         calibration::get_calibration,
         calibration::apply_calibration,
         calibration::clear_measurements,
+        harness::harness_preflight,
+        harness::harness_add,
+        harness::harness_cancel,
+        harness::harness_remove,
+        harness::harness_status,
         update::check_update,
         update::install_update,
     ]

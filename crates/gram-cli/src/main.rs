@@ -1,6 +1,7 @@
 //! `gram-cli` : binaire de debug pour valider chaque brique de GRAM sans l'interface.
 
 mod estimate;
+mod harness;
 mod hw;
 mod ollama;
 mod rank;
@@ -128,6 +129,12 @@ enum Command {
         #[arg(long)]
         cache_dir: Option<PathBuf>,
     },
+    /// Ajout à GRAM Harness : modèles ajoutés, ajout d'une quantification à Ollama (modèle
+    /// dérivé `gram/…` réglé au contexte calculé par GRAM), retrait.
+    Harness {
+        #[command(subcommand)]
+        action: HarnessAction,
+    },
     /// Génère `data/seed_catalog.json` (catalogue embarqué pour le hors ligne).
     Snapshot {
         #[arg(long, default_value = "data/seed_catalog.json")]
@@ -136,6 +143,48 @@ enum Command {
         /// %LOCALAPPDATA% sous Windows, ~/Library/Application Support sous macOS).
         #[arg(long)]
         cache_dir: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+enum HarnessAction {
+    /// Modèles ajoutés (manifeste partagé `fr.gram.shared/models.json`), et s'ils sont encore
+    /// dans Ollama.
+    List {
+        /// Sortie JSON (`SharedManifest`).
+        #[arg(long)]
+        json: bool,
+    },
+    /// Ajoute une quantification d'un modèle du catalogue : téléchargement dans Ollama si
+    /// besoin (Ctrl C annule), puis modèle dérivé au contexte estimé avec les paramètres et
+    /// les corrections enregistrés par GRAM.
+    Add {
+        /// Dépôt, nom ou modèle de base (recherche sans tenir compte de la casse).
+        model: String,
+        /// Quantification (ex. Q4_K_M).
+        #[arg(long)]
+        quant: String,
+        /// Contexte souhaité en tokens (défaut : celui du cas d'usage).
+        #[arg(long)]
+        ctx: Option<u32>,
+        #[arg(long, value_enum, default_value_t = Usage::General)]
+        usage: Usage,
+        /// Affiche les vérifications (téléchargement, place, contexte, précautions) sans rien
+        /// ajouter.
+        #[arg(long)]
+        dry_run: bool,
+        /// Dossier du cache (défaut : `fr.gram.desktop/cache` dans les données locales).
+        #[arg(long)]
+        cache_dir: Option<PathBuf>,
+    },
+    /// Retire un modèle ajouté : supprime le modèle dérivé d'Ollama et son entrée du manifeste.
+    Remove {
+        /// Nom du modèle dérivé (ex. gram/qwen3-8b:q4_k_m).
+        name: String,
+        /// Supprime aussi la base, si GRAM l'a téléchargée et qu'aucun autre modèle ajouté ne
+        /// l'utilise.
+        #[arg(long)]
+        base: bool,
     },
 }
 
@@ -273,6 +322,25 @@ fn main() -> Result<()> {
             json,
             cache_dir,
         }),
+        Command::Harness { action } => harness::run(match action {
+            HarnessAction::List { json } => harness::HarnessCmd::List { json },
+            HarnessAction::Add {
+                model,
+                quant,
+                ctx,
+                usage,
+                dry_run,
+                cache_dir,
+            } => harness::HarnessCmd::Add {
+                query: model,
+                quant,
+                ctx,
+                use_case: usage.into(),
+                dry_run,
+                cache_dir,
+            },
+            HarnessAction::Remove { name, base } => harness::HarnessCmd::Remove { name, base },
+        }),
         Command::Snapshot { output, cache_dir } => sync::snapshot(&output, cache_dir),
     }
 }
@@ -321,6 +389,59 @@ mod tests {
         // La quantification et le contexte n'ont de sens qu'avec `--measure`.
         assert!(Cli::try_parse_from(["gram-cli", "ollama", "--quant", "Q4_K_M"]).is_err());
         assert!(Cli::try_parse_from(["gram-cli", "ollama", "--ctx", "4096"]).is_err());
+    }
+
+    #[test]
+    fn parse_harness() {
+        let cli = Cli::try_parse_from([
+            "gram-cli",
+            "harness",
+            "add",
+            "Qwen3-1.7B",
+            "--quant",
+            "Q4_K_M",
+            "--ctx",
+            "16384",
+        ])
+        .unwrap();
+        match cli.command {
+            Command::Harness {
+                action:
+                    HarnessAction::Add {
+                        model,
+                        quant,
+                        ctx,
+                        usage,
+                        dry_run,
+                        ..
+                    },
+            } => {
+                assert_eq!((model.as_str(), quant.as_str()), ("Qwen3-1.7B", "Q4_K_M"));
+                assert!(!dry_run);
+                assert_eq!(ctx, Some(16384));
+                assert_eq!(UseCase::from(usage), UseCase::General);
+            }
+            _ => panic!("sous-commande inattendue"),
+        }
+        // La quantification est obligatoire.
+        assert!(Cli::try_parse_from(["gram-cli", "harness", "add", "Qwen3-1.7B"]).is_err());
+        match Cli::try_parse_from(["gram-cli", "harness", "remove", "gram/x:q4_k_m", "--base"])
+            .unwrap()
+            .command
+        {
+            Command::Harness {
+                action: HarnessAction::Remove { name, base },
+            } => assert_eq!((name.as_str(), base), ("gram/x:q4_k_m", true)),
+            _ => panic!("sous-commande inattendue"),
+        }
+        assert!(matches!(
+            Cli::try_parse_from(["gram-cli", "harness", "list", "--json"])
+                .unwrap()
+                .command,
+            Command::Harness {
+                action: HarnessAction::List { json: true }
+            }
+        ));
     }
 
     #[test]
