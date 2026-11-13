@@ -19,7 +19,7 @@ pub mod manifest;
 pub mod presence;
 
 pub use deeplink::{DeepLink, DeepLinkError};
-pub use dirs::{SHARED_DIR_NAME, shared_dir};
+pub use dirs::{SHARED_DIR_NAME, local_data_dir, shared_dir};
 pub use manifest::{
     MANIFEST_FILE, MANIFEST_VERSION, SharedManifest, SharedModel, read_manifest, update_manifest,
 };

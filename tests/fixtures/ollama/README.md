@@ -44,3 +44,23 @@ devient `C:\Users\gram`.
 
 Sans flux (`stream: false`), une erreur de `pull` arrive avec le statut HTTP 500. `DELETE
 /api/delete` répond 200 sans corps, ou 404 avec `error-not-found.json` si le modèle est déjà absent.
+
+## Discussion dans GRAM Harness
+
+Enregistrées le 13 novembre 2026, même machine et même version d'Ollama, avec
+`hf.co/unsloth/Qwen3-1.7B-GGUF:Q4_K_M` (déjà installé), en flux (`stream: true`), `seed` 42 et
+`temperature` 0.
+
+| Fichier | Requête |
+|---|---|
+| `chat-default.ndjson` | `POST /api/chat` sans `think`, modèle à charger : Qwen3 réfléchit quand même, et la réflexion arrive à part dans `message.thinking` (99 lignes de réflexion puis de réponse, puis le bilan) ; `load_duration` 1,47 s |
+| `chat-think.ndjson` | Même requête avec `think: true` : même format |
+| `chat-no-think.ndjson` | `think: false` : réponse seule, 11 lignes |
+| `chat-length.ndjson` | Instructions (`system`), historique, `num_predict` 5 : `done_reason` `length` |
+| `chat-not-found.json` | Modèle absent : HTTP 404, avant tout flux |
+
+Chaque ligne porte un morceau de `message.content` ou de `message.thinking` (l'autre est vide) ;
+la dernière (`done: true`) a un contenu vide et le bilan : `done_reason`, `prompt_eval_count`,
+`prompt_eval_cached_count`, `eval_count` (réflexion comprise) et les durées. Fermer la connexion
+arrête la génération (« srv stop: cancel task » dans le journal d'Ollama) ; la requête suivante
+est servie aussitôt.

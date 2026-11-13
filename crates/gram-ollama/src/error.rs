@@ -14,6 +14,9 @@ pub enum OllamaError {
     /// exemple un manifeste introuvable ou un dépôt protégé au début d'un téléchargement.
     #[error("Ollama a interrompu l'opération : {0}")]
     Interrupted(String),
+    /// Connexion coupée au milieu d'un flux : Ollama s'est arrêté ou a planté.
+    #[error("connexion avec Ollama coupée ({0}) : le relancer, puis réessayer")]
+    Disconnected(&'static str),
     #[error("réponse inattendue d'Ollama : {0}")]
     Invalid(String),
     #[error("requête vers Ollama impossible : {0}")]

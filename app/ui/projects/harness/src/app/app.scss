@@ -39,9 +39,8 @@
   gap: 4px;
 }
 
-// Défilement de la zone centrale : place de la barre toujours réservée (voir styles/_scrollbars).
+// La discussion gère son propre défilement (fil au-dessus de la zone de saisie).
 .content {
   flex: 1;
   min-height: 0;
-  overflow-y: scroll;
 }

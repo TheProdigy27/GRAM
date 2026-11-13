@@ -8,6 +8,8 @@ pub enum CommandError {
     Message(String),
     #[error(transparent)]
     Ollama(#[from] gram_ollama::OllamaError),
+    #[error(transparent)]
+    Store(#[from] crate::conversations::StoreError),
 }
 
 impl CommandError {

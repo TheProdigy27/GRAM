@@ -1,8 +1,9 @@
 // Faux backend de GRAM Harness pour les tests et la vérification visuelle : répond aux
-// commandes IPC avec les fixtures et enregistre les appels.
+// commandes IPC avec les fixtures (la discussion par `FakeChat`) et enregistre les appels.
 
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import { mockIPC } from '@tauri-apps/api/mocks';
+import { FakeChat } from './chat';
 import { MODELS } from './fixtures';
 
 export interface IpcCall {
@@ -16,12 +17,20 @@ const DEFAULTS: Record<string, Handler> = {
   list_models: () => MODELS,
   open_ollama_download: () => null,
   'plugin:window|set_theme': () => null,
+  'plugin:clipboard-manager|write_text': () => null,
+  'plugin:opener|open_url': () => null,
 };
 
-/** Installe le faux backend ; `handlers` remplace des réponses (une erreur = `throw`). */
-export function mockBackend(handlers: Record<string, Handler> = {}): IpcCall[] {
+/**
+ * Installe le faux backend ; `chat` répond aux commandes de la discussion et des conversations,
+ * `handlers` remplace des réponses (une erreur = `throw`).
+ */
+export function mockBackend(
+  handlers: Record<string, Handler> = {},
+  chat: FakeChat = new FakeChat(),
+): IpcCall[] {
   const calls: IpcCall[] = [];
-  const all = { ...DEFAULTS, ...handlers };
+  const all = { ...DEFAULTS, ...chat.handlers(), ...handlers };
   mockIPC((cmd: string, args?: InvokeArgs) => {
     const a = (args ?? {}) as Record<string, unknown>;
     calls.push({ cmd, args: a });

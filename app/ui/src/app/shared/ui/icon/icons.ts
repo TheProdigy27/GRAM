@@ -33,6 +33,9 @@ export const ICONS = {
   'arrow-down': ['M12 5v14M6 13l6 6 6-6'],
   'arrow-up': ['M12 19V5M6 11l6-6 6 6'],
   plus: ['M12 5v14M5 12h14'],
+  // Arrêter une réponse ; menu d'actions d'un élément.
+  stop: [rect(6, 6, 12, 12, 2)],
+  more: [circle(5, 12, 1), circle(12, 12, 1), circle(19, 12, 1)],
   minus: ['M5 12h14'],
   refresh: [
     'M3 12a9 9 0 0 1 15.5-6.3L21 8',

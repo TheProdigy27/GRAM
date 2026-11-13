@@ -24,15 +24,20 @@ gram-link.workspace = true
 tauri.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Dates des conversations (RFC 3339 dans les fichiers, chaînes côté TypeScript).
+chrono.workspace = true
 ts-rs.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true
-# `/api/show` des modèles pas encore vus, en parallèle (`JoinSet`).
+# `/api/show` des modèles pas encore vus, en parallèle (`JoinSet`) ; arrêt d'une réponse
+# (`Notify`, `select!`).
 tokio.workspace = true
-# Page de téléchargement d'Ollama, ouverte depuis Rust (aucune permission côté WebView).
+# Page de téléchargement d'Ollama, ouverte depuis Rust ; liens des réponses, ouverts depuis la
+# WebView (permission limitée à http et https dans capabilities/default.json).
 tauri-plugin-opener = "2.7.2"
-# Copier une réponse (phase 5) ; permission limitée à l'écriture dans capabilities/default.json.
+# Copier une réponse ou un bloc de code ; permission limitée à l'écriture dans
+# capabilities/default.json.
 tauri-plugin-clipboard-manager = "2.5.0"
 
 [lints]

@@ -36,6 +36,12 @@ pub const PULL_ERROR_GATED: &str =
 pub const CREATE: &str = include_str!("../../../tests/fixtures/ollama/create.json");
 /// `POST /api/show` du modèle dérivé de Qwen3 1.7B, réglé à 16 384 tokens.
 pub const SHOW_ALIAS: &str = include_str!("../../../tests/fixtures/ollama/show-alias.json");
+/// `POST /api/chat` de Qwen3 1.7B sans `think` : réflexion (à part) puis réponse, 100 lignes.
+pub const CHAT_DEFAULT: &str = include_str!("../../../tests/fixtures/ollama/chat-default.ndjson");
+/// `POST /api/chat` de Qwen3 1.7B avec `think: false` : « 12 × 3 = 36. », 11 lignes.
+pub const CHAT_NO_THINK: &str = include_str!("../../../tests/fixtures/ollama/chat-no-think.ndjson");
+/// Réponse de [`CHAT_NO_THINK`].
+pub const CHAT_NO_THINK_CONTENT: &str = "12 × 3 = 36.";
 
 /// Réponse de `/api/tags` qui liste ces modèles.
 pub fn tags_json(names: &[&str]) -> String {
@@ -59,6 +65,8 @@ pub struct Reply {
 enum Part {
     Data(String),
     Pause(Duration),
+    /// Connexion fermée sans terminer la réponse (Ollama arrêté au milieu d'un flux).
+    Abort,
 }
 
 impl Reply {
@@ -102,6 +110,12 @@ impl Reply {
         self.parts.push(Part::Pause(pause));
         self
     }
+
+    /// Ferme la connexion ici, sans terminer la réponse.
+    pub fn abort(mut self) -> Self {
+        self.parts.push(Part::Abort);
+        self
+    }
 }
 
 impl From<(u16, String)> for Reply {
@@ -127,7 +141,8 @@ impl Recorded {
 
 /// Réponses enregistrées : version, modèles installés, modèles chargés, génération (celle de
 /// l'échauffement, qui charge le modèle, pour une requête de moins de [`MEASURE_TOKENS`]),
-/// téléchargement d'un modèle déjà là, création, `show` d'un modèle dérivé et suppression.
+/// téléchargement d'un modèle déjà là, création, `show` d'un modèle dérivé, suppression et
+/// discussion (sans réflexion).
 pub fn standard_response(r: &Recorded) -> (u16, String) {
     match (r.method.as_str(), r.path.as_str()) {
         ("GET", "/api/version") => (200, format!(r#"{{"version":"{VERSION}"}}"#)),
@@ -137,6 +152,7 @@ pub fn standard_response(r: &Recorded) -> (u16, String) {
         ("POST", "/api/create") => (200, CREATE.into()),
         ("POST", "/api/show") => (200, SHOW_ALIAS.into()),
         ("DELETE", "/api/delete") => (200, String::new()),
+        ("POST", "/api/chat") => (200, CHAT_NO_THINK.into()),
         ("POST", "/api/generate") => {
             let tokens = r.json()["options"]["num_predict"].as_u64();
             if tokens.is_some_and(|n| n < u64::from(MEASURE_TOKENS)) {
@@ -272,7 +288,7 @@ fn write_reply(mut stream: TcpStream, reply: &Reply, stop: &AtomicBool) {
             .iter()
             .map(|p| match p {
                 Part::Data(d) => d.len(),
-                Part::Pause(_) => 0,
+                Part::Pause(_) | Part::Abort => 0,
             })
             .sum();
         format!("Content-Length: {len}")
@@ -297,6 +313,7 @@ fn write_reply(mut stream: TcpStream, reply: &Reply, stop: &AtomicBool) {
             }
             Part::Data(d) => send(d.as_bytes()),
             Part::Pause(pause) => sleep_unless(*pause, stop),
+            Part::Abort => false,
         };
         if !sent {
             return;

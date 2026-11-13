@@ -1,0 +1,47 @@
+<div #scroller class="scroller" data-testid="thread" (scroll)="onScroll()">
+  @if (showHome()) {
+    <app-home class="home" />
+  } @else {
+    <div #thread class="thread">
+      @if (store.openError(); as error) {
+        <g-callout
+          kind="error"
+          heading="Conversation non ouverte"
+          role="alert"
+          data-testid="open-error"
+        >
+          {{ error }}
+        </g-callout>
+      } @else if (store.opening() && store.messages().length === 0) {
+        <p class="opening" data-testid="conversation-opening">
+          <g-spinner [size]="16" />
+          Ouverture de la conversation…
+        </p>
+      }
+      @for (m of store.messages(); track $index; let last = $last) {
+        <app-message [message]="m" [last]="last && !streamingMessage()" />
+      }
+      @if (streamingMessage(); as m) {
+        <app-message [message]="m" streaming />
+      }
+    </div>
+  }
+</div>
+
+@if (newContent()) {
+  <button gButton class="new-content" data-testid="new-content" (click)="scrollToBottom()">
+    <g-icon name="arrow-down" [size]="16" />
+    Nouveau contenu
+  </button>
+}
+
+@if (showComposer()) {
+  <div class="bottom">
+    @if (store.sendError(); as error) {
+      <g-callout class="send-error" kind="error" role="alert" data-testid="send-error">
+        {{ error }}
+      </g-callout>
+    }
+    <app-composer />
+  </div>
+}

@@ -5,7 +5,9 @@
 //! dans le dossier partagé (`models.json`) ne fait que l'enrichir (nom lisible, contexte,
 //! vitesses). Aucune commande système n'est lancée : tout passe par l'API d'Ollama.
 
+pub mod chat;
 mod commands;
+pub mod conversations;
 mod error;
 pub mod models;
 mod state;
@@ -23,7 +25,8 @@ pub fn run() {
 
     tauri::Builder::default()
         // Presse-papiers (permission d'écriture seule dans capabilities/default.json) ; page de
-        // téléchargement d'Ollama ouverte depuis Rust (aucune permission côté WebView).
+        // téléchargement d'Ollama ouverte depuis Rust, liens des réponses depuis la WebView
+        // (http et https seulement).
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .manage(HarnessState::production())

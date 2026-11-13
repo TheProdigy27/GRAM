@@ -3,18 +3,80 @@
   <span class="brand__name">GRAM Harness</span>
 </div>
 
-<!-- Activé avec la discussion (phase 5). -->
-<button gButton class="new" data-testid="new-conversation" disabled>
+<button
+  gButton
+  class="new"
+  data-testid="new-conversation"
+  gTooltip="Nouvelle conversation"
+  [gTooltipShortcut]="modN"
+  (click)="newConversation()"
+>
   <g-icon name="plus" />
   Nouvelle conversation
 </button>
 
 <nav class="conversations" aria-labelledby="conversations-title">
-  <h2 id="conversations-title" class="conversations__title">Conversations</h2>
-  <p class="conversations__empty" data-testid="conversations-empty">
-    Aucune conversation pour l’instant.
-  </p>
+  <h2 id="conversations-title" class="g-sr-only">Conversations</h2>
+  @if (chat.listError(); as error) {
+    <p class="conversations__empty" role="alert" data-testid="conversations-error">{{ error }}</p>
+  } @else if (groups().length === 0) {
+    <p class="conversations__empty" data-testid="conversations-empty">
+      Aucune conversation pour l’instant.
+    </p>
+  }
+  @for (g of groups(); track g.key) {
+    <section class="group" [attr.aria-labelledby]="'group-' + g.key">
+      <h3 class="group__title" [id]="'group-' + g.key" [attr.data-testid]="'group-' + g.key">
+        {{ g.label }}
+      </h3>
+      <ul class="list">
+        @for (c of g.items; track c.id) {
+          @let active = c.id === chat.currentId();
+          <li class="item" [class.item--active]="active" [attr.data-id]="c.id">
+            <button
+              type="button"
+              class="item__open"
+              data-testid="conversation"
+              [attr.data-id]="c.id"
+              [attr.aria-current]="active ? 'page' : null"
+              (click)="open(c.id)"
+            >
+              <span class="item__title">{{ c.title }}</span>
+              @if (streamingId() === c.id) {
+                <g-spinner class="item__busy" [size]="12" />
+                <span class="g-sr-only">, réponse en cours</span>
+              }
+            </button>
+            <button
+              gButton
+              variant="ghost"
+              icon
+              class="item__menu"
+              data-testid="conversation-menu"
+              [attr.aria-label]="'Actions : ' + c.title"
+              [cdkMenuTriggerFor]="menu"
+              [cdkMenuTriggerData]="{ $implicit: c.id }"
+            >
+              <g-icon name="more" [size]="16" />
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
 </nav>
+
+<!-- Le menu garde les données de sa première ouverture : seulement l'identifiant. -->
+<ng-template #menu let-id>
+  <g-menu aria-label="Actions de la conversation">
+    <button gMenuItem icon="edit" data-testid="conversation-rename" (triggered)="rename(id)">
+      Renommer
+    </button>
+    <button gMenuItem icon="trash" data-testid="conversation-delete" (triggered)="remove(id)">
+      Supprimer
+    </button>
+  </g-menu>
+</ng-template>
 
 @if (status(); as text) {
   <p class="status" data-testid="ollama-status">

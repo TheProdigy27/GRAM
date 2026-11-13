@@ -4,3 +4,6 @@
 @use '../../../src/styles/tokens';
 @use '../../../src/styles/base';
 @use '../../../src/styles/scrollbars';
+
+// Réponses en Markdown (contenu inséré après nettoyage, hors encapsulation des composants).
+@use 'styles/markdown';

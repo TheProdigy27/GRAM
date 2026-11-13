@@ -1,18 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { GDialog } from '../../shared/ui/dialog/dialog';
-
-/** Une ligne de l'aide : touches (reliées par `joiner`, « à »…) et ce qu'elles font. */
-export interface ShortcutRow {
-  keys: readonly string[];
-  joiner?: string;
-  label: string;
-}
-
-export interface ShortcutGroup {
-  title: string;
-  rows: readonly ShortcutRow[];
-}
+import {
+  type ShortcutGroup,
+  ShortcutGroups,
+} from '../../shared/ui/shortcut-groups/shortcut-groups';
 
 /**
  * Table « Raccourcis » de l'application. `mod` met une touche avec Ctrl (⌘ sur Mac) :
@@ -71,31 +63,10 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
 /** Dialogue « Raccourcis clavier » (touche ?, palette). */
 @Component({
   selector: 'app-shortcuts-help',
-  imports: [GDialog],
+  imports: [GDialog, ShortcutGroups],
   template: `
     <g-dialog heading="Raccourcis clavier">
-      <div class="groups">
-        @for (g of groups; track g.title) {
-          <section class="group" [attr.aria-labelledby]="'shortcuts-' + $index">
-            <h3 class="group__title" [id]="'shortcuts-' + $index">{{ g.title }}</h3>
-            <dl class="rows">
-              @for (r of g.rows; track r.label) {
-                <div class="row" data-testid="shortcut-row">
-                  <dt class="keys">
-                    @for (k of r.keys; track $index; let last = $last) {
-                      <kbd class="g-kbd">{{ k }}</kbd>
-                      @if (r.joiner && !last) {
-                        <span class="joiner"> {{ r.joiner }} </span>
-                      }
-                    }
-                  </dt>
-                  <dd class="label">{{ r.label }}</dd>
-                </div>
-              }
-            </dl>
-          </section>
-        }
-      </div>
+      <g-shortcut-groups [groups]="groups" />
       <p class="note">
         Les touches seules ne marchent pas pendant une saisie ni sous un dialogue ; {{ modF }} et
         Échap, si.
@@ -103,44 +74,6 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
     </g-dialog>
   `,
   styles: `
-    .groups {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px 28px;
-    }
-    .group__title {
-      margin: 0 0 6px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--g-muted);
-    }
-    .rows {
-      margin: 0;
-    }
-    .row {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      padding: 6px 0;
-      border-bottom: 1px solid var(--g-line-2);
-    }
-    .keys {
-      flex: none;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      width: 96px;
-    }
-    .joiner {
-      font-size: 12px;
-      color: var(--g-muted);
-    }
-    .label {
-      margin: 0;
-      color: var(--g-fg-2);
-    }
     .note {
       margin: 16px 0 0;
       font-size: 11.5px;

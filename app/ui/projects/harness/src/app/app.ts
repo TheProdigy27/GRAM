@@ -1,15 +1,17 @@
-import { Component, DestroyRef, computed, inject } from '@angular/core';
+import { Component, DestroyRef, PendingTasks, computed, inject } from '@angular/core';
 import { ShortcutsService } from '@gram/shortcuts';
 import type { ThemePref } from '@gram/theme';
 import { Button } from '@gram/ui/button/button';
+import { DialogService } from '@gram/ui/dialog/dialog';
 import { Icon } from '@gram/ui/icon/icon';
 import type { IconName } from '@gram/ui/icon/icons';
 import { MENU } from '@gram/ui/menu/menu';
 import { Tooltip } from '@gram/ui/tooltip/tooltip';
 import { ThemeService } from './core/theme.service';
-import { Home } from './features/home/home';
+import { ChatView } from './features/chat/chat-view';
 import { ModelPicker } from './features/model-picker/model-picker';
 import { Sidebar } from './features/sidebar/sidebar';
+import { ChatStore } from './state/chat.store';
 import { ModelsStore } from './state/models.store';
 
 /** Délai minimal entre deux relectures déclenchées par le focus de la fenêtre. */
@@ -29,18 +31,22 @@ const THEMES: readonly ThemeChoice[] = [
 
 /**
  * Coque de GRAM Harness : barre latérale (conversations), en-tête (sélecteur de modèle,
- * « Actualiser », thème) et zone centrale. La liste des modèles est lue au lancement, par
- * « Actualiser » (R) et quand la fenêtre reprend le focus.
+ * « Actualiser », thème) et discussion. La liste des modèles est lue au lancement, par
+ * « Actualiser » (R) et quand la fenêtre reprend le focus ; celle des conversations au
+ * lancement. Raccourcis : Ctrl N, Échap (arrêter la réponse), ? (aide), R.
  */
 @Component({
   selector: 'app-root',
-  imports: [Button, Icon, MENU, Tooltip, Home, ModelPicker, Sidebar],
+  imports: [Button, Icon, MENU, Tooltip, ChatView, ModelPicker, Sidebar],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   host: { '(window:focus)': 'onWindowFocus()' },
 })
 export class App {
   protected readonly store = inject(ModelsStore);
+  private readonly chat = inject(ChatStore);
+  private readonly dialogs = inject(DialogService);
+  private readonly pendingTasks = inject(PendingTasks);
   /** Créé avec la coque : le thème choisi s'applique avant le premier rendu. */
   protected readonly theme = inject(ThemeService);
   protected readonly themes = THEMES;
@@ -51,9 +57,31 @@ export class App {
 
   constructor() {
     void this.store.refresh();
+    void this.chat.load();
     inject(DestroyRef).onDestroy(
-      inject(ShortcutsService).register([{ key: 'r', run: () => this.refresh() }]),
+      inject(ShortcutsService).register([
+        { key: 'r', run: () => this.refresh() },
+        { key: 'n', mod: true, inInputs: true, run: () => this.chat.newConversation() },
+        { key: '?', run: () => this.openShortcuts() },
+        {
+          key: 'Escape',
+          inInputs: true,
+          run: () => {
+            if (!this.chat.streamingHere()) return false;
+            void this.chat.stop();
+            return true;
+          },
+        },
+      ]),
     );
+  }
+
+  /** Aide des raccourcis, chargée à la demande (tâche suivie par Angular). */
+  protected openShortcuts(): void {
+    this.pendingTasks.run(async () => {
+      const { ShortcutsHelp } = await import('./features/shortcuts-help/shortcuts-help');
+      this.dialogs.open(ShortcutsHelp, { width: '720px' });
+    });
   }
 
   protected refresh(): void {

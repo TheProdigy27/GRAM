@@ -1,35 +1,19 @@
 //! Commandes IPC de bout en bout, avec le runtime simulé de Tauri : noms des commandes,
 //! sérialisation des réponses et des erreurs. Sans Ollama réel ni détection réelle.
 
+use crate::chat::ChatSend;
+use crate::conversations::tests::TempDir;
 use crate::state::{Config, HarnessState};
 use gram_link::{MANIFEST_FILE, SharedManifest, SharedModel};
 use gram_ollama::OllamaClient;
-use gram_ollama::testing::{FakeOllama, tags_json};
+use gram_ollama::testing::{CHAT_NO_THINK_CONTENT, FakeOllama, tags_json};
 use serde_json::{Value, json};
 use std::path::PathBuf;
-use std::sync::Arc;
-use tauri::ipc::{CallbackFn, InvokeBody};
+use std::sync::{Arc, Mutex};
+use tauri::ipc::{CallbackFn, Channel, InvokeBody, InvokeResponseBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
-use tauri::{App, WebviewWindow, WebviewWindowBuilder};
-
-/// Dossier temporaire supprimé à la fin du test.
-struct TempDir(PathBuf);
-
-impl TempDir {
-    fn new(name: &str) -> Self {
-        let dir = std::env::temp_dir().join(format!("gram-harness-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        Self(dir)
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
+use tauri::{App, Manager, WebviewWindow, WebviewWindowBuilder};
 
 /// Application simulée.
 struct Harness {
@@ -39,7 +23,18 @@ struct Harness {
 
 impl Harness {
     fn new(ollama: Option<OllamaClient>, shared_dir: Option<PathBuf>, installed: bool) -> Self {
-        let state = HarnessState::new(Config { ollama, shared_dir }, Arc::new(move || installed));
+        Self::with_config(
+            Config {
+                ollama,
+                shared_dir,
+                conversations_dir: None,
+            },
+            installed,
+        )
+    }
+
+    fn with_config(config: Config, installed: bool) -> Self {
+        let state = HarnessState::new(config, Arc::new(move || installed));
         let app = mock_builder()
             .manage(state)
             .invoke_handler(crate::commands::handler())
@@ -178,11 +173,131 @@ fn erreurs_en_francais() {
     assert!(err.as_str().unwrap().contains("/api/tags"), "{err}");
 }
 
+/// Réponse transmise par le canal propre à la requête (`Channel`), au format que lit
+/// l'interface ; puis les commandes des conversations.
+#[test]
+fn discussion_et_conversations() {
+    let dir = TempDir::new("ipc-discussion");
+    let fake = FakeOllama::standard();
+    let h = Harness::with_config(
+        Config {
+            ollama: Some(OllamaClient::new(fake.url()).unwrap()),
+            shared_dir: None,
+            conversations_dir: Some(dir.0.join("conversations")),
+        },
+        true,
+    );
+    let events = Arc::new(Mutex::new(Vec::<Value>::new()));
+    let sink = Arc::clone(&events);
+    let channel = Channel::new(move |body| {
+        let InvokeResponseBody::Json(json) = body else {
+            panic!("événement binaire");
+        };
+        sink.lock()
+            .unwrap()
+            .push(serde_json::from_str(&json).unwrap());
+        Ok(())
+    });
+    let request = ChatSend {
+        conversation_id: None,
+        model: "gram/qwen3-1.7b:q4_k_m".into(),
+        content: Some("Combien font 12 × 3 ?".into()),
+    };
+    tauri::async_runtime::block_on(crate::commands::chat_send(
+        h.webview.state(),
+        request,
+        channel,
+    ))
+    .unwrap();
+
+    let events = events.lock().unwrap().clone();
+    let kinds: Vec<&str> = events
+        .iter()
+        .map(|e| e["event"].as_str().unwrap())
+        .collect();
+    assert_eq!(kinds.first(), Some(&"started"));
+    assert_eq!(kinds.last(), Some(&"done"));
+    assert!(kinds[1..kinds.len() - 1].iter().all(|k| *k == "delta"));
+    let conversation = &events[0]["data"]["conversation"];
+    assert_eq!(conversation["title"], "Combien font 12 × 3 ?");
+    assert_eq!(conversation["model"], "gram/qwen3-1.7b:q4_k_m");
+    let id = conversation["id"].as_str().unwrap().to_string();
+    assert_eq!(events[1]["data"], json!({ "content": "1", "thinking": "" }));
+    let message = &events.last().unwrap()["data"]["message"];
+    assert_eq!(message["role"], "assistant");
+    assert_eq!(message["content"], CHAT_NO_THINK_CONTENT);
+    assert_eq!(message["thinking"], Value::Null);
+    assert_eq!(message["stats"]["evalCount"], 11);
+    assert_eq!(message["stats"]["doneReason"], "stop");
+    assert_eq!(message["interrupted"], false);
+    assert_eq!(message["error"], Value::Null);
+
+    // Conversations.
+    let list = h.invoke("list_conversations", json!({})).unwrap();
+    assert_eq!(list.as_array().unwrap().len(), 1);
+    assert_eq!(list[0]["id"], id.as_str());
+    let full = h.invoke("get_conversation", json!({ "id": id })).unwrap();
+    assert_eq!(full["messages"].as_array().unwrap().len(), 2);
+    assert_eq!(full["messages"][0]["content"], "Combien font 12 × 3 ?");
+    assert_eq!(full["instructions"], Value::Null);
+    let renamed = h
+        .invoke(
+            "rename_conversation",
+            json!({ "id": id, "title": "  Calcul   mental " }),
+        )
+        .unwrap();
+    assert_eq!(renamed["title"], "Calcul mental");
+    assert_eq!(
+        renamed["updatedAt"], full["updatedAt"],
+        "titre sans effet sur la date"
+    );
+    let err = h
+        .invoke("rename_conversation", json!({ "id": id, "title": " " }))
+        .unwrap_err();
+    assert!(err.as_str().unwrap().starts_with("Titre vide"), "{err}");
+    assert_eq!(
+        h.invoke("chat_stop", json!({ "conversationId": id }))
+            .unwrap(),
+        false
+    );
+    assert_eq!(
+        h.invoke("delete_conversation", json!({ "id": id }))
+            .unwrap(),
+        true
+    );
+    let err = h
+        .invoke("get_conversation", json!({ "id": id }))
+        .unwrap_err();
+    assert!(
+        err.as_str()
+            .unwrap()
+            .starts_with("Conversation introuvable"),
+        "{err}"
+    );
+    assert_eq!(
+        h.invoke("list_conversations", json!({})).unwrap(),
+        json!([])
+    );
+}
+
+#[test]
+fn conversations_sans_dossier() {
+    let h = Harness::new(None, None, true);
+    let err = h.invoke("list_conversations", json!({})).unwrap_err();
+    assert!(
+        err.as_str()
+            .unwrap()
+            .starts_with("Dossier de données introuvable"),
+        "{err}"
+    );
+}
+
 /// Identifiant (dossier de données propre au harness), fenêtre, port de l'interface et CSP,
 /// reprise telle quelle de GRAM.
 #[test]
 fn configuration() {
     let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    assert_eq!(conf["identifier"], crate::state::APP_DIR_NAME);
     let gram: Value =
         serde_json::from_str(include_str!("../../src-tauri/tauri.conf.json")).unwrap();
     assert_eq!(conf["identifier"], "fr.gram.harness");

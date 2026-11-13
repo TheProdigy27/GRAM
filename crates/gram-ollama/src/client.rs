@@ -2,8 +2,8 @@
 
 use crate::addr::ollama_addr_from_env;
 use crate::api::{
-    self, CreateParameters, CreateRequest, GenerateRequest, GenerateResponse, ModelRequest,
-    ModelShow, PsEntry, PullEvent, PullRequest, TaggedModel,
+    self, ChatChunk, ChatDone, ChatRequest, CreateParameters, CreateRequest, GenerateRequest,
+    GenerateResponse, ModelRequest, ModelShow, PsEntry, PullEvent, PullRequest, TaggedModel,
 };
 use crate::error::{OllamaError, Result};
 use crate::ndjson::Lines;
@@ -110,48 +110,89 @@ impl OllamaClient {
     ///
     /// Abandonner le futur ferme la connexion, ce qui arrête le téléchargement côté Ollama ;
     /// le suivant reprend là où il s'était arrêté (vérifié avec Ollama 0.40.16).
-    pub async fn pull(&self, name: &str, mut on_event: impl FnMut(&PullEvent)) -> Result<()> {
-        const WHAT: &str = "téléchargement";
+    pub async fn pull(&self, name: &str, on_event: impl FnMut(&PullEvent)) -> Result<()> {
         let request = PullRequest {
             model: name,
             stream: true,
         };
-        let mut resp = self
-            .post("/api/pull", &request)?
-            .send()
-            .await
-            .map_err(|e| self.error(e, WHAT))?;
-        let status = resp.status();
-        if !status.is_success() {
-            let body = resp.bytes().await.map_err(|e| self.error(e, WHAT))?;
-            return Err(OllamaError::Api {
-                status: status.as_u16(),
-                message: api::error_message(&body),
-            });
-        }
-        let mut lines = Lines::default();
-        let mut state = PullState::default();
-        loop {
-            let idle = self.idle_timeout + state.verify_time();
-            let chunk = tokio::time::timeout(idle, resp.chunk())
-                .await
-                .map_err(|_| OllamaError::Timeout(WHAT))?
-                .map_err(|e| self.error(e, WHAT))?;
-            let Some(chunk) = chunk else { break };
-            for line in lines.push(&chunk)? {
-                state.line(&line, &mut on_event)?;
-            }
-        }
-        if let Some(line) = lines.finish() {
-            state.line(&line, &mut on_event)?;
-        }
-        if state.success {
+        let mut reader = PullReader {
+            state: PullState::default(),
+            on_event,
+        };
+        self.stream("/api/pull", &request, "téléchargement", &mut reader)
+            .await?;
+        if reader.state.success {
             Ok(())
         } else {
             Err(OllamaError::Invalid(
                 "le téléchargement s'est arrêté avant la fin (pas de « success »)".into(),
             ))
         }
+    }
+
+    /// Discussion en flux (`POST /api/chat`) : `on_chunk` reçoit chaque morceau de la réponse
+    /// ou de la réflexion ; renvoie le bilan de la dernière ligne. Le modèle est chargé s'il ne
+    /// l'est pas : la première ligne peut tarder (chargement, puis lecture de la conversation).
+    ///
+    /// Abandonner le futur ferme la connexion, ce qui arrête la génération côté Ollama
+    /// (vérifié avec Ollama 0.40.16 : « cancel task » dans son journal, requête suivante servie
+    /// aussitôt).
+    pub async fn chat(
+        &self,
+        request: &ChatRequest<'_>,
+        on_chunk: impl FnMut(&ChatChunk),
+    ) -> Result<ChatDone> {
+        let mut reader = ChatReader {
+            on_chunk,
+            lines: 0,
+            done: None,
+        };
+        self.stream("/api/chat", request, "réponse", &mut reader)
+            .await?;
+        reader.done.ok_or_else(|| {
+            OllamaError::Invalid("la réponse s'est arrêtée avant la fin (pas de bilan)".into())
+        })
+    }
+
+    /// Envoie une requête dont la réponse est un flux NDJSON, et passe chaque ligne à `reader`.
+    /// Pas de délai total : seulement un délai entre deux morceaux, fixé par `reader`.
+    async fn stream(
+        &self,
+        path: &str,
+        body: &impl Serialize,
+        what: &'static str,
+        reader: &mut impl LineReader,
+    ) -> Result<()> {
+        // Les en-têtes peuvent attendre le chargement du modèle (`/api/chat`).
+        let send = self.post(path, body)?.send();
+        let mut resp = tokio::time::timeout(GENERATE_TIMEOUT, send)
+            .await
+            .map_err(|_| OllamaError::Timeout(what))?
+            .map_err(|e| self.error(e, what))?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.bytes().await.map_err(|e| self.error(e, what))?;
+            return Err(OllamaError::Api {
+                status: status.as_u16(),
+                message: api::error_message(&body),
+            });
+        }
+        let mut lines = Lines::default();
+        loop {
+            let idle = reader.idle_timeout(self.idle_timeout);
+            let chunk = tokio::time::timeout(idle, resp.chunk())
+                .await
+                .map_err(|_| OllamaError::Timeout(what))?
+                .map_err(|e| self.stream_error(e, what))?;
+            let Some(chunk) = chunk else { break };
+            for line in lines.push(&chunk)? {
+                reader.line(&line)?;
+            }
+        }
+        if let Some(line) = lines.finish() {
+            reader.line(&line)?;
+        }
+        Ok(())
     }
 
     /// Modèle dérivé `alias` de `from`, au contexte `num_ctx` (`POST /api/create`). Un modèle
@@ -231,6 +272,15 @@ impl OllamaClient {
             OllamaError::Client(e.to_string())
         }
     }
+
+    /// Erreur en lisant un flux déjà commencé : la connexion s'est coupée (Ollama arrêté).
+    fn stream_error(&self, e: reqwest::Error, what: &'static str) -> OllamaError {
+        if e.is_body() || e.is_decode() {
+            OllamaError::Disconnected(what)
+        } else {
+            self.error(e, what)
+        }
+    }
 }
 
 fn with_json(
@@ -243,6 +293,14 @@ fn with_json(
         .body(json))
 }
 
+/// Lecteur d'un flux NDJSON : traite chaque ligne et fixe le délai d'attente du morceau
+/// suivant.
+trait LineReader {
+    fn line(&mut self, line: &[u8]) -> Result<()>;
+    /// Délai maximal avant le prochain morceau ; `base` : celui du client.
+    fn idle_timeout(&self, base: Duration) -> Duration;
+}
+
 /// Suivi d'un flux de téléchargement : délai de la vérification, et fin.
 #[derive(Debug, Default)]
 struct PullState {
@@ -253,8 +311,7 @@ struct PullState {
 }
 
 impl PullState {
-    fn line(&mut self, line: &[u8], on_event: &mut impl FnMut(&PullEvent)) -> Result<()> {
-        let event = api::parse_pull_line(line)?;
+    fn event(&mut self, event: &PullEvent) {
         if let Some((digest, total, _)) = event.layer() {
             match self.layers.iter_mut().find(|(d, _)| d == digest) {
                 Some(layer) => layer.1 = total,
@@ -263,8 +320,6 @@ impl PullState {
         }
         self.verifying |= event.is_verifying();
         self.success |= event.is_success();
-        on_event(&event);
-        Ok(())
     }
 
     /// Délai supplémentaire pendant la vérification, selon la taille des couches.
@@ -278,12 +333,59 @@ impl PullState {
     }
 }
 
+struct PullReader<F> {
+    state: PullState,
+    on_event: F,
+}
+
+impl<F: FnMut(&PullEvent)> LineReader for PullReader<F> {
+    fn line(&mut self, line: &[u8]) -> Result<()> {
+        let event = api::parse_pull_line(line)?;
+        self.state.event(&event);
+        (self.on_event)(&event);
+        Ok(())
+    }
+
+    fn idle_timeout(&self, base: Duration) -> Duration {
+        base + self.state.verify_time()
+    }
+}
+
+/// Suivi d'un flux de discussion : bilan de la dernière ligne.
+struct ChatReader<F> {
+    on_chunk: F,
+    lines: usize,
+    done: Option<ChatDone>,
+}
+
+impl<F: FnMut(&ChatChunk)> LineReader for ChatReader<F> {
+    fn line(&mut self, line: &[u8]) -> Result<()> {
+        let chunk = api::parse_chat_line(line)?;
+        self.lines += 1;
+        (self.on_chunk)(&chunk);
+        if let Some(done) = chunk.done {
+            self.done = Some(done);
+        }
+        Ok(())
+    }
+
+    /// Avant la première ligne, le modèle lit toute la conversation : plusieurs minutes pour un
+    /// gros modèle sur le processeur. Ensuite, un token arrive au moins toutes les secondes.
+    fn idle_timeout(&self, base: Duration) -> Duration {
+        if self.lines == 0 {
+            GENERATE_TIMEOUT
+        } else {
+            base
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::testing::{
-        FakeOllama, NOT_FOUND, PULL_ERROR_QUANT, PULL_INSTALLED, PULL_RESUME, Reply, VERSION,
-        standard_response,
+        CHAT_DEFAULT, CHAT_NO_THINK_CONTENT, FakeOllama, NOT_FOUND, PULL_ERROR_QUANT,
+        PULL_INSTALLED, PULL_RESUME, Reply, VERSION, standard_response,
     };
 
     #[tokio::test]
@@ -465,6 +567,166 @@ mod tests {
             reqs[2].json(),
             serde_json::json!({ "model": "gram/qwen3-1.7b:q4_k_m" })
         );
+    }
+
+    fn chat_request(messages: &[api::ChatMessage]) -> ChatRequest<'_> {
+        ChatRequest {
+            model: "gram/qwen3-1.7b:q4_k_m",
+            messages,
+            stream: true,
+            think: None,
+            keep_alive: None,
+            options: api::ChatOptions::default(),
+        }
+    }
+
+    /// Morceaux reçus par `chat` (réponse, réflexion), puis son bilan ou son erreur.
+    async fn chat(client: &OllamaClient) -> (String, String, Result<ChatDone>) {
+        let messages = [api::ChatMessage::new(api::ChatRole::User, "Bonjour")];
+        let (mut content, mut thinking) = (String::new(), String::new());
+        let done = client
+            .chat(&chat_request(&messages), |c| {
+                content.push_str(&c.content);
+                thinking.push_str(&c.thinking);
+            })
+            .await;
+        (content, thinking, done)
+    }
+
+    #[tokio::test]
+    async fn discussion_en_flux() {
+        // Morceaux de 5 octets : lignes et caractères coupés n'importe où.
+        let fake = FakeOllama::streaming(|_| {
+            let bytes = CHAT_DEFAULT.as_bytes();
+            bytes.chunks(5).fold(Reply::chunked(200), |reply, chunk| {
+                reply.data(String::from_utf8_lossy(chunk).into_owned())
+            })
+        });
+        let client = OllamaClient::new(fake.url()).unwrap();
+        let (_, thinking, done) = chat(&client).await;
+        let done = done.unwrap();
+        assert!(thinking.starts_with("Okay, the user said"));
+        assert_eq!(
+            (done.eval_count, done.done_reason.as_deref()),
+            (104, Some("stop"))
+        );
+        let req = &fake.requests()[0];
+        assert_eq!(
+            (req.method.as_str(), req.path.as_str()),
+            ("POST", "/api/chat")
+        );
+        assert_eq!(
+            req.json(),
+            serde_json::json!({
+                "model": "gram/qwen3-1.7b:q4_k_m",
+                "messages": [{ "role": "user", "content": "Bonjour" }],
+                "stream": true,
+            })
+        );
+
+        // Réponse enregistrée, ligne par ligne.
+        let fake = FakeOllama::standard();
+        let client = OllamaClient::new(fake.url()).unwrap();
+        let (content, thinking, done) = chat(&client).await;
+        assert_eq!(
+            (content.as_str(), thinking.as_str()),
+            (CHAT_NO_THINK_CONTENT, "")
+        );
+        assert_eq!(done.unwrap().eval_count, 11);
+    }
+
+    #[tokio::test]
+    async fn discussion_interrompue() {
+        let head: String = CHAT_DEFAULT
+            .lines()
+            .take(3)
+            .map(|l| format!("{l}\n"))
+            .collect();
+        let client = |fake: &FakeOllama| OllamaClient::new(fake.url()).unwrap();
+        // Erreur au milieu du flux : les morceaux d'avant sont arrivés.
+        let h = head.clone();
+        let fake = FakeOllama::streaming(move |_| {
+            Reply::ndjson(&h).lines(r#"{"error":"llama runner process has terminated"}"#)
+        });
+        let (_, thinking, done) = chat(&client(&fake)).await;
+        assert_eq!(thinking, "Okay, the");
+        assert!(
+            matches!(&done, Err(OllamaError::Interrupted(m)) if m.contains("terminated")),
+            "{done:?}"
+        );
+        // Ollama arrêté au milieu : connexion fermée sans fin de réponse.
+        let h = head.clone();
+        let fake = FakeOllama::streaming(move |_| Reply::ndjson(&h).abort());
+        let (_, thinking, done) = chat(&client(&fake)).await;
+        assert_eq!(thinking, "Okay, the");
+        let err = done.unwrap_err();
+        assert!(matches!(err, OllamaError::Disconnected(_)), "{err:?}");
+        assert_eq!(
+            err.to_string(),
+            "connexion avec Ollama coupée (réponse) : le relancer, puis réessayer"
+        );
+        // Flux terminé sans bilan.
+        let fake = FakeOllama::streaming(move |_| Reply::ndjson(&head));
+        let (_, _, done) = chat(&client(&fake)).await;
+        assert!(matches!(done, Err(OllamaError::Invalid(_))), "{done:?}");
+        // Modèle absent : HTTP 404, avant tout flux.
+        let fake = FakeOllama::start(|_| {
+            (
+                404,
+                r#"{"error":"model 'gram/absent:q4_k_m' not found"}"#.into(),
+            )
+        });
+        let (_, _, done) = chat(&client(&fake)).await;
+        assert!(
+            matches!(&done, Err(OllamaError::Api { status: 404, message }) if api::is_model_not_found(404, message)),
+            "{done:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn discussion_delais_et_annulation() {
+        let lines: Vec<String> = CHAT_DEFAULT.lines().map(|l| format!("{l}\n")).collect();
+        let (first, rest) = (lines[..2].concat(), lines[2..].concat());
+        // La première ligne peut tarder (chargement du modèle) : le délai entre deux morceaux
+        // ne vaut qu'ensuite.
+        let (f, r) = (first.clone(), rest.clone());
+        let fake = FakeOllama::streaming(move |_| {
+            Reply::chunked(200)
+                .pause(Duration::from_millis(600))
+                .lines(&f)
+                .lines(&r)
+        });
+        let client = OllamaClient::new(fake.url())
+            .unwrap()
+            .with_idle_timeout(Duration::from_millis(300));
+        assert!(chat(&client).await.2.is_ok());
+        // Silence au milieu de la réponse.
+        let (f, r) = (first.clone(), rest.clone());
+        let fake = FakeOllama::streaming(move |_| {
+            Reply::ndjson(&f).pause(Duration::from_secs(5)).lines(&r)
+        });
+        let client = OllamaClient::new(fake.url())
+            .unwrap()
+            .with_idle_timeout(Duration::from_millis(300));
+        let err = chat(&client).await.2.unwrap_err();
+        assert!(matches!(err, OllamaError::Timeout("réponse")), "{err:?}");
+
+        // Annuler = abandonner le futur : il rend la main tout de suite, avec les morceaux reçus.
+        let fake = FakeOllama::streaming(move |_| {
+            Reply::ndjson(&first)
+                .pause(Duration::from_secs(5))
+                .lines(&rest)
+        });
+        let client = OllamaClient::new(fake.url()).unwrap();
+        let messages = [api::ChatMessage::new(api::ChatRole::User, "Bonjour")];
+        let request = chat_request(&messages);
+        let mut thinking = String::new();
+        let start = std::time::Instant::now();
+        let chat = client.chat(&request, |c| thinking.push_str(&c.thinking));
+        let cancelled = tokio::time::timeout(Duration::from_millis(400), chat).await;
+        assert!(cancelled.is_err(), "annulé");
+        assert!(start.elapsed() < Duration::from_secs(2));
+        assert_eq!(thinking, "Okay,");
     }
 
     #[tokio::test]

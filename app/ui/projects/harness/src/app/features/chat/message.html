@@ -1,0 +1,75 @@
+@let m = message();
+@if (m.role === 'user') {
+  <div class="bubble" data-testid="message-user">{{ m.content }}</div>
+} @else {
+  <article class="answer" data-testid="message-assistant" [attr.aria-busy]="streaming() || null">
+    <header class="head">
+      <span class="model" data-testid="message-model">{{ model() }}</span>
+      @if (m.interrupted) {
+        <g-tag size="sm" data-testid="message-interrupted">Interrompue</g-tag>
+      }
+    </header>
+    @if (m.thinking; as thinking) {
+      <details class="thinking" data-testid="message-thinking">
+        <summary class="thinking__summary">
+          {{ streaming() && !m.content ? 'Réflexion…' : 'Réflexion' }}
+        </summary>
+        <p class="thinking__text">{{ thinking }}</p>
+      </details>
+    }
+    @if (m.content) {
+      <app-markdown [text]="m.content" />
+    } @else if (streaming()) {
+      <p class="waiting" data-testid="message-waiting">
+        <g-spinner [size]="14" />
+        {{ m.thinking ? 'Le modèle réfléchit…' : 'Le modèle prépare sa réponse…' }}
+      </p>
+    }
+    @if (m.error; as error) {
+      <g-callout class="error" kind="error" role="alert" data-testid="message-error">
+        {{ error }}
+        @if (last()) {
+          <button
+            gButton
+            gCalloutAction
+            size="sm"
+            data-testid="message-retry"
+            [disabled]="!canRegenerate()"
+            (click)="regenerate()"
+          >
+            Réessayer
+          </button>
+        }
+      </g-callout>
+    }
+    @if (!streaming() && m.content) {
+      <div class="actions">
+        <button
+          gButton
+          variant="ghost"
+          icon
+          data-testid="message-copy"
+          aria-label="Copier la réponse"
+          [gTooltip]="copied() ? 'Copiée' : 'Copier'"
+          (click)="copy()"
+        >
+          <g-icon [name]="copied() ? 'check' : 'copy'" [size]="16" />
+        </button>
+        @if (last() && !m.error) {
+          <button
+            gButton
+            variant="ghost"
+            icon
+            data-testid="message-regenerate"
+            aria-label="Régénérer la réponse"
+            gTooltip="Régénérer"
+            [disabled]="!canRegenerate()"
+            (click)="regenerate()"
+          >
+            <g-icon name="refresh" [size]="16" />
+          </button>
+        }
+      </div>
+    }
+  </article>
+}

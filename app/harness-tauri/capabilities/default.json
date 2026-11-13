@@ -3,5 +3,13 @@
   "identifier": "default",
   "description": "Permissions de la fenêtre de GRAM Harness (n'ajouter que les plugins réellement utilisés).",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-set-theme", "clipboard-manager:allow-write-text"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-theme",
+    "clipboard-manager:allow-write-text",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "http://*" }, { "url": "https://*" }]
+    }
+  ]
 }

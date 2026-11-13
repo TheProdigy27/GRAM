@@ -63,7 +63,8 @@ describe('App (GRAM Harness)', () => {
     expect(queryTestId('capability-vision', el)).toBeNull();
 
     // Barre latérale : conversations vides, état d'Ollama.
-    expect(byTestId<HTMLButtonElement>('new-conversation', el).disabled).toBe(true);
+    expect(countOf(calls, 'list_conversations')).toBe(1);
+    expect(byTestId<HTMLButtonElement>('new-conversation', el).disabled).toBe(false);
     expect(text(byTestId('conversations-empty', el))).toBe('Aucune conversation pour l’instant.');
     expect(text(byTestId('ollama-status', el))).toBe('Ollama en cours · 3 modèles');
   });

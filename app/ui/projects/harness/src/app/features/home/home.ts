@@ -13,8 +13,8 @@ import { ModelsStore } from '../../state/models.store';
 export type HomeView = 'error' | 'loading' | 'absent' | 'stopped' | 'empty' | 'model';
 
 /**
- * Zone centrale : le modèle choisi, ou ce qu'il faut faire pour en avoir un (installer ou lancer
- * Ollama, ajouter des modèles depuis GRAM). La discussion la remplacera (phase 5).
+ * Début d'une nouvelle conversation : le modèle choisi, ou ce qu'il faut faire pour en avoir un
+ * (installer ou lancer Ollama, ajouter des modèles depuis GRAM).
  */
 @Component({
   selector: 'app-home',

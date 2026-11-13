@@ -202,6 +202,164 @@ pub fn parse_generate(body: &[u8]) -> Result<GenerateResponse> {
     Ok(r)
 }
 
+// ── POST /api/chat : discussion, en flux NDJSON ─────────────────────────────────────────────
+
+/// Requête de discussion, en flux (`stream: true`). L'API est sans état : toute la conversation
+/// est envoyée à chaque fois.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ChatRequest<'a> {
+    pub model: &'a str,
+    pub messages: &'a [ChatMessage],
+    pub stream: bool,
+    /// Réflexion. Absente, Ollama décide : Qwen3 réfléchit, et la réflexion arrive à part, dans
+    /// `message.thinking` (constaté avec Ollama 0.40.16, `chat-default.ndjson`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub think: Option<bool>,
+    /// Durée de chargement après la réponse (« 5m », « -1 » : toujours) ; absente : celle
+    /// d'Ollama (5 min).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub keep_alive: Option<&'a str>,
+    /// Absentes : les paramètres du modèle (dont `num_ctx` d'un modèle dérivé de GRAM).
+    #[serde(skip_serializing_if = "ChatOptions::is_empty")]
+    pub options: ChatOptions,
+}
+
+/// Options d'une discussion ; chacune absente garde le réglage du modèle.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct ChatOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num_ctx: Option<u32>,
+    /// Tokens générés au plus.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub num_predict: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperature: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seed: Option<i64>,
+}
+
+impl ChatOptions {
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
+/// Auteur d'un message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChatRole {
+    /// Instructions, en premier message.
+    System,
+    User,
+    Assistant,
+}
+
+/// Un message de la conversation envoyée.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ChatMessage {
+    pub role: ChatRole,
+    pub content: String,
+    /// Images en base64 (modèles de vision).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<String>,
+    /// Réflexion d'une réponse précédente, que le modèle de conversation peut reprendre.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
+}
+
+impl ChatMessage {
+    pub fn new(role: ChatRole, content: impl Into<String>) -> Self {
+        Self {
+            role,
+            content: content.into(),
+            images: Vec::new(),
+            thinking: None,
+        }
+    }
+}
+
+/// Bilan d'une réponse, sur la dernière ligne du flux (durées en nanosecondes).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+pub struct ChatDone {
+    /// `stop` (fin naturelle), `length` (limite de tokens atteinte)…
+    #[serde(default)]
+    pub done_reason: Option<String>,
+    #[serde(default)]
+    pub total_duration: u64,
+    /// Chargement du modèle, s'il n'était pas déjà en mémoire.
+    #[serde(default)]
+    pub load_duration: u64,
+    /// Tokens de la conversation envoyée, y compris ceux repris du cache.
+    #[serde(default)]
+    pub prompt_eval_count: u32,
+    #[serde(default)]
+    pub prompt_eval_cached_count: u32,
+    #[serde(default)]
+    pub prompt_eval_duration: u64,
+    /// Tokens générés, réflexion comprise.
+    #[serde(default)]
+    pub eval_count: u32,
+    #[serde(default)]
+    pub eval_duration: u64,
+}
+
+/// Une ligne du flux de `POST /api/chat`, par exemple :
+///
+/// ```text
+/// {"model":"…","message":{"role":"assistant","content":"","thinking":"Okay"},"done":false}
+/// {"model":"…","message":{"role":"assistant","content":"Bonjour"},"done":false}
+/// {"model":"…","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop",…}
+/// ```
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ChatChunk {
+    /// Morceau de la réponse (souvent vide pendant la réflexion).
+    pub content: String,
+    /// Morceau de la réflexion.
+    pub thinking: String,
+    /// Bilan, sur la dernière ligne seulement.
+    pub done: Option<ChatDone>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ChatLine {
+    #[serde(default)]
+    error: Option<String>,
+    #[serde(default)]
+    message: Option<ChatLineMessage>,
+    #[serde(default)]
+    done: bool,
+    #[serde(flatten)]
+    stats: ChatDone,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ChatLineMessage {
+    #[serde(default)]
+    content: String,
+    #[serde(default)]
+    thinking: String,
+}
+
+/// Une ligne du flux. Une erreur arrive aussi par une ligne (`{"error": "…"}`), après le
+/// statut HTTP 200.
+pub fn parse_chat_line(line: &[u8]) -> Result<ChatChunk> {
+    let line: ChatLine = parse(line, "/api/chat")?;
+    if let Some(error) = line.error {
+        return Err(OllamaError::Interrupted(error));
+    }
+    let message = line.message.unwrap_or_default();
+    Ok(ChatChunk {
+        content: message.content,
+        thinking: message.thinking,
+        done: line.done.then_some(line.stats),
+    })
+}
+
+/// Erreur d'Ollama qui dit que le modèle n'est pas installé (`model '…' not found`, HTTP 404).
+pub fn is_model_not_found(status: u16, message: &str) -> bool {
+    status == 404 && message.contains("not found")
+}
+
 // ── POST /api/pull : téléchargement, en flux NDJSON ─────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -591,6 +749,122 @@ mod tests {
         assert_eq!(json["keep_alive"], "5m");
         assert_eq!(json["options"]["num_ctx"], 8192);
         assert_eq!(json["options"]["num_predict"], 128);
+    }
+
+    /// Réponse et réflexion d'un flux de `/api/chat`, et son bilan.
+    fn chat_stream(text: &[u8]) -> (String, String, ChatDone, usize) {
+        let mut content = String::new();
+        let mut thinking = String::new();
+        let mut done = None;
+        let mut lines = 0;
+        for line in text.split(|&b| b == b'\n').filter(|l| !l.is_empty()) {
+            let chunk = parse_chat_line(line).unwrap();
+            assert!(done.is_none(), "rien après le bilan");
+            content.push_str(&chunk.content);
+            thinking.push_str(&chunk.thinking);
+            done = chunk.done;
+            lines += 1;
+        }
+        (content, thinking, done.expect("bilan"), lines)
+    }
+
+    #[test]
+    fn discussion() {
+        // Sans `think`, Qwen3 réfléchit, et la réflexion arrive à part.
+        let (content, thinking, done, lines) = chat_stream(fixture!("chat-default.ndjson"));
+        assert_eq!(lines, 100);
+        assert_eq!(content, "Bonjour ! Comment puis-je vous aider ?");
+        assert!(thinking.starts_with("Okay, the user said"), "{thinking}");
+        assert_eq!(done.done_reason.as_deref(), Some("stop"));
+        assert_eq!(
+            (done.prompt_eval_count, done.eval_count),
+            (18, 104),
+            "réflexion comptée dans eval_count"
+        );
+        assert_eq!(done.eval_duration, 252_300_000);
+        // Le modèle était à charger.
+        assert_eq!(done.load_duration, 1_467_873_600);
+        assert_eq!(done.total_duration, 1_784_520_700);
+
+        // `think: true` : même format.
+        let (content, thinking, done, _) = chat_stream(fixture!("chat-think.ndjson"));
+        assert_eq!(content, "12 × 3 = 36.");
+        assert!(thinking.contains("12 times 3 is 36"), "{thinking}");
+        assert_eq!(done.prompt_eval_cached_count, 3);
+        // `think: false` : aucune réflexion.
+        let (content, thinking, done, lines) = chat_stream(fixture!("chat-no-think.ndjson"));
+        assert_eq!((content.as_str(), thinking.as_str()), ("12 × 3 = 36.", ""));
+        assert_eq!((lines, done.eval_count), (11, 11));
+        // Limite de tokens atteinte (`num_predict` 5), avec des instructions et un historique.
+        let (content, _, done, _) = chat_stream(fixture!("chat-length.ndjson"));
+        assert_eq!(content, "Tu t'appelles L");
+        assert_eq!(done.done_reason.as_deref(), Some("length"));
+        assert_eq!(done.prompt_eval_count, 61);
+
+        // Erreur au milieu du flux.
+        assert!(matches!(
+            parse_chat_line(br#"{"error":"llama runner process has terminated"}"#),
+            Err(OllamaError::Interrupted(m)) if m == "llama runner process has terminated"
+        ));
+        assert!(matches!(
+            parse_chat_line(b"<html>"),
+            Err(OllamaError::Invalid(m)) if m.starts_with("/api/chat")
+        ));
+        // Modèle absent : HTTP 404.
+        let message = error_message(fixture!("chat-not-found.json"));
+        assert_eq!(message, "model 'gram/absent:q4_k_m' not found");
+        assert!(is_model_not_found(404, &message));
+        assert!(!is_model_not_found(500, &message));
+    }
+
+    #[test]
+    fn requete_de_discussion() {
+        let messages = [
+            ChatMessage::new(ChatRole::System, "Réponds brièvement."),
+            ChatMessage::new(ChatRole::User, "Bonjour"),
+            ChatMessage {
+                images: vec!["aGVsbG8=".into()],
+                ..ChatMessage::new(ChatRole::User, "Et ça ?")
+            },
+        ];
+        let req = ChatRequest {
+            model: "gram/qwen3-1.7b:q4_k_m",
+            messages: &messages,
+            stream: true,
+            think: None,
+            keep_alive: None,
+            options: ChatOptions::default(),
+        };
+        // Sans réglage : ni `think`, ni `keep_alive`, ni `options` (ceux du modèle valent).
+        assert_eq!(
+            serde_json::to_value(&req).unwrap(),
+            serde_json::json!({
+                "model": "gram/qwen3-1.7b:q4_k_m",
+                "messages": [
+                    { "role": "system", "content": "Réponds brièvement." },
+                    { "role": "user", "content": "Bonjour" },
+                    { "role": "user", "content": "Et ça ?", "images": ["aGVsbG8="] },
+                ],
+                "stream": true,
+            })
+        );
+        let req = ChatRequest {
+            think: Some(false),
+            keep_alive: Some("30m"),
+            options: ChatOptions {
+                num_predict: Some(5),
+                seed: Some(42),
+                ..ChatOptions::default()
+            },
+            ..req
+        };
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["think"], false);
+        assert_eq!(json["keep_alive"], "30m");
+        assert_eq!(
+            json["options"],
+            serde_json::json!({ "num_predict": 5, "seed": 42 })
+        );
     }
 
     fn pull_lines(text: &[u8]) -> Vec<Result<PullEvent>> {

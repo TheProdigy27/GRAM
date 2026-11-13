@@ -13,8 +13,13 @@ pub const SHARED_DIR_NAME: &str = "fr.gram.shared";
 /// Sans API propre à une application : la même fonction sert à GRAM, à GRAM Harness et à
 /// `gram-cli`, qui trouvent donc le même dossier.
 pub fn shared_dir() -> Option<PathBuf> {
+    local_data_dir().map(|d| d.join(SHARED_DIR_NAME))
+}
+
+/// Dossier des données locales, d'après les mêmes variables : GRAM Harness y range ses propres
+/// fichiers (`fr.gram.harness/`), comme GRAM (`fr.gram.desktop/`).
+pub fn local_data_dir() -> Option<PathBuf> {
     data_local_dir(std::env::consts::OS, |key| std::env::var_os(key))
-        .map(|d| d.join(SHARED_DIR_NAME))
 }
 
 fn data_local_dir(os: &str, var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
