@@ -1,0 +1,182 @@
+<section class="harness" aria-labelledby="harness-title" data-testid="harness-panel">
+  <div class="head">
+    <h3 #title class="title" id="harness-title" tabindex="-1">
+      Discuter avec <span class="mono">{{ variant().variant.label }}</span>
+    </h3>
+    @if (entry()) {
+      <g-tag tone="accent" size="sm" icon="check" data-testid="harness-tag"
+        >Dans GRAM Harness</g-tag
+      >
+    }
+  </div>
+
+  <div class="card">
+    @switch (state()) {
+      @case ('absent') {
+        <p class="muted" data-testid="harness-ollama-absent">
+          L’ajout à GRAM Harness passe par Ollama, qui n’est pas installé : l’installer depuis
+          ollama.com, puis actualiser.
+        </p>
+        <div class="actions">
+          <button gButton size="sm" data-testid="harness-refresh" (click)="refresh()">
+            <g-icon name="refresh" />
+            Actualiser
+          </button>
+        </div>
+      }
+      @case ('stopped') {
+        <p class="muted" data-testid="harness-ollama-stopped">
+          Ollama n’est pas lancé : le démarrer pour ajouter des modèles à GRAM Harness, ou en
+          retirer.
+        </p>
+        <div class="actions">
+          <button gButton size="sm" data-testid="harness-refresh" (click)="refresh()">
+            <g-icon name="refresh" />
+            Actualiser
+          </button>
+        </div>
+      }
+      @case ('installing') {
+        @if (progress(); as p) {
+          <div class="progress" data-testid="harness-progress">
+            <div class="progress__line">
+              <span data-testid="harness-step">{{ p.step }}</span>
+              <span class="mono">{{ p.percentText }}</span>
+            </div>
+            <g-progress label="Ajout à GRAM Harness" [value]="p.percent" [valueText]="p.step" />
+          </div>
+          <div class="actions">
+            <button
+              #cancelButton
+              gButton
+              size="sm"
+              data-testid="harness-cancel"
+              [busy]="store.cancelling()"
+              (click)="cancel()"
+            >
+              @if (store.cancelling()) {
+                Annulation…
+              } @else {
+                <g-icon name="close" />
+                Annuler
+              }
+            </button>
+          </div>
+        }
+      }
+      @case ('added') {
+        @if (entry(); as e) {
+          <div class="added" data-testid="harness-added">
+            <p>
+              <span class="mono name" data-testid="harness-name">{{ e.model.ollamaName }}</span
+              ><span class="muted"> · {{ addedFacts() }}</span>
+            </p>
+            <p class="muted">
+              Pour discuter avec le modèle dans un terminal, en attendant GRAM Harness :
+            </p>
+            <app-command-block
+              testId="harness-command"
+              [command]="'ollama run ' + e.model.ollamaName"
+            />
+          </div>
+          @for (w of addedWarnings(); track $index) {
+            <g-callout kind="warn">{{ w }}</g-callout>
+          }
+          @if (ctxUpdate(); as ctx) {
+            <g-callout icon="context" data-testid="harness-ctx">
+              Réglé au contexte {{ e.model.ctx | ctx }} ; l’estimation actuelle retient
+              {{ ctx | ctx }}.
+              @if (blocked(); as reason) {
+                <span class="reason"> {{ reason }}</span>
+              }
+              <button
+                gCalloutAction
+                gButton
+                size="sm"
+                data-testid="harness-ctx-update"
+                [disabled]="!!blocked()"
+                (click)="add()"
+              >
+                Régler le contexte à {{ ctx | ctx }}
+              </button>
+            </g-callout>
+          }
+          <div class="actions">
+            <button
+              #removeButton
+              gButton
+              variant="ghost"
+              size="sm"
+              data-testid="harness-remove"
+              [busy]="removing()"
+              (click)="remove(e)"
+            >
+              @if (!removing()) {
+                <g-icon name="trash" />
+              }
+              Retirer
+            </button>
+          </div>
+        }
+      }
+      @default {
+        @if (store.preflightError(); as message) {
+          <g-callout kind="error" role="alert">Vérification impossible : {{ message }}</g-callout>
+          <div class="actions">
+            <button gButton size="sm" data-testid="harness-refresh" (click)="refresh()">
+              <g-icon name="refresh" />
+              Actualiser
+            </button>
+          </div>
+        } @else {
+          <p class="muted">
+            Installe <span class="mono">{{ variant().variant.label }}</span> dans Ollama, réglée au
+            contexte calculé par GRAM, pour discuter avec le modèle dans GRAM Harness.
+          </p>
+          <div class="actions">
+            <button
+              gButton
+              variant="primary"
+              size="sm"
+              data-testid="harness-add"
+              [disabled]="!preflight() || !!blocked()"
+              [attr.aria-describedby]="blocked() ? 'harness-blocked' : null"
+              (click)="add()"
+            >
+              <g-icon name="plus" />
+              Ajouter à GRAM Harness
+            </button>
+            @if (preflight()) {
+              <span class="facts" data-testid="harness-facts">{{ facts() }}</span>
+            } @else {
+              <g-skeleton width="240px" height="12px" aria-hidden="true" />
+            }
+          </div>
+          @if (blocked(); as reason) {
+            <p class="reason" id="harness-blocked" data-testid="harness-blocked">{{ reason }}</p>
+          }
+          @if (preflight(); as p) {
+            @if (p.warnings.length > 0) {
+              <div class="warnings" data-testid="harness-warnings">
+                @for (w of p.warnings; track $index) {
+                  <g-callout kind="warn">{{ w }}</g-callout>
+                }
+              </div>
+            }
+          }
+          @if (hardware.simulation()) {
+            <p class="small" data-testid="harness-real-machine">
+              Calculé pour la machine réelle : la simulation ne compte pas pour l’ajout.
+            </p>
+          }
+        }
+      }
+    }
+
+    @if (state() !== 'installing' && error(); as message) {
+      <g-callout kind="error" role="alert" data-testid="harness-error"
+        >Ajout impossible : {{ message }}</g-callout
+      >
+    }
+  </div>
+</section>

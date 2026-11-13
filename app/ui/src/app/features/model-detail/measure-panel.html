@@ -24,7 +24,8 @@
         </div>
       } @else if (!variant().ollamaModel) {
         <p data-testid="not-installed">
-          Pas encore installée dans Ollama. Pour la mesurer, l’installer puis actualiser :
+          Pas encore installée dans Ollama. Pour la mesurer, l’ajouter à GRAM Harness (plus haut),
+          qui l’installe, ou l’installer avec cette commande puis actualiser :
         </p>
         <app-command-block testId="pull-command" [command]="variant().ollamaPull" />
         <div class="actions">

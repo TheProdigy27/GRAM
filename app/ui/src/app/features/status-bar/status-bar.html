@@ -1,4 +1,18 @@
 <footer class="status" role="status">
+  @if (install(); as i) {
+    <button
+      type="button"
+      class="item install"
+      data-testid="status-install"
+      [gTooltip]="'Ouvrir la fiche de ' + i.progress.displayName"
+      (click)="openInstall(i.progress)"
+    >
+      <g-icon name="download" [size]="14" />
+      <span>{{ i.text }}</span>
+      <g-progress size="sm" label="Ajout à GRAM Harness" [value]="i.percent" />
+    </button>
+  }
+
   @if (catalog.syncing()) {
     <span class="item sync" data-testid="sync-progress">
       <span>{{ progress()?.label ?? 'Synchronisation…' }}</span>

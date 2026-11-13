@@ -4,11 +4,12 @@ import { TestBed } from '@angular/core/testing';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { type Handler, argsOf, mockBackend } from '../../../testing/backend';
 import { allByTestId, byTestId, click, press, text, typeInto } from '../../../testing/dom';
-import { MODEL, makeDetail } from '../../../testing/fixtures';
+import { MODEL, RUNTIMES, makeDetail } from '../../../testing/fixtures';
 import type { DetailRequest } from '../../core/generated/DetailRequest';
 import type { RankRequest } from '../../core/generated/RankRequest';
 import { ThemeService } from '../../core/theme.service';
 import { DetailStore } from '../../state/detail.store';
+import { HardwareStore } from '../../state/hardware.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from '../../state/ranking.store';
 import { Palette } from './palette';
 
@@ -271,6 +272,42 @@ describe('Palette', () => {
     );
     expect(theme.preference()).toBe('system');
     expect(document.documentElement.dataset['theme']).toBeUndefined();
+  });
+
+  it('GRAM Harness : ajouter la quantification de la fiche, puis annuler l’ajout', async () => {
+    let finish: (v: unknown) => void = () => undefined;
+    const p = await open(
+      {
+        harness_add: () => new Promise((resolve) => (finish = resolve)),
+        harness_cancel: () => true,
+      },
+      async ({ detail }) => {
+        TestBed.inject(HardwareStore).runtimes.set(RUNTIMES);
+        detail.open('Qwen/Qwen3-8B-GGUF');
+        await TestBed.inject(ApplicationRef).whenStable();
+      },
+    );
+    const command = (id: string) => p.options().find((o) => o.dataset['key'] === `command:${id}`);
+    const add = command('harness-add')!;
+    expect(text(add.querySelector('.opt__label'))).toBe('Ajouter à GRAM Harness');
+    expect(text(add.querySelector('.opt__hint'))).toBe('Qwen3-8B Q8_0');
+    expect(command('harness-cancel')).toBeUndefined();
+
+    await click(p.fixture, add);
+    expect(p.closed()).toBe(1);
+    expect(argsOf(p.calls, 'harness_add')).toEqual([
+      { request: { repoId: 'Qwen/Qwen3-8B-GGUF', label: 'Q8_0', useCase: 'general', ctx: 8192 } },
+    ]);
+
+    // Ajout en cours : l'annulation remplace l'ajout.
+    expect(command('harness-add')).toBeUndefined();
+    const cancel = command('harness-cancel')!;
+    expect(text(cancel.querySelector('.opt__label'))).toBe('Annuler l’ajout');
+    expect(text(cancel.querySelector('.opt__hint'))).toBe('Qwen3-8B Q8_0');
+    await click(p.fixture, cancel);
+    expect(argsOf(p.calls, 'harness_cancel')).toHaveLength(1);
+    expect(command('harness-cancel')).toBeUndefined();
+    finish(null);
   });
 
   it('signale une recherche impossible', async () => {

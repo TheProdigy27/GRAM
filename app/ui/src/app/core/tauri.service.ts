@@ -6,17 +6,24 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import type { CacheInfo } from './generated/CacheInfo';
 import type { Calibration } from './generated/Calibration';
 import type { DetailRequest } from './generated/DetailRequest';
+import type { AddOutcome } from './generated/AddOutcome';
 import type { ExportFormat } from './generated/ExportFormat';
 import type { HardwareOptions } from './generated/HardwareOptions';
 import type { HardwareProfile } from './generated/HardwareProfile';
+import type { HarnessAddRequest } from './generated/HarnessAddRequest';
+import type { HarnessStatus } from './generated/HarnessStatus';
+import type { InstallDone } from './generated/InstallDone';
+import type { InstallProgress } from './generated/InstallProgress';
 import type { MeasureRequest } from './generated/MeasureRequest';
 import type { Measurement } from './generated/Measurement';
 import type { ModelDetail } from './generated/ModelDetail';
 import type { Overrides } from './generated/Overrides';
 import type { PingResponse } from './generated/PingResponse';
+import type { Preflight } from './generated/Preflight';
 import type { RankRequest } from './generated/RankRequest';
 import type { RankResponse } from './generated/RankResponse';
 import type { RateLimitInfo } from './generated/RateLimitInfo';
+import type { RemoveOutcome } from './generated/RemoveOutcome';
 import type { RuntimesStatus } from './generated/RuntimesStatus';
 import type { Settings } from './generated/Settings';
 import type { SyncProgress } from './generated/SyncProgress';
@@ -31,6 +38,8 @@ export interface GramEvents {
   'sync-done': SyncSummary;
   'rate-limit': RateLimitInfo;
   'update-progress': UpdateProgress;
+  'harness-progress': InstallProgress;
+  'harness-done': InstallDone;
 }
 
 /** Message lisible d'une erreur : le backend rejette `invoke` avec une chaîne en français. */
@@ -134,6 +143,43 @@ export class TauriService {
 
   clearMeasurements(): Promise<Calibration> {
     return this.call('clear_measurements');
+  }
+
+  // ── Ajout à GRAM Harness ─────────────────────────────────────────────────────────────────
+
+  /** Modèles ajoutés (d'après le manifeste) et ajout en cours. */
+  harnessStatus(): Promise<HarnessStatus> {
+    return this.call('harness_status');
+  }
+
+  /**
+   * Ce que fera l'ajout d'une quantification : taille à télécharger, place sur le disque,
+   * contexte réglé, précautions, refus éventuel. Ollama doit répondre.
+   */
+  harnessPreflight(request: HarnessAddRequest): Promise<Preflight> {
+    return this.call('harness_preflight', { request });
+  }
+
+  /**
+   * Ajoute une quantification à GRAM Harness (événements `harness-progress`, puis
+   * `harness-done`) : téléchargement de la base si elle manque, modèle dérivé au contexte de
+   * l'estimation, manifeste. `null` si l'ajout est annulé.
+   */
+  harnessAdd(request: HarnessAddRequest): Promise<AddOutcome | null> {
+    return this.call('harness_add', { request });
+  }
+
+  /** Annule l'ajout en cours ; `false` s'il n'y en a pas. */
+  harnessCancel(): Promise<boolean> {
+    return this.call('harness_cancel');
+  }
+
+  /**
+   * Retire un modèle de GRAM Harness ; avec `removeBase`, supprime aussi sa base d'Ollama si
+   * GRAM l'a téléchargée et qu'aucun autre modèle ajouté ne l'utilise.
+   */
+  harnessRemove(ollamaName: string, removeBase: boolean): Promise<RemoveOutcome> {
+    return this.call('harness_remove', { ollamaName, removeBase });
   }
 
   // ── Paramètres et token ──────────────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ import { Tooltip } from './shared/ui/tooltip/tooltip';
 import { CatalogStore } from './state/catalog.store';
 import { DetailStore } from './state/detail.store';
 import { HardwareStore } from './state/hardware.store';
+import { HarnessStore } from './state/harness.store';
 import { RankingStore } from './state/ranking.store';
 import { SettingsStore } from './state/settings.store';
 import { UPDATE_CHECK_DELAY_MS, UpdateStore } from './state/update.store';
@@ -99,6 +100,9 @@ export class App {
     void this.hardware.load();
     void inject(SettingsStore).load();
     void this.catalog.sync(false);
+    // Modèles ajoutés à GRAM Harness et ajout en cours (après un rechargement), relus à chaque
+    // détection des runtimes.
+    inject(HarnessStore);
 
     const timer = setTimeout(() => void this.checkUpdate(), inject(UPDATE_CHECK_DELAY_MS));
     const destroyRef = inject(DestroyRef);

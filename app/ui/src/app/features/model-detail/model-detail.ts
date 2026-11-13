@@ -20,6 +20,7 @@ import { DisplayStore, type QuantView } from '../../state/display.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { RankingStore } from '../../state/ranking.store';
 import { CommandBlock } from './command-block';
+import { HarnessPanel } from './harness-panel';
 import { MeasurePanel } from './measure-panel';
 import { MemoryBar } from './memory-bar';
 import { QuantChart } from './quant-chart';
@@ -36,8 +37,8 @@ const SHELLS: Record<Os, string> = {
 /**
  * Fiche détail, ancrée à droite du classement : en-tête (rang, score, dépôt, Hugging Face),
  * quatre tuiles, vitesse estimée selon la quantification (graphique ou tableau, choix d'une
- * quantification), suggestion d'une quantification qui tient en VRAM, mémoire, commandes du
- * runtime choisi, mesure réelle avec Ollama, autres dépôts GGUF.
+ * quantification), suggestion d'une quantification qui tient en VRAM, mémoire, ajout à GRAM
+ * Harness, commandes du runtime choisi, mesure réelle avec Ollama, autres dépôts GGUF.
  */
 @Component({
   selector: 'app-model-detail',
@@ -45,6 +46,7 @@ const SHELLS: Record<Os, string> = {
     Button,
     Callout,
     CommandBlock,
+    HarnessPanel,
     Icon,
     MeasurePanel,
     MemoryBar,

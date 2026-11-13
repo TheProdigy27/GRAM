@@ -25,6 +25,7 @@ import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
 import { delay, sameJson } from '../../state/async';
 import { CatalogStore } from '../../state/catalog.store';
 import { DetailStore, type RecentModel } from '../../state/detail.store';
+import { HarnessStore } from '../../state/harness.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from '../../state/ranking.store';
 import {
   MAX_MODELS,
@@ -119,6 +120,7 @@ export class Palette {
   private readonly detail = inject(DetailStore);
   private readonly catalog = inject(CatalogStore);
   private readonly commands = inject(AppCommands);
+  private readonly harness = inject(HarnessStore);
   private readonly theme = inject(ThemeService);
   private readonly shortcuts = inject(ShortcutsService);
   private readonly debounceMs = inject(FILTER_DEBOUNCE_MS);
@@ -217,6 +219,32 @@ export class Palette {
         icon: 'close',
         keys: [],
         run: () => this.ranking.setSearch(''),
+      });
+    }
+    // Ajout à GRAM Harness de la quantification de la fiche, et annulation de l'ajout en cours.
+    const addable = this.harness.addable();
+    if (addable) {
+      const { preflight: p, request } = addable;
+      list.push({
+        id: 'harness-add',
+        label: 'Ajouter à GRAM Harness',
+        hint: `${p.displayName} ${p.label}`,
+        icon: 'plus',
+        keys: [],
+        keywords: 'ollama installer télécharger discuter',
+        run: () => void this.harness.add(request),
+      });
+    }
+    const install = this.harness.install();
+    if (install && !this.harness.cancelling()) {
+      list.push({
+        id: 'harness-cancel',
+        label: 'Annuler l’ajout',
+        hint: `${install.displayName} ${install.label}`,
+        icon: 'close',
+        keys: [],
+        keywords: 'gram harness ollama arrêter téléchargement',
+        run: () => void this.harness.cancel(),
       });
     }
     if (c.canExport()) {

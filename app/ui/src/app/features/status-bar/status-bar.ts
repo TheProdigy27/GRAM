@@ -1,15 +1,20 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import type { InstallProgress } from '../../core/generated/InstallProgress';
 import { int, relativeTime } from '../../shared/format';
+import { installPercent, installStatus } from '../../shared/harness';
 import { DATA_SOURCE_LABELS, SYNC_PHASE_LABELS } from '../../shared/labels';
 import { Icon } from '../../shared/ui/icon/icon';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { CatalogStore } from '../../state/catalog.store';
+import { DetailStore } from '../../state/detail.store';
+import { HarnessStore } from '../../state/harness.store';
 import { RankingStore } from '../../state/ranking.store';
 
 /**
- * Barre d'état : source des données, nombre de modèles, progression de la synchronisation,
- * quota de l'API Hugging Face, marge des estimations.
+ * Barre d'état : ajout à GRAM Harness en cours (un clic ouvre la fiche), source des données,
+ * nombre de modèles, progression de la synchronisation, quota de l'API Hugging Face, marge des
+ * estimations.
  */
 @Component({
   selector: 'app-status-bar',
@@ -20,6 +25,8 @@ import { RankingStore } from '../../state/ranking.store';
 export class StatusBar {
   protected readonly catalog = inject(CatalogStore);
   private readonly ranking = inject(RankingStore);
+  private readonly harness = inject(HarnessStore);
+  private readonly detail = inject(DetailStore);
 
   /** Heure courante, rafraîchie chaque minute pour « il y a 2 h ». */
   private readonly now = signal(Date.now());
@@ -59,6 +66,16 @@ export class StatusBar {
       total: Math.max(p.total, 1),
     };
   });
+
+  /** « Ajout de Qwen3-8B Q4_K_M · 38 % ». */
+  protected readonly install = computed(() => {
+    const p = this.harness.install();
+    return p ? { progress: p, text: installStatus(p), percent: installPercent(p) } : null;
+  });
+
+  protected openInstall(p: InstallProgress): void {
+    this.detail.open(p.repoId, p.label);
+  }
 
   protected readonly quota = computed(() => {
     const r = this.catalog.rateLimit();

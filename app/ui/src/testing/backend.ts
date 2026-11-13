@@ -4,6 +4,7 @@
 import { mockIPC } from '@tauri-apps/api/mocks';
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
+import type { HarnessAddRequest } from '../app/core/generated/HarnessAddRequest';
 import type { RankRequest } from '../app/core/generated/RankRequest';
 import type { RankResponse } from '../app/core/generated/RankResponse';
 import { matchesWords, searchWords } from '../app/features/palette/palette-model';
@@ -15,13 +16,13 @@ import {
   HARDWARE_OPTIONS,
   HARNESS_STATUS_EMPTY,
   MEASUREMENT,
-  PREFLIGHT,
   RANKING,
   RUNTIMES,
   SETTINGS,
   SYNC_SUMMARY,
   makeDetail,
   makeResponse,
+  preflightFor,
 } from './fixtures';
 
 export interface IpcCall {
@@ -64,7 +65,7 @@ const DEFAULTS: Record<string, Handler> = {
   apply_calibration: () => ({ ...SETTINGS, estimate: { ...SETTINGS.estimate, gpuEfficiency: 0.48 } }),
   clear_measurements: () => CALIBRATION_EMPTY,
   harness_status: () => HARNESS_STATUS_EMPTY,
-  harness_preflight: () => PREFLIGHT,
+  harness_preflight: (a) => preflightFor(a['request'] as HarnessAddRequest),
   harness_add: () => ADD_OUTCOME,
   harness_cancel: () => false,
   harness_remove: () => ({ removed: true, baseRemoved: false }),

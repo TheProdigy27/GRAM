@@ -23,6 +23,28 @@
   width: 140px;
 }
 
+// Cible de 32 px dans la barre de 34 px.
+.install {
+  align-self: stretch;
+  min-height: 32px;
+  margin: -6px 0;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--g-fg-2);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--g-fg);
+    background: var(--g-hover);
+  }
+
+  g-progress {
+    width: 80px;
+  }
+}
+
 .error {
   color: var(--g-error);
 }

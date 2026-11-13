@@ -17,6 +17,7 @@ import {
 import {
   GIB,
   HARDWARE,
+  INSTALL_PROGRESS,
   RANKING,
   SYNC_SUMMARY,
   makeItem,
@@ -332,6 +333,38 @@ describe('App', () => {
     await fixture.whenStable();
     expect(el.querySelector('[data-testid="sync-progress"]')).toBeNull();
     expect(argsOf(calls, 'rank')).toHaveLength(2);
+  });
+
+  it('barre d’état : ajout à GRAM Harness en cours, un clic ouvre la fiche', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(queryTestId('status-install', el)).toBeNull();
+
+    await emit('harness-progress', INSTALL_PROGRESS);
+    await fixture.whenStable();
+    const item = byTestId('status-install', el);
+    expect(text(item)).toBe('Ajout de Qwen3-8B Q8_0 · 38 %');
+    expect(item.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).toBe(
+      'Ajout à GRAM Harness',
+    );
+    await click(fixture, item);
+    expect(queryTestId('detail-pane', el)).not.toBeNull();
+    expect(TestBed.inject(DetailStore).selectedLabel()).toBe('Q8_0');
+
+    await emit('harness-done', {
+      repoId: INSTALL_PROGRESS.repoId,
+      displayName: INSTALL_PROGRESS.displayName,
+      label: INSTALL_PROGRESS.label,
+      ollamaName: INSTALL_PROGRESS.ollamaName,
+      result: { kind: 'cancelled' },
+    });
+    await new Promise((r) => setTimeout(r));
+    await fixture.whenStable();
+    expect(queryTestId('status-install', el)).toBeNull();
+    expect(text(toast()?.querySelector('.g-toast__message'))).toBe(
+      'Ajout de Qwen3-8B Q8_0 annulé. Ollama garde la partie téléchargée : un nouvel ajout reprendra là.',
+    );
   });
 
   it('exporte le classement affiché depuis le menu', async () => {

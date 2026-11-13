@@ -8,6 +8,7 @@ import type { Calibration } from '../app/core/generated/Calibration';
 import type { Estimate } from '../app/core/generated/Estimate';
 import type { HardwareOptions } from '../app/core/generated/HardwareOptions';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
+import type { HarnessAddRequest } from '../app/core/generated/HarnessAddRequest';
 import type { HarnessStatus } from '../app/core/generated/HarnessStatus';
 import type { InstallProgress } from '../app/core/generated/InstallProgress';
 import type { LaunchPlan } from '../app/core/generated/LaunchPlan';
@@ -586,6 +587,22 @@ export const PREFLIGHT_DOWNLOAD: Preflight = {
   disk: { mount: 'C:\\', available: 1062 * GIB, needed: 8.91 * GIB, enough: true },
   estimatedTokS: 62,
 };
+
+/**
+ * Préflight du faux backend : `PREFLIGHT` pour Q4_K_M, `PREFLIGHT_DOWNLOAD` pour Q8_0, refusé
+ * (trop gros) pour les autres quantifications (BF16 dans `makeDetail`).
+ */
+export function preflightFor(request: HarnessAddRequest): Preflight {
+  if (request.label === PREFLIGHT.label) return PREFLIGHT;
+  if (request.label === PREFLIGHT_DOWNLOAD.label) return PREFLIGHT_DOWNLOAD;
+  return {
+    ...PREFLIGHT_DOWNLOAD,
+    label: request.label,
+    ollamaName: `gram/qwen3-8b:${request.label.toLowerCase()}`,
+    baseName: `hf.co/${request.repoId}:${request.label}`,
+    blocked: `${request.label} ne tient pas en mémoire sur cette machine : ajout refusé (le système risquerait de saturer).`,
+  };
+}
 
 /** Q4_K_M ajouté à GRAM Harness (base déjà installée, donc gardée au retrait). */
 export const SHARED_MODEL: SharedModel = {
