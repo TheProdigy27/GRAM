@@ -1859,6 +1859,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "gram-harness"
+version = "0.2.0"
+dependencies = [
+ "gram-core",
+ "gram-hw",
+ "gram-link",
+ "gram-ollama",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-opener",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "ts-rs",
+]
+
+[[package]]
 name = "gram-hub"
 version = "0.2.0"
 dependencies = [

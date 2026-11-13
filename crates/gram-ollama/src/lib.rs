@@ -26,7 +26,7 @@ mod ndjson;
 pub mod testing;
 
 pub use addr::{OLLAMA_DEFAULT_PORT, ollama_addr};
-pub use api::{Capability, ModelShow, PullEvent};
+pub use api::{Capability, ModelShow, PullEvent, TaggedModel};
 pub use client::OllamaClient;
 pub use dirs::models_dir;
 pub use error::{OllamaError, Result};

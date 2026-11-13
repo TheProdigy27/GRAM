@@ -1,0 +1,45 @@
+[package]
+name = "gram-harness"
+description = "GRAM Harness : discuter en local avec les modèles d'Ollama, ajoutés depuis GRAM."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+# Le suffixe `_lib` évite un conflit de nom entre la lib et le binaire sous Windows
+# (https://github.com/rust-lang/cargo/issues/8519).
+name = "gram_harness_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+gram-core.workspace = true
+# Ollama installé mais arrêté, ou absent (seulement quand son API ne répond pas).
+gram-hw.workspace = true
+gram-ollama.workspace = true
+gram-link.workspace = true
+tauri.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+thiserror.workspace = true
+# `/api/show` des modèles pas encore vus, en parallèle (`JoinSet`).
+tokio.workspace = true
+# Page de téléchargement d'Ollama, ouverte depuis Rust (aucune permission côté WebView).
+tauri-plugin-opener = "2.7.2"
+# Copier une réponse (phase 5) ; permission limitée à l'écriture dans capabilities/default.json.
+tauri-plugin-clipboard-manager = "2.5.0"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tauri = { workspace = true, features = ["test"] }
+# Faux serveur Ollama.
+gram-ollama = { workspace = true, features = ["test-support"] }
+tokio = { workspace = true, features = ["rt", "macros"] }

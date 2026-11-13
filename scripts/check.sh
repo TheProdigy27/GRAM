@@ -6,7 +6,7 @@
 #   2. cargo clippy -D warnings
 #   3. cargo test (régénère aussi les types TypeScript via ts-rs)
 #   4. vérifie que les types TypeScript générés sont à jour dans git
-#   5. tests Angular (Vitest) et build de production
+#   5. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
 #
 # Usage : scripts/check.sh
 set -euo pipefail
@@ -43,9 +43,11 @@ if [ -n "$changes" ]; then
 fi
 
 cd app/ui
-step 'tests Angular'
+step 'tests Angular (GRAM et GRAM Harness)'
 npm run test:ci || fail 'tests Angular'
-step 'build Angular'
-npm run build || fail 'build Angular'
+step 'build Angular de GRAM'
+npm run build || fail 'build Angular de GRAM'
+step 'build Angular de GRAM Harness'
+npm run build:harness || fail 'build Angular de GRAM Harness'
 
 printf '\n\033[32mTout est vert.\033[0m\n'

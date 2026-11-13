@@ -1,4 +1,7 @@
 import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
+import { type ThemePref, type ThemePrefStore, isThemePref } from '../core/theme';
+
+export type { ThemePref } from '../core/theme';
 
 /** Préférences d'affichage, gardées d'un lancement à l'autre (stockage local de la WebView). */
 export interface DisplayPrefs {
@@ -13,9 +16,6 @@ export interface DisplayPrefs {
 }
 
 export type QuantView = 'chart' | 'table';
-
-/** Thème : celui du système, ou clair ou sombre quel que soit le système. */
-export type ThemePref = 'system' | 'light' | 'dark';
 
 const DEFAULTS: DisplayPrefs = {
   groupVariants: true,
@@ -41,10 +41,10 @@ export const DISPLAY_STORAGE = new InjectionToken<Storage | null>('DISPLAY_STORA
 /**
  * Préférences d'affichage de l'interface (pas des paramètres de calcul : rien n'est envoyé au
  * backend). Un stockage illisible ou plein n'empêche rien : les préférences valent alors pour la
- * session.
+ * session. Garde aussi le thème choisi (`ThemePrefStore` de `ThemeService`).
  */
 @Injectable({ providedIn: 'root' })
-export class DisplayStore {
+export class DisplayStore implements ThemePrefStore {
   private readonly storage = inject(DISPLAY_STORAGE);
   private readonly prefs = signal<DisplayPrefs>(this.read());
 
@@ -89,10 +89,7 @@ export class DisplayStore {
           saved.quantView === 'chart' || saved.quantView === 'table'
             ? saved.quantView
             : DEFAULTS.quantView,
-        theme:
-          saved.theme === 'system' || saved.theme === 'light' || saved.theme === 'dark'
-            ? saved.theme
-            : DEFAULTS.theme,
+        theme: isThemePref(saved.theme) ? saved.theme : DEFAULTS.theme,
       };
     } catch {
       return { ...DEFAULTS };

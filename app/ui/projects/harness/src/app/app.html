@@ -1,0 +1,58 @@
+<app-sidebar class="sidebar" />
+
+<div class="main">
+  <header class="header">
+    <app-model-picker class="picker" />
+    <div class="actions">
+      <button
+        gButton
+        variant="ghost"
+        icon
+        data-testid="refresh"
+        aria-label="Actualiser la liste des modèles"
+        aria-keyshortcuts="R"
+        gTooltip="Actualiser la liste des modèles"
+        gTooltipShortcut="R"
+        [busy]="store.loading()"
+        (click)="refresh()"
+      >
+        @if (!store.loading()) {
+          <g-icon name="refresh" [size]="18" />
+        }
+      </button>
+      <button
+        gButton
+        variant="ghost"
+        icon
+        data-testid="theme-menu"
+        aria-label="Thème"
+        gTooltip="Thème"
+        [cdkMenuTriggerFor]="themeMenu"
+      >
+        <g-icon [name]="themeIcon()" [size]="18" />
+      </button>
+      <ng-template #themeMenu>
+        <g-menu aria-label="Thème">
+          @for (t of themes; track t.value) {
+            @let active = theme.preference() === t.value;
+            <button
+              gMenuItem
+              [icon]="active ? 'check' : t.icon"
+              [attr.data-testid]="'theme-' + t.value"
+              (triggered)="theme.set(t.value)"
+            >
+              {{ t.label }}
+              @if (active) {
+                <span class="g-sr-only"> (choisi)</span>
+              }
+            </button>
+          }
+        </g-menu>
+      </ng-template>
+    </div>
+  </header>
+
+  <main class="content">
+    <app-home />
+  </main>
+</div>

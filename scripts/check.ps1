@@ -7,7 +7,7 @@
   2. cargo clippy -D warnings
   3. cargo test (régénère aussi les types TypeScript via ts-rs)
   4. vérifie que les types TypeScript générés sont à jour dans git
-  5. tests Angular (Vitest) et build de production
+  5. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts/check.ps1
@@ -41,8 +41,9 @@ Invoke-Step 'types TypeScript à jour' {
 
 Push-Location app/ui
 try {
-    Invoke-Step 'tests Angular' { npm run test:ci }
-    Invoke-Step 'build Angular' { npm run build }
+    Invoke-Step 'tests Angular (GRAM et GRAM Harness)' { npm run test:ci }
+    Invoke-Step 'build Angular de GRAM' { npm run build }
+    Invoke-Step 'build Angular de GRAM Harness' { npm run build:harness }
 }
 finally {
     Pop-Location

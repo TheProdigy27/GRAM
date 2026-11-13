@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GRAM Harness",
+  "identifier": "fr.gram.harness",
+  "build": {
+    "beforeDevCommand": "npm run start:harness",
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand": "npm run build:harness",
+    "frontendDist": "../ui/dist/harness/browser"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "GRAM Harness",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 520,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "script-src": "'self'",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data:",
+        "font-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "object-src": "'none'",
+        "base-uri": "'self'",
+        "form-action": "'none'",
+        "frame-ancestors": "'none'"
+      },
+      "dangerousDisableAssetCspModification": ["style-src"]
+    }
+  },
+  "bundle": {
+    "active": false,
+    "publisher": "GRAM",
+    "category": "Utility",
+    "shortDescription": "Discuter en local avec les modèles ajoutés depuis GRAM",
+    "icon": [
+      "../src-tauri/icons/32x32.png",
+      "../src-tauri/icons/128x128.png",
+      "../src-tauri/icons/128x128@2x.png",
+      "../src-tauri/icons/icon.icns",
+      "../src-tauri/icons/icon.ico"
+    ]
+  }
+}

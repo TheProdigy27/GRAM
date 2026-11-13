@@ -3,12 +3,16 @@
   "version": "0.2.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "test:ci": "ng test --watch=false",
-    "tauri": "node scripts/tauri.mjs"
+    "start": "ng serve ui",
+    "start:harness": "ng serve harness",
+    "build": "ng build ui",
+    "build:harness": "ng build harness",
+    "watch": "ng build ui --watch --configuration development",
+    "test": "ng test ui",
+    "test:harness": "ng test harness",
+    "test:ci": "ng test ui --watch=false && ng test harness --watch=false",
+    "tauri": "node scripts/tauri.mjs",
+    "harness": "node scripts/tauri.mjs --harness"
   },
   "private": true,
   "packageManager": "npm@11.17.0",

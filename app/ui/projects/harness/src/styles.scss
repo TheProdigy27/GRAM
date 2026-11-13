@@ -1,0 +1,6 @@
+// Styles globaux de GRAM Harness : jetons, base et barres de défilement de GRAM
+// (`src/styles/`), pour une interface construite avec le même kit.
+
+@use '../../../src/styles/tokens';
+@use '../../../src/styles/base';
+@use '../../../src/styles/scrollbars';

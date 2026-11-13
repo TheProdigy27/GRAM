@@ -1,0 +1,91 @@
+@switch (view()) {
+  @case ('error') {
+    <g-callout
+      class="error"
+      kind="error"
+      heading="Liste des modèles illisible"
+      role="alert"
+      data-testid="models-error"
+    >
+      {{ store.error() }}
+      <button gButton gCalloutAction size="sm" data-testid="error-refresh" (click)="refresh()">
+        Réessayer
+      </button>
+    </g-callout>
+  }
+  @case ('loading') {
+    <p class="loading" data-testid="models-loading">
+      <g-spinner [size]="16" />
+      Recherche des modèles d’Ollama…
+    </p>
+  }
+  @case ('absent') {
+    <g-empty-state
+      class="state"
+      icon="download"
+      heading="Ollama n’est pas installé"
+      description="GRAM Harness discute avec les modèles installés dans Ollama. Installer Ollama, puis Actualiser."
+      data-testid="ollama-absent"
+    >
+      <button gButton variant="primary" data-testid="install-ollama" (click)="openDownload()">
+        <g-icon name="external" />
+        Installer Ollama (ollama.com)
+      </button>
+      <button gButton [busy]="store.loading()" data-testid="state-refresh" (click)="refresh()">
+        Actualiser
+      </button>
+    </g-empty-state>
+    @if (openError(); as message) {
+      <p class="open-error" role="alert" data-testid="open-error">{{ message }}</p>
+    }
+  }
+  @case ('stopped') {
+    <g-empty-state
+      class="state"
+      icon="play"
+      heading="Ollama est arrêté"
+      description="Lancer Ollama, puis Actualiser."
+      data-testid="ollama-stopped"
+    >
+      <button gButton [busy]="store.loading()" data-testid="state-refresh" (click)="refresh()">
+        Actualiser
+      </button>
+    </g-empty-state>
+  }
+  @case ('empty') {
+    <g-empty-state
+      class="state"
+      icon="database"
+      heading="Aucun modèle dans Ollama"
+      description="Ajoutez des modèles depuis GRAM : fiche d’un modèle → Ajouter à GRAM Harness."
+      data-testid="no-models"
+    >
+      <button gButton [busy]="store.loading()" data-testid="state-refresh" (click)="refresh()">
+        Actualiser
+      </button>
+    </g-empty-state>
+  }
+  @case ('model') {
+    @if (store.selected(); as m) {
+      <section class="model" data-testid="model-summary" aria-labelledby="model-title">
+        <h1 id="model-title" class="model__title">{{ m.displayName }}</h1>
+        @if (m.displayName !== m.name) {
+          <p class="model__name mono" data-testid="model-name">{{ m.name }}</p>
+        }
+        <ul class="model__facts" data-testid="model-facts">
+          @for (f of facts(); track f) {
+            <li>{{ f }}</li>
+          }
+        </ul>
+        @if (caps().length) {
+          <div class="model__caps">
+            @for (c of caps(); track c.key) {
+              <g-tag size="sm" [icon]="c.icon">{{ c.label }}</g-tag>
+            }
+          </div>
+        }
+        <p class="model__soon">La discussion arrive à la prochaine étape de GRAM Harness.</p>
+      </section>
+    }
+  }
+}

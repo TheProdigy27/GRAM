@@ -21,6 +21,8 @@ export interface SelectOption<T> {
   label: string;
   /** Précision à droite (« non installé »). */
   hint?: string;
+  /** Étiquettes courtes après le libellé (« vision », « réflexion »). */
+  tags?: readonly string[];
   disabled?: boolean;
   /** Groupe (« NVIDIA ») : les options consécutives d'un même groupe sont réunies sous son titre. */
   group?: string;
@@ -118,6 +120,9 @@ const POSITIONS: ConnectedPosition[] = [
                     (click)="closeSoon()"
                   >
                     <span class="g-select__option-label">{{ o.label }}</span>
+                    @for (t of o.tags; track t) {
+                      <span class="g-select__tag">{{ t }}</span>
+                    }
                     @if (o.hint) {
                       <span class="g-select__hint">{{ o.hint }}</span>
                     }
@@ -136,6 +141,9 @@ const POSITIONS: ConnectedPosition[] = [
                 (click)="closeSoon()"
               >
                 <span class="g-select__option-label">{{ o.label }}</span>
+                @for (t of o.tags; track t) {
+                  <span class="g-select__tag">{{ t }}</span>
+                }
                 @if (o.hint) {
                   <span class="g-select__hint">{{ o.hint }}</span>
                 }
@@ -257,6 +265,14 @@ const POSITIONS: ConnectedPosition[] = [
     }
     .g-select__option-label {
       flex: 1;
+    }
+    .g-select__tag {
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--g-track);
+      color: var(--g-fg-2);
+      font-size: 11px;
+      font-weight: 500;
     }
     .g-select__hint {
       font-size: 11.5px;

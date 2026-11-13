@@ -1,0 +1,24 @@
+<div class="brand">
+  <img class="logo" src="logo.svg" alt="" width="24" height="24" />
+  <span class="brand__name">GRAM Harness</span>
+</div>
+
+<!-- Activé avec la discussion (phase 5). -->
+<button gButton class="new" data-testid="new-conversation" disabled>
+  <g-icon name="plus" />
+  Nouvelle conversation
+</button>
+
+<nav class="conversations" aria-labelledby="conversations-title">
+  <h2 id="conversations-title" class="conversations__title">Conversations</h2>
+  <p class="conversations__empty" data-testid="conversations-empty">
+    Aucune conversation pour l’instant.
+  </p>
+</nav>
+
+@if (status(); as text) {
+  <p class="status" data-testid="ollama-status">
+    <span class="status__dot" [attr.data-tone]="tone()" aria-hidden="true"></span>
+    {{ text }}
+  </p>
+}

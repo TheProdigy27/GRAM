@@ -3,7 +3,7 @@
 use crate::addr::ollama_addr_from_env;
 use crate::api::{
     self, CreateParameters, CreateRequest, GenerateRequest, GenerateResponse, ModelRequest,
-    ModelShow, PsEntry, PullEvent, PullRequest,
+    ModelShow, PsEntry, PullEvent, PullRequest, TaggedModel,
 };
 use crate::error::{OllamaError, Result};
 use crate::ndjson::Lines;
@@ -85,6 +85,12 @@ impl OllamaClient {
     pub async fn tags(&self) -> Result<Vec<OllamaModel>> {
         let body = self.get("/api/tags").await?;
         api::parse_tags(&body)
+    }
+
+    /// Modèles installés, avec l'empreinte de chacun (`GET /api/tags`).
+    pub async fn tagged(&self) -> Result<Vec<TaggedModel>> {
+        let body = self.get("/api/tags").await?;
+        api::parse_tagged(&body)
     }
 
     /// Modèles chargés en mémoire (`GET /api/ps`).

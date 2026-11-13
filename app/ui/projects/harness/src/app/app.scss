@@ -1,0 +1,47 @@
+:host {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  height: 100%;
+}
+
+.sidebar {
+  background: var(--g-surface-2);
+  border-right: 1px solid var(--g-line);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--g-bg);
+}
+
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 12px 0 16px;
+  background: var(--g-surface);
+  border-bottom: 1px solid var(--g-line);
+}
+
+.picker {
+  flex: 1;
+}
+
+.actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Défilement de la zone centrale : place de la barre toujours réservée (voir styles/_scrollbars).
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+}

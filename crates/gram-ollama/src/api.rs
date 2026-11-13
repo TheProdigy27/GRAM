@@ -26,6 +26,8 @@ struct TagEntry {
     #[serde(default)]
     size: u64,
     #[serde(default)]
+    digest: String,
+    #[serde(default)]
     details: Details,
     /// Modèle hébergé à distance (`ollama.com`) : il n'occupe pas cette machine.
     #[serde(default)]
@@ -38,8 +40,25 @@ struct Details {
     quantization_level: Option<String>,
 }
 
+/// Un modèle installé et l'empreinte de son manifeste dans Ollama.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaggedModel {
+    pub model: OllamaModel,
+    /// Change quand le modèle est refait sous le même nom (modèle dérivé réglé à un autre
+    /// contexte), même si sa taille ne change pas ; vide si Ollama ne la donne pas.
+    pub digest: String,
+    /// Quantification annoncée par Ollama (`details.quantization_level`), seule à valoir pour
+    /// un modèle de sa bibliothèque : l'étiquette de `qwen3:8b` est une taille.
+    pub quantization_level: Option<String>,
+}
+
 /// Modèles installés sur cette machine (les modèles distants sont écartés).
 pub fn parse_tags(body: &[u8]) -> Result<Vec<OllamaModel>> {
+    Ok(parse_tagged(body)?.into_iter().map(|t| t.model).collect())
+}
+
+/// Comme [`parse_tags`], avec l'empreinte de chaque modèle.
+pub fn parse_tagged(body: &[u8]) -> Result<Vec<TaggedModel>> {
     let tags: TagsResponse = parse(body, "/api/tags")?;
     Ok(tags
         .models
@@ -47,8 +66,15 @@ pub fn parse_tags(body: &[u8]) -> Result<Vec<OllamaModel>> {
         .filter(|t| t.remote_host.as_deref().is_none_or(str::is_empty))
         .filter_map(|t| {
             let name = if t.name.is_empty() { t.model } else { t.name };
-            (!name.is_empty())
-                .then(|| OllamaModel::new(name, t.size, t.details.quantization_level.as_deref()))
+            let level = t
+                .details
+                .quantization_level
+                .filter(|q| !q.trim().is_empty());
+            (!name.is_empty()).then(|| TaggedModel {
+                model: OllamaModel::new(name, t.size, level.as_deref()),
+                digest: t.digest,
+                quantization_level: level,
+            })
         })
         .collect())
 }
@@ -472,6 +498,22 @@ mod tests {
         // L'étiquette du nom l'emporte sur `quantization_level`.
         assert_eq!(models[1].quant.as_deref(), Some("UD-Q4_K_XL"));
         assert_eq!(models[2].repo_id, None);
+        // Avec l'empreinte du manifeste.
+        let tagged = parse_tagged(fixture!("tags.json")).unwrap();
+        assert_eq!(tagged.len(), 3);
+        assert_eq!(tagged[0].model, models[0]);
+        assert_eq!(
+            tagged[0].digest,
+            "b14ffb635b5bbdb62bbb1aed050de1c32b12a5b139eb5adeb529497c6622bc1b"
+        );
+        assert_eq!(tagged[1].quantization_level.as_deref(), Some("Q4_K_M"));
+        let bare =
+            &parse_tagged(br#"{"models":[{"name":"a:b","details":{"quantization_level":""}}]}"#)
+                .unwrap()[0];
+        assert_eq!(
+            (bare.digest.as_str(), bare.quantization_level.as_deref()),
+            ("", None)
+        );
 
         assert!(parse_tags(br#"{"models":[]}"#).unwrap().is_empty());
         assert!(parse_tags(b"{}").unwrap().is_empty());

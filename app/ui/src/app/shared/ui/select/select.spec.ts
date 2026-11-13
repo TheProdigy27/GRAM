@@ -118,4 +118,20 @@ describe('Select', () => {
     await fixture.whenStable();
     expect(host.value()).toBe('llamaCpp');
   });
+
+  it('étiquettes après le libellé, dans l’option seulement', async () => {
+    const { fixture, trigger, host } = await render();
+    host.options.set([
+      { value: 'ollama', label: 'Qwen3 8B', tags: ['réflexion', 'outils'], hint: 'Q4_K_M' },
+      { value: 'lmStudio', label: 'LLaVA' },
+    ]);
+    host.value.set('ollama');
+    await click(fixture, trigger);
+    const options = list(trigger)!.querySelectorAll('[role="option"]');
+    const tags = (o: Element) => [...o.querySelectorAll('.g-select__tag')].map(text);
+    expect(tags(options[0])).toEqual(['réflexion', 'outils']);
+    expect(tags(options[1])).toEqual([]);
+    expect(optionLabels(list(trigger)!)).toEqual(['Qwen3 8B', 'LLaVA']);
+    expect(text(trigger)).toBe('Qwen3 8B');
+  });
 });

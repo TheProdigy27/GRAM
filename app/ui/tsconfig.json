@@ -12,7 +12,17 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    // Code de GRAM partagé avec GRAM Harness (projects/harness), sans rien déplacer.
+    "paths": {
+      "@gram/ui/*": ["./src/app/shared/ui/*"],
+      "@gram/types/*": ["./src/app/core/generated/*"],
+      "@gram/format": ["./src/app/shared/format.ts"],
+      "@gram/theme": ["./src/app/core/theme.ts"],
+      "@gram/shortcuts": ["./src/app/core/shortcuts.service.ts"],
+      "@gram/scrollbars": ["./src/app/core/scrollbars.service.ts"],
+      "@gram/testing/dom": ["./src/testing/dom.ts"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
@@ -26,6 +36,12 @@
     },
     {
       "path": "./tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/harness/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/harness/tsconfig.spec.json"
     }
   ]
 }
