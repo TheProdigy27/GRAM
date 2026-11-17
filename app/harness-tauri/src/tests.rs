@@ -474,8 +474,11 @@ fn installeurs_et_mises_a_jour() {
         assert_eq!(bundle[key], gram_bundle[key], "bundle.{key}");
     }
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    for icon in bundle["icon"].as_array().unwrap() {
-        let icon = icon.as_str().unwrap();
+    // Installeur et désinstalleur NSIS : sans icône, NSIS met la sienne.
+    let nsis = &bundle["windows"]["nsis"];
+    let nsis_icons = [&nsis["installerIcon"], &nsis["uninstallerIcon"]];
+    for icon in bundle["icon"].as_array().unwrap().iter().chain(nsis_icons) {
+        let icon = icon.as_str().expect("icône d'installeur absente");
         assert!(icon.starts_with("icons/"), "icône du harness : {icon}");
         assert!(dir.join(icon).is_file(), "{icon} absente");
     }

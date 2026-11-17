@@ -48,7 +48,9 @@
       "nsis": {
         "installMode": "currentUser",
         "languages": ["French"],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
       },
       "wix": { "language": "fr-FR" }
     },
