@@ -56,3 +56,25 @@
   margin: 0 auto;
   padding: 0 24px 12px;
 }
+
+// Zone de dépôt des images, par-dessus le fil et la zone de saisie.
+.drop {
+  position: absolute;
+  inset: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--g-accent);
+  border-radius: var(--g-radius-card);
+  background: var(--g-bg);
+  pointer-events: none;
+}
+
+.drop__text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--g-fg);
+}

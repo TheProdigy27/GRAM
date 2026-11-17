@@ -1,7 +1,10 @@
-// Groupes de la barre latérale et libellés des messages.
+// Groupes de la barre latérale, libellés des messages, longueur des instructions.
 
 import type { ConversationSummary } from '@gram/types/ConversationSummary';
 import type { HarnessModel } from '@gram/types/HarnessModel';
+
+/** Longueur maximale des instructions saisies (conversation, paramètres). */
+export const INSTRUCTIONS_MAX = 8000;
 
 export interface ConversationGroup {
   key: 'today' | 'week' | 'older';

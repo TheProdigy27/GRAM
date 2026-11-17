@@ -4,9 +4,10 @@
 //! `window.__TAURI_INTERNALS__.invoke('list_models')`. Les arguments sont en camelCase ; une
 //! erreur rejette la promesse avec un message en français.
 
-use crate::chat::{self, ChatEvent, ChatSend};
+use crate::chat::{self, ChatEvent, ChatSend, clean_instructions};
 use crate::conversations::{Conversation, ConversationSummary, StoreError, clean_title};
 use crate::error::{CmdResult, CommandError};
+use crate::images;
 use crate::models::{self, ModelList, OllamaState};
 use crate::state::HarnessState;
 use gram_ollama::OllamaError;
@@ -27,7 +28,10 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         list_conversations,
         get_conversation,
         rename_conversation,
+        set_instructions,
+        set_think,
         delete_conversation,
+        get_image,
     ]
 }
 
@@ -72,9 +76,9 @@ pub fn open_ollama_download<R: Runtime>(app: AppHandle<R>) -> CmdResult<()> {
 
 /// Envoie un message (ou, sans `content`, régénère la dernière réponse) ; la réponse arrive
 /// par `onEvent` (`started`, `delta`…, `done`), propre à cette requête. La promesse se résout
-/// après `done` ; elle est rejetée avant tout événement si la requête est refusée (réponse
-/// déjà en cours, conversation introuvable, enregistrement impossible). Une erreur d'Ollama
-/// arrive dans `done`, avec la réponse partielle.
+/// après `done` ; elle est rejetée avant tout événement si la requête est refusée (images
+/// refusées, réponse déjà en cours, conversation introuvable, enregistrement impossible). Une
+/// erreur d'Ollama arrive dans `done`, avec la réponse partielle.
 #[tauri::command]
 pub async fn chat_send(
     state: State<'_, HarnessState>,
@@ -83,12 +87,20 @@ pub async fn chat_send(
 ) -> CmdResult<()> {
     let client = state.require_ollama()?;
     let store = state.conversations()?;
-    chat::send(client, store, state.generations(), request, |event| {
-        // Fenêtre fermée ou rechargée : la réponse est quand même enregistrée.
-        if let Err(e) = on_event.send(event) {
-            tracing::debug!("événement de discussion non transmis : {e}");
-        }
-    })
+    let vision = state.model_vision(client, request.model.trim()).await;
+    chat::send(
+        client,
+        store,
+        state.generations(),
+        vision,
+        request,
+        |event| {
+            // Fenêtre fermée ou rechargée : la réponse est quand même enregistrée.
+            if let Err(e) = on_event.send(event) {
+                tracing::debug!("événement de discussion non transmis : {e}");
+            }
+        },
+    )
     .await
 }
 
@@ -133,10 +145,52 @@ pub async fn rename_conversation(
         .map_err(Into::into)
 }
 
-/// Supprime la conversation, après avoir arrêté sa réponse en cours ; `false` si elle
-/// n'existait plus.
+/// Change les instructions de la conversation (vides : aucune), envoyées en message `system`
+/// à partir du prochain message ; sans effet sur la date.
+#[tauri::command]
+pub async fn set_instructions(
+    state: State<'_, HarnessState>,
+    id: String,
+    instructions: Option<String>,
+) -> CmdResult<()> {
+    let instructions = clean_instructions(instructions.as_deref());
+    state
+        .conversations()?
+        .update(&id, |c| {
+            c.instructions = instructions;
+            Ok::<_, StoreError>(())
+        })
+        .map_err(Into::into)
+}
+
+/// Retient la bascule « Réflexion » de la conversation ; sans effet sur la date.
+#[tauri::command]
+pub async fn set_think(state: State<'_, HarnessState>, id: String, think: bool) -> CmdResult<()> {
+    state
+        .conversations()?
+        .update(&id, |c| {
+            c.think = Some(think);
+            Ok::<_, StoreError>(())
+        })
+        .map_err(Into::into)
+}
+
+/// Supprime la conversation et ses images, après avoir arrêté sa réponse en cours ; `false`
+/// si elle n'existait plus.
 #[tauri::command]
 pub async fn delete_conversation(state: State<'_, HarnessState>, id: String) -> CmdResult<bool> {
     state.generations().stop(&id);
     Ok(state.conversations()?.delete(&id)?)
+}
+
+/// Image jointe à un message, en adresse `data:` (la CSP de la WebView n'autorise que
+/// `'self'` et `data:` pour les images).
+#[tauri::command]
+pub async fn get_image(
+    state: State<'_, HarnessState>,
+    conversation_id: String,
+    name: String,
+) -> CmdResult<String> {
+    let image = state.conversations()?.read_image(&conversation_id, &name)?;
+    Ok(images::data_url(image.kind, &image.bytes))
 }

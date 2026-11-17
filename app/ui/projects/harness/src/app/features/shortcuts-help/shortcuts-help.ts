@@ -10,6 +10,7 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
       title: 'Partout',
       rows: [
         { keys: [mod('N')], label: 'Nouvelle conversation' },
+        { keys: [mod(',')], label: 'Paramètres' },
         { keys: ['Échap'], label: 'Arrêter la réponse ; fermer le dialogue ou le menu' },
         { keys: ['?'], label: 'Afficher cette aide' },
         { keys: ['R'], label: 'Actualiser la liste des modèles' },
@@ -33,8 +34,8 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
     <g-dialog heading="Raccourcis clavier">
       <g-shortcut-groups [groups]="groups" />
       <p class="note">
-        Les touches seules ne marchent pas pendant une saisie ni sous un dialogue ; {{ modN }} et
-        Échap, si.
+        Les touches seules ne marchent pas pendant une saisie ni sous un dialogue ; {{ modN }},
+        {{ modComma }} et Échap, si.
       </p>
     </g-dialog>
   `,
@@ -50,4 +51,5 @@ export class ShortcutsHelp {
   private readonly shortcuts = inject(ShortcutsService);
   protected readonly groups = shortcutGroups((key) => this.shortcuts.modShortcut(key));
   protected readonly modN = this.shortcuts.modShortcut('N');
+  protected readonly modComma = this.shortcuts.modShortcut(',');
 }

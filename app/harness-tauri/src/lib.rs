@@ -9,6 +9,7 @@ pub mod chat;
 mod commands;
 pub mod conversations;
 mod error;
+pub mod images;
 pub mod models;
 mod state;
 

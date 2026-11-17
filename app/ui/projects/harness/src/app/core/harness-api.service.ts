@@ -68,9 +68,30 @@ export class HarnessApi {
     return this.call('rename_conversation', { id, title });
   }
 
-  /** Supprime la conversation (et arrête sa réponse en cours) ; `false` si elle n'existait plus. */
+  /**
+   * Instructions de la conversation (vides : aucune), envoyées en message `system` à partir du
+   * prochain message.
+   */
+  setInstructions(id: string, instructions: string | null): Promise<void> {
+    return this.call('set_instructions', { id, instructions });
+  }
+
+  /** Retient la bascule « Réflexion » de la conversation. */
+  setThink(id: string, think: boolean): Promise<void> {
+    return this.call('set_think', { id, think });
+  }
+
+  /**
+   * Supprime la conversation et ses images (et arrête sa réponse en cours) ; `false` si elle
+   * n'existait plus.
+   */
   deleteConversation(id: string): Promise<boolean> {
     return this.call('delete_conversation', { id });
+  }
+
+  /** Image jointe à un message, en adresse `data:` (seule forme que la CSP autorise). */
+  getImage(conversationId: string, name: string): Promise<string> {
+    return this.call('get_image', { conversationId, name });
   }
 
   /** Copie un texte dans le presse-papiers. */

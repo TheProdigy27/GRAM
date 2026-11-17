@@ -171,6 +171,15 @@ fn show_key(t: &TaggedModel) -> ShowKey {
 pub struct ShowCache(Mutex<HashMap<ShowKey, ModelShow>>);
 
 impl ShowCache {
+    /// Capacités déjà lues d'un modèle, par son nom.
+    pub fn find(&self, name: &str) -> Option<ModelShow> {
+        let cache = self.0.lock().expect("verrou du cache");
+        cache
+            .iter()
+            .find(|(k, _)| same_model(&k.0, name))
+            .map(|(_, show)| show.clone())
+    }
+
     /// Capacités de chaque modèle installé, par nom ; `/api/show` n'est appelé (en parallèle)
     /// que pour ceux qui ne sont pas en cache. Un échec est journalisé : le modèle reste sans
     /// capacités connues, et sera relu la fois suivante. Les modèles disparus sortent du cache.
@@ -382,6 +391,9 @@ mod tests {
         let client = OllamaClient::new(fake.url()).unwrap();
         let cache = ShowCache::default();
         list_models(&client, &manifest(), &cache).await.unwrap();
+        // Lues par nom (casse ignorée), pour la vision d'une requête.
+        assert!(cache.find("llava:7b").unwrap().has(&Capability::Vision));
+        assert!(cache.find("abime:1b").is_none(), "/api/show en échec");
         let first = shows(&fake);
         let again = list_models(&client, &manifest(), &cache).await.unwrap();
         // Seul le modèle en échec est relu.

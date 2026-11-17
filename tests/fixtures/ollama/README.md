@@ -64,3 +64,17 @@ la dernière (`done: true`) a un contenu vide et le bilan : `done_reason`, `prom
 `prompt_eval_cached_count`, `eval_count` (réflexion comprise) et les durées. Fermer la connexion
 arrête la génération (« srv stop: cancel task » dans le journal d'Ollama) ; la requête suivante
 est servie aussitôt.
+
+## Images et réglages de GRAM Harness
+
+Enregistrées le 17 novembre 2026, même machine et même version d'Ollama.
+
+| Fichier | Requête |
+|---|---|
+| `chat-image-unsupported.json` | `POST /api/chat` avec une image (`images`, base64) pour Qwen3 1.7B, qui n'a pas la vision : HTTP 500 avant tout flux. Même réponse quand l'image n'est que dans l'historique, et que la question en cours n'en a pas |
+
+Avec un modèle de vision de 27 Md déjà installé, la même requête répond normalement (image PNG de
+128 × 128 décrite correctement ; `prompt_eval_count` 39, image comprise). `keep_alive` : `"30m"`
+et `"-1m"` (toujours, `expires_at` en 2319) sont acceptés, comme le nombre `-1` ; la chaîne `"-1"`
+est refusée (HTTP 400, `time: missing unit in duration "-1"`). `/api/ps` donne `context_length`
+du modèle chargé (4 096 pour une base sans `num_ctx`).

@@ -5,4 +5,4 @@ import type { ConversationSummary } from "./ConversationSummary";
 /**
  * Événements d'une réponse, dans l'ordre : `started`, des `delta`, puis `done`.
  */
-export type ChatEvent = { "event": "started", "data": { conversation: ConversationSummary, } } | { "event": "delta", "data": { content: string, thinking: string, } } | { "event": "done", "data": { message: ChatMessage, } };
+export type ChatEvent = { "event": "started", "data": { conversation: ConversationSummary, message: ChatMessage | null, } } | { "event": "delta", "data": { content: string, thinking: string, } } | { "event": "done", "data": { message: ChatMessage, } };

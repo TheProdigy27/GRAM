@@ -19,4 +19,9 @@ evalCount: number, evalDuration: number,
 /**
  * Chargement du modèle, s'il n'était pas déjà en mémoire.
  */
-loadDuration: number, promptEvalDuration: number, totalDuration: number, };
+loadDuration: number, promptEvalDuration: number, totalDuration: number, 
+/**
+ * Contexte du modèle chargé, en tokens (`context_length` de `/api/ps`, lu après la
+ * réponse) ; absent si Ollama ne l'a pas donné.
+ */
+contextLength: number | null, };

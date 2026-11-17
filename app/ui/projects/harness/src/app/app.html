@@ -3,6 +3,7 @@
 <div class="main">
   <header class="header">
     <app-model-picker class="picker" />
+    <app-context-gauge />
     <div class="actions">
       <button
         gButton
@@ -49,6 +50,18 @@
           }
         </g-menu>
       </ng-template>
+      <button
+        gButton
+        variant="ghost"
+        icon
+        data-testid="settings"
+        aria-label="Paramètres"
+        gTooltip="Paramètres"
+        [gTooltipShortcut]="modComma"
+        (click)="openSettings()"
+      >
+        <g-icon name="settings" [size]="18" />
+      </button>
     </div>
   </header>
 

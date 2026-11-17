@@ -6,7 +6,18 @@ import type { ChatSend } from '@gram/types/ChatSend';
 import type { Conversation } from '@gram/types/Conversation';
 import type { ConversationSummary } from '@gram/types/ConversationSummary';
 import { HarnessApi, errorMessage } from '../core/harness-api.service';
+import {
+  type Attachment,
+  MAX_IMAGES,
+  base64Of,
+  imageProblem,
+  readDataUrl,
+} from '../shared/attachments';
+import { modelLabel } from '../shared/conversations';
+import { contextUsage } from '../shared/stats';
+import { ImagesStore } from './images.store';
 import { ModelsStore } from './models.store';
+import { PrefsStore } from './prefs.store';
 
 /**
  * Report à la prochaine image : le message en cours est redessiné au plus une fois par image,
@@ -26,20 +37,27 @@ export interface Streaming {
   model: string;
   content: string;
   thinking: string;
+  /** Premier morceau de la réflexion, puis de la réponse (`Date.now()`) : durée en direct. */
+  thinkingFrom: number | null;
+  thinkingTo: number | null;
 }
 
 /**
  * Conversations et discussion : liste de la barre latérale, conversation affichée, réponse en
- * cours (une à la fois), texte en cours de saisie.
+ * cours (une à la fois), texte et images en cours de saisie, réglages de la conversation
+ * (instructions, réflexion).
  *
  * Une nouvelle conversation n'existe pas avant son premier message : elle s'affiche d'abord en
- * brouillon (identifiant vide), puis prend son identifiant à `started`. Les morceaux de la
- * réponse sont réunis et appliqués une fois par image (`NEXT_FRAME`).
+ * brouillon (identifiant vide), puis prend son identifiant à `started`. Ses instructions et sa
+ * réflexion partent avec ce premier message (celles des paramètres, sauf changement). Les
+ * morceaux de la réponse sont réunis et appliqués une fois par image (`NEXT_FRAME`).
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly api = inject(HarnessApi);
   private readonly models = inject(ModelsStore);
+  private readonly prefs = inject(PrefsStore);
+  private readonly images = inject(ImagesStore);
   private readonly nextFrame = inject(NEXT_FRAME);
 
   /** Conversations, la plus récente d'abord. */
@@ -55,8 +73,14 @@ export class ChatStore {
   readonly sendError = signal<string | null>(null);
   /** Texte de la zone de saisie, rendu si l'envoi est refusé. */
   readonly draft = signal('');
+  /** Images jointes au message en cours de saisie, rendues si l'envoi est refusé. */
+  readonly attachments = signal<Attachment[]>([]);
   /** Incrémenté pour demander le focus de la zone de saisie. */
   readonly focusRequest = signal(0);
+
+  /** Réglages d'une nouvelle conversation changés avant son premier message. */
+  private readonly draftInstructions = signal<string | null>(null);
+  private readonly draftThink = signal<boolean | null>(null);
 
   readonly currentId = computed(() => this.current()?.id || null);
   readonly messages = computed<readonly ChatMessage[]>(() => this.current()?.messages ?? []);
@@ -67,6 +91,22 @@ export class ChatStore {
     const c = this.current();
     return !!s && !!c && (s.conversationId ?? '') === c.id;
   });
+  /** Instructions de la conversation affichée (ou de la nouvelle) ; vides : aucune. */
+  readonly instructions = computed(() => {
+    const c = this.current();
+    if (c?.id) return c.instructions ?? '';
+    return this.draftInstructions() ?? this.prefs.instructions();
+  });
+  /** Bascule « Réflexion » de la conversation affichée (ou de la nouvelle). */
+  readonly think = computed(() => {
+    const c = this.current();
+    if (c?.id) return c.think ?? this.prefs.think();
+    return this.draftThink() ?? this.prefs.think();
+  });
+  /** Contexte occupé à la fin de la dernière réponse mesurée. */
+  readonly context = computed(() => contextUsage(this.messages(), this.models.models()));
+  /** La conversation affichée contient des images. */
+  readonly hasImages = computed(() => this.messages().some((m) => m.images.length > 0));
 
   /** Requête en cours : les événements d'une requête précédente sont ignorés. */
   private token = 0;
@@ -77,6 +117,7 @@ export class ChatStore {
   private openSeq = 0;
   /** Une réponse s'est terminée pendant l'ouverture de sa conversation : la relire. */
   private openStale = false;
+  private nextAttachment = 1;
 
   async load(): Promise<void> {
     try {
@@ -115,61 +156,174 @@ export class ChatStore {
     }
   }
 
-  /** Nouvelle conversation (rien n'est enregistré avant le premier message). */
+  /**
+   * Nouvelle conversation (rien n'est enregistré avant le premier message), avec les
+   * instructions par défaut et la dernière position de « Réflexion ».
+   */
   newConversation(): void {
     this.openSeq++;
     this.opening.set(null);
     this.openError.set(null);
     this.sendError.set(null);
+    this.draftInstructions.set(null);
+    this.draftThink.set(null);
     this.current.set(null);
     this.focusRequest.update((n) => n + 1);
   }
 
-  /** Envoie un message au modèle choisi ; `false` s'il n'est pas parti (vide, réponse en cours…). */
+  /**
+   * Joint des images au message en cours de saisie (trombone, coller, glisser-déposer). Renvoie
+   * ce qui a été refusé, en français (`null` : tout est joint) : modèle sans vision, format,
+   * taille, nombre.
+   */
+  async attach(files: readonly File[]): Promise<string | null> {
+    if (files.length === 0) return null;
+    const model = this.models.selected();
+    if (model && !model.vision) {
+      const label = modelLabel(this.models.models(), model.name);
+      return `${label} n’accepte pas d’images : choisir un modèle avec la vision`;
+    }
+    const problems: string[] = [];
+    const accepted: File[] = [];
+    for (const file of files) {
+      const problem = imageProblem(file);
+      if (problem) problems.push(problem);
+      else accepted.push(file);
+    }
+    const room = MAX_IMAGES - this.attachments().length;
+    if (accepted.length > room) {
+      problems.push(`${MAX_IMAGES} images au plus par message`);
+      accepted.splice(Math.max(room, 0));
+    }
+    const read = await Promise.all(
+      accepted.map(async (file) => {
+        try {
+          return { file, url: await readDataUrl(file) };
+        } catch {
+          problems.push(`${file.name} : lecture impossible`);
+          return null;
+        }
+      }),
+    );
+    const added = read
+      .filter((r) => r !== null)
+      .map(({ file, url }) => ({
+        id: this.nextAttachment++,
+        name: file.name,
+        size: file.size,
+        url,
+      }));
+    this.attachments.update((list) => [...list, ...added].slice(0, MAX_IMAGES));
+    return problems.length > 0 ? problems.join(' · ') : null;
+  }
+
+  detach(id: number): void {
+    this.attachments.update((list) => list.filter((a) => a.id !== id));
+  }
+
+  /**
+   * Bascule « Réflexion » : retenue par la conversation (enregistrée tout de suite) et reprise
+   * par les nouvelles conversations. Rejette si la conversation n'a pas pu être enregistrée.
+   */
+  async setThink(think: boolean): Promise<void> {
+    this.prefs.setThink(think);
+    const c = this.current();
+    if (!c?.id) {
+      this.draftThink.set(think);
+      return;
+    }
+    this.current.set({ ...c, think });
+    await this.api.setThink(c.id, think);
+  }
+
+  /**
+   * Instructions de la conversation affichée ; pour une nouvelle conversation, elles partiront
+   * avec le premier message. Rejette si elles n'ont pas pu être enregistrées.
+   */
+  async setInstructions(text: string): Promise<void> {
+    const instructions = text.trim();
+    const c = this.current();
+    if (!c?.id) {
+      this.draftInstructions.set(instructions);
+      return;
+    }
+    await this.api.setInstructions(c.id, instructions || null);
+    const now = this.current();
+    if (now?.id === c.id) this.current.set({ ...now, instructions: instructions || null });
+  }
+
+  /**
+   * Envoie le message (texte et images jointes) au modèle choisi ; `false` s'il n'est pas parti
+   * (vide, réponse en cours, images pour un modèle sans vision…).
+   */
   async send(text: string): Promise<boolean> {
     const content = text.trim();
-    const model = this.models.selected()?.name;
-    if (!content || !model || this.busy()) return false;
+    const model = this.models.selected();
+    const attachments = this.attachments();
+    if ((!content && attachments.length === 0) || !model || this.busy()) return false;
+    if (attachments.length > 0 && !model.vision) return false;
     const now = new Date().toISOString();
-    const user: ChatMessage = {
-      role: 'user',
+    // Vignettes affichées par leurs adresses `data:`, jusqu'au message enregistré (`started`).
+    const user = userMessage(
       content,
-      thinking: null,
-      model: null,
-      stats: null,
-      interrupted: false,
-      error: null,
-      createdAt: now,
-    };
+      attachments.map((a) => a.url),
+      now,
+    );
     const current = this.current();
+    const instructions = current?.id ? null : this.instructions() || null;
+    const think = model.thinking ? this.think() : null;
     this.current.set(
       current
         ? { ...current, messages: [...current.messages, user] }
         : {
             id: '',
             title: content,
-            model,
-            instructions: null,
+            model: model.name,
+            instructions,
+            think,
             createdAt: now,
             updatedAt: now,
             messages: [user],
           },
     );
     this.draft.set('');
-    await this.run({ conversationId: current?.id || null, model, content });
+    this.attachments.set([]);
+    await this.run(
+      {
+        conversationId: current?.id || null,
+        model: model.name,
+        content,
+        images: attachments.map((a) => base64Of(a.url)),
+        think,
+        keepAlive: this.prefs.keepAlive(),
+        instructions,
+      },
+      attachments,
+    );
     return true;
   }
 
   /** Retire la dernière réponse (ou l'échec) et la redemande au modèle choisi. */
   async regenerate(): Promise<void> {
     const c = this.current();
-    const model = this.models.selected()?.name;
+    const model = this.models.selected();
     if (!c?.id || !model || this.busy()) return;
     const messages = [...c.messages];
     if (messages.at(-1)?.role === 'assistant') messages.pop();
     if (messages.at(-1)?.role !== 'user') return;
     this.current.set({ ...c, messages });
-    await this.run({ conversationId: c.id, model, content: null });
+    await this.run(
+      {
+        conversationId: c.id,
+        model: model.name,
+        content: null,
+        images: [],
+        think: model.thinking ? this.think() : null,
+        keepAlive: this.prefs.keepAlive(),
+        instructions: null,
+      },
+      [],
+    );
   }
 
   /** Arrête la réponse en cours ; son début est gardé. */
@@ -197,10 +351,11 @@ export class ChatStore {
   async remove(id: string): Promise<void> {
     await this.api.deleteConversation(id);
     this.conversations.update((list) => list.filter((c) => c.id !== id));
+    this.images.forget(id);
     if (this.current()?.id === id) this.newConversation();
   }
 
-  private async run(request: ChatSend): Promise<void> {
+  private async run(request: ChatSend, attachments: readonly Attachment[]): Promise<void> {
     const token = ++this.token;
     this.started = false;
     this.stopRequested = false;
@@ -211,24 +366,29 @@ export class ChatStore {
       model: request.model,
       content: '',
       thinking: '',
+      thinkingFrom: null,
+      thinkingTo: null,
     });
     const channel = new Channel<ChatEvent>();
-    channel.onmessage = (event) => this.onEvent(token, event);
+    channel.onmessage = (event) => this.onEvent(token, event, attachments);
     try {
       await this.api.chatSend(request, channel);
     } catch (e) {
       if (token !== this.token) return;
       this.sendError.set(errorMessage(e));
-      if (!this.started) await this.undo(request);
+      if (!this.started) await this.undo(request, attachments);
     } finally {
       if (token === this.token && this.streaming()) this.streaming.set(null);
     }
   }
 
   /** Envoi refusé avant toute réponse : la conversation redevient ce qu'elle était. */
-  private async undo(request: ChatSend): Promise<void> {
+  private async undo(request: ChatSend, attachments: readonly Attachment[]): Promise<void> {
     this.streaming.set(null);
     if (request.content && !this.draft()) this.draft.set(request.content);
+    if (attachments.length > 0 && this.attachments().length === 0) {
+      this.attachments.set([...attachments]);
+    }
     const c = this.current();
     if (!request.conversationId) {
       if (c?.id === '') this.current.set(null);
@@ -243,21 +403,29 @@ export class ChatStore {
     }
   }
 
-  private onEvent(token: number, event: ChatEvent): void {
+  private onEvent(token: number, event: ChatEvent, attachments: readonly Attachment[]): void {
     if (token !== this.token) return;
     switch (event.event) {
       case 'started': {
-        const summary = event.data.conversation;
+        const { conversation: summary, message: saved } = event.data;
         this.started = true;
         this.streaming.update((s) => s && { ...s, conversationId: summary.id });
+        // Images enregistrées : déjà lues, inutile de les relire.
+        saved?.images.forEach((name, i) => {
+          const url = attachments[i]?.url;
+          if (url) this.images.seed(summary.id, name, url);
+        });
         const c = this.current();
         if (c && (c.id === summary.id || c.id === '')) {
+          const messages = [...c.messages];
+          if (saved && messages.at(-1)?.role === 'user') messages[messages.length - 1] = saved;
           this.current.set({
             ...c,
             id: summary.id,
             title: summary.title,
             model: summary.model,
             updatedAt: summary.updatedAt,
+            messages,
           });
         }
         this.conversations.update((list) => [summary, ...list.filter((x) => x.id !== summary.id)]);
@@ -309,8 +477,34 @@ export class ChatStore {
     const { content, thinking } = this.pending;
     if (!content && !thinking) return;
     this.pending = { content: '', thinking: '' };
-    this.streaming.update(
-      (s) => s && { ...s, content: s.content + content, thinking: s.thinking + thinking },
-    );
+    const now = Date.now();
+    this.streaming.update((s) => {
+      if (!s) return s;
+      const thinkingFrom = s.thinkingFrom ?? (thinking ? now : null);
+      const thinkingTo = s.thinkingTo ?? (content && thinkingFrom !== null ? now : null);
+      return {
+        ...s,
+        content: s.content + content,
+        thinking: s.thinking + thinking,
+        thinkingFrom,
+        thinkingTo,
+      };
+    });
   }
+}
+
+/** Message de l'utilisateur, avant son enregistrement. */
+export function userMessage(content: string, images: string[], at: string): ChatMessage {
+  return {
+    role: 'user',
+    content,
+    images,
+    thinking: null,
+    thinkingMs: null,
+    model: null,
+    stats: null,
+    interrupted: false,
+    error: null,
+    createdAt: at,
+  };
 }

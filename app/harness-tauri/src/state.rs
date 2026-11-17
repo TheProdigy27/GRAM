@@ -7,7 +7,7 @@ use crate::conversations::ConversationStore;
 use crate::error::{CmdResult, CommandError};
 use crate::models::ShowCache;
 use gram_link::{SharedManifest, read_manifest};
-use gram_ollama::OllamaClient;
+use gram_ollama::{Capability, OllamaClient};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -83,6 +83,21 @@ impl HarnessState {
 
     pub fn shows(&self) -> &ShowCache {
         &self.shows
+    }
+
+    /// Le modèle accepte-t-il des images ? D'après ses capacités (`/api/show`, déjà lues pour
+    /// la liste ou lues maintenant) ; `None` si elles sont inconnues (Ollama ancien,
+    /// `/api/show` en échec) : les images sont alors envoyées.
+    pub async fn model_vision(&self, client: &OllamaClient, model: &str) -> Option<bool> {
+        let show = match self.shows.find(model) {
+            Some(show) => show,
+            None => client
+                .show(model)
+                .await
+                .inspect_err(|e| tracing::debug!(model, "/api/show : {e}"))
+                .ok()?,
+        };
+        (!show.capabilities.is_empty()).then(|| show.has(&Capability::Vision))
     }
 
     /// Conversations enregistrées, ou l'erreur à afficher si leur dossier est introuvable.

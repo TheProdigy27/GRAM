@@ -27,6 +27,8 @@ serde_json.workspace = true
 # Dates des conversations (RFC 3339 dans les fichiers, chaînes côté TypeScript).
 chrono.workspace = true
 ts-rs.workspace = true
+# Images jointes : reçues de l'interface et envoyées à Ollama en base64.
+base64 = "0.23.1"
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true

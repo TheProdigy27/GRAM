@@ -17,27 +17,34 @@ import { Tooltip } from '@gram/ui/tooltip/tooltip';
 import type { ChatMessage } from '@gram/types/ChatMessage';
 import { HarnessApi, errorMessage } from '../../core/harness-api.service';
 import { modelLabel } from '../../shared/conversations';
+import { duration, gramEstimate, speedFacts } from '../../shared/stats';
 import { ChatStore } from '../../state/chat.store';
 import { ModelsStore } from '../../state/models.store';
 import { MarkdownView } from './markdown-view';
+import { MessageImages } from './message-images';
 
 /** Durée du ✓ après une copie. */
 const COPIED_MS = 2000;
 
+let nextId = 0;
+
 /**
- * Un message du fil : celui de l'utilisateur à droite (texte brut), une réponse en pleine
- * largeur (Markdown), avec le nom de son modèle, sa réflexion repliée, son échec et ses actions
- * (copier ; régénérer ou réessayer pour la dernière).
+ * Un message du fil : celui de l'utilisateur à droite (images, puis texte brut), une réponse en
+ * pleine largeur (Markdown), avec le nom de son modèle, sa réflexion (ouverte pendant qu'elle
+ * s'écrit, repliée dès que la réponse commence, « Réflexion · 12 s »), son échec, sa vitesse et
+ * ses actions (copier ; régénérer ou réessayer pour la dernière).
  */
 @Component({
   selector: 'app-message',
-  imports: [Button, Callout, Icon, MarkdownView, Spinner, Tag, Tooltip],
+  imports: [Button, Callout, Icon, MarkdownView, MessageImages, Spinner, Tag, Tooltip],
   templateUrl: './message.html',
   styleUrl: './message.scss',
   host: { '[attr.data-role]': 'message().role' },
 })
 export class Message {
   readonly message = input.required<ChatMessage>();
+  /** Conversation du message (images enregistrées). */
+  readonly conversationId = input('');
   /** Dernière réponse de la conversation : « Régénérer », « Réessayer ». */
   readonly last = input(false, { transform: booleanAttribute });
   /** Réponse en cours. */
@@ -47,6 +54,7 @@ export class Message {
   private readonly models = inject(ModelsStore);
   private readonly api = inject(HarnessApi);
   private readonly toast = inject(ToastService);
+  protected readonly thinkingId = `thinking-${nextId++}`;
 
   protected readonly model = computed(() => {
     const name = this.message().model;
@@ -56,6 +64,29 @@ export class Message {
   protected readonly canRegenerate = computed(
     () => !this.store.busy() && this.models.selected() !== null,
   );
+
+  /** La réflexion s'écrit encore (la réponse n'a pas commencé). */
+  protected readonly thinkingLive = computed(() => this.streaming() && !this.message().content);
+  /** Choix de l'utilisateur ; sans choix, ouverte seulement pendant qu'elle s'écrit. */
+  private readonly thinkingChoice = signal<boolean | null>(null);
+  protected readonly thinkingOpen = computed(() => this.thinkingChoice() ?? this.thinkingLive());
+  /** « Réflexion… 4 s » pendant qu'elle s'écrit, puis « Réflexion · 12 s ». */
+  protected readonly thinkingLabel = computed(() => {
+    const ms = this.message().thinkingMs;
+    if (this.thinkingLive()) return ms === null ? 'Réflexion…' : `Réflexion… ${duration(ms)}`;
+    return ms === null ? 'Réflexion' : `Réflexion · ${duration(ms)}`;
+  });
+
+  /** « 128 tokens · 41 tok/s · chargement 2,1 s ». */
+  protected readonly speed = computed(() => {
+    const stats = this.message().stats;
+    return stats ? speedFacts(stats).join(' · ') : '';
+  });
+  /** Infobulle de la vitesse : l'estimation de GRAM pour un modèle ajouté depuis GRAM. */
+  protected readonly estimate = computed(() =>
+    gramEstimate(this.models.models().find((m) => m.name === this.message().model)),
+  );
+
   protected readonly copied = signal(false);
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -63,6 +94,10 @@ export class Message {
     inject(DestroyRef).onDestroy(() => {
       if (this.timer !== null) clearTimeout(this.timer);
     });
+  }
+
+  protected toggleThinking(): void {
+    this.thinkingChoice.set(!this.thinkingOpen());
   }
 
   protected regenerate(): void {

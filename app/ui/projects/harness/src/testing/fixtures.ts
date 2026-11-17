@@ -70,7 +70,9 @@ function message(role: ChatMessage['role'], content: string, at: string): ChatMe
   return {
     role,
     content,
+    images: [],
     thinking: null,
+    thinkingMs: null,
     model: role === 'assistant' ? GRAM_MODEL.name : null,
     stats: null,
     interrupted: false,
@@ -106,6 +108,7 @@ export const CONVERSATION_TODAY: Conversation = {
   title: 'Différence entre Q4_K_M et Q8_0',
   model: GRAM_MODEL.name,
   instructions: null,
+  think: null,
   createdAt: ago(60_000 * 5),
   updatedAt: ago(60_000 * 4),
   messages: [
@@ -121,7 +124,9 @@ export const CONVERSATION_TODAY: Conversation = {
         loadDuration: 2_100_000_000,
         promptEvalDuration: 60_000_000,
         totalDuration: 6_900_000_000,
+        contextLength: 16384,
       },
+      thinkingMs: 3400,
     },
   ],
 };
@@ -132,6 +137,7 @@ export const CONVERSATION_WEEK: Conversation = {
   title: 'Écrire un conte',
   model: OTHER_MODEL.name,
   instructions: null,
+  think: null,
   createdAt: ago(3 * DAY),
   updatedAt: ago(3 * DAY),
   messages: [
@@ -150,6 +156,7 @@ export const CONVERSATION_OLD: Conversation = {
   title: 'Bonjour',
   model: GRAM_MODEL.name,
   instructions: null,
+  think: null,
   createdAt: ago(31 * DAY),
   updatedAt: ago(31 * DAY),
   messages: [
@@ -166,3 +173,38 @@ export const CONVERSATIONS: readonly Conversation[] = [
   CONVERSATION_WEEK,
   CONVERSATION_OLD,
 ];
+
+/** Image PNG de 128 × 128 (carré rouge, disque bleu), en adresse `data:`. */
+export const PNG_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABOklEQVR42u3cwQ3CQBAEwQmCtyMh/ygcDCkgIbHrm5I6Aaae+Db3dWmwmAAAAAEAIAAABACAAAAQAAACAEAAAAgAAAEAIAAABACAAAAQAAACAEAAAAgAgD/1et/fB2Bm98dJ5NTdnyKRkvXXGqRk+rUMaVt/m0Hapt/GkNr1lxikef0NBilff9wg1p81ANAKsGr9QYNYf9YAQB/A2vVHDGL9WQMAAABYf9AAAAAA1h80AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/g8AAACAryJ8FQEAAADfhvo62tfRALyQ8ULGGzEAALwT9lLeS3m3IlxLcS3FvSAXs1zMcjPuTIDb1cRjJJb/OpdzAXQHAAAAAQAgAAAEAIAAABAAAAIAQAAACAAAAQAgAAAEAIAAABAAAAIAQAAA6Mc+Q+ffj3jA9B0AAAAASUVORK5CYII=';
+
+/** Image jointe à la question de `CONVERSATION_VISION`. */
+export const VISION_IMAGE = '20261117-100000000-1.png';
+
+/** Aujourd'hui : une image et sa description par le modèle de vision, contexte presque plein. */
+export const CONVERSATION_VISION: Conversation = {
+  id: '20261117-100000000',
+  title: 'Décris cette image',
+  model: VISION_MODEL.name,
+  instructions: 'Réponds en une phrase.',
+  think: null,
+  createdAt: ago(60_000 * 2),
+  updatedAt: ago(60_000),
+  messages: [
+    { ...message('user', 'Décris cette image.', ago(60_000 * 2)), images: [VISION_IMAGE] },
+    {
+      ...message('assistant', 'Un disque bleu au centre d’un carré rouge.', ago(60_000)),
+      model: VISION_MODEL.name,
+      stats: {
+        doneReason: 'stop',
+        promptEvalCount: 26_500,
+        evalCount: 18,
+        evalDuration: 590_000_000,
+        loadDuration: 8_000_000_000,
+        promptEvalDuration: 6_100_000_000,
+        totalDuration: 14_700_000_000,
+        contextLength: 32768,
+      },
+    },
+  ],
+};

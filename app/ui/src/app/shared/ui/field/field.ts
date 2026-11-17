@@ -36,6 +36,7 @@ let nextId = 0;
       class="g-field__box"
       [class.g-field__box--invalid]="!!error()"
       [class.g-field__box--disabled]="control()?.disabled()"
+      [class.g-field__box--multiline]="control()?.multiline"
       (click)="focusControl($event)"
     >
       <ng-content select="[gPrefix]" />
@@ -103,6 +104,15 @@ let nextId = 0;
     .g-field__box--disabled {
       background: var(--g-surface-2);
       cursor: not-allowed;
+    }
+    /* <textarea> : hauteur du texte, bouton Effacer en haut. */
+    .g-field__box--multiline {
+      height: auto;
+      align-items: flex-start;
+      padding: 8px 10px;
+    }
+    .g-field__box--multiline .g-input {
+      line-height: 1.5;
     }
     .g-field .g-input {
       flex: 1;
@@ -234,6 +244,8 @@ export class FieldControl {
     },
   });
   readonly hasValue = computed(() => this.current() !== '');
+  /** `<textarea>` : la boîte du champ prend la hauteur du texte. */
+  readonly multiline = this.element.tagName === 'TEXTAREA';
 
   /** Saisie validée : un champ numérique reprend la forme de la valeur liée. */
   protected onCommit(): void {

@@ -1,5 +1,6 @@
 import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { type ThemePref, type ThemePrefStore, isThemePref } from '@gram/theme';
+import type { KeepAlive } from '@gram/types/KeepAlive';
 
 /** Préférences de GRAM Harness, gardées d'un lancement à l'autre (stockage local de la WebView). */
 export interface HarnessPrefs {
@@ -7,9 +8,23 @@ export interface HarnessPrefs {
   theme: ThemePref;
   /** Dernier modèle choisi (nom dans Ollama), repris au lancement s'il est toujours là. */
   model: string | null;
+  /** Instructions des nouvelles conversations (paramètres) ; vides : aucune. */
+  instructions: string;
+  /** Garder le modèle en mémoire après chaque réponse (paramètres). */
+  keepAlive: KeepAlive;
+  /** Dernière position de la bascule « Réflexion », reprise par les nouvelles conversations. */
+  think: boolean;
 }
 
-const DEFAULTS: HarnessPrefs = { theme: 'system', model: null };
+const DEFAULTS: HarnessPrefs = {
+  theme: 'system',
+  model: null,
+  instructions: '',
+  keepAlive: 'ollama',
+  think: true,
+};
+
+const KEEP_ALIVES: readonly KeepAlive[] = ['ollama', 'halfHour', 'forever'];
 
 /** Clé du stockage local. */
 export const PREFS_KEY = 'gram-harness.prefs';
@@ -36,6 +51,9 @@ export class PrefsStore implements ThemePrefStore {
 
   readonly theme = computed(() => this.prefs().theme);
   readonly model = computed(() => this.prefs().model);
+  readonly instructions = computed(() => this.prefs().instructions);
+  readonly keepAlive = computed(() => this.prefs().keepAlive);
+  readonly think = computed(() => this.prefs().think);
 
   setTheme(theme: ThemePref): void {
     this.update({ theme });
@@ -43,6 +61,18 @@ export class PrefsStore implements ThemePrefStore {
 
   setModel(model: string): void {
     this.update({ model });
+  }
+
+  setInstructions(instructions: string): void {
+    this.update({ instructions });
+  }
+
+  setKeepAlive(keepAlive: KeepAlive): void {
+    this.update({ keepAlive });
+  }
+
+  setThink(think: boolean): void {
+    this.update({ think });
   }
 
   private update(patch: Partial<HarnessPrefs>): void {
@@ -61,6 +91,12 @@ export class PrefsStore implements ThemePrefStore {
       return {
         theme: isThemePref(saved.theme) ? saved.theme : DEFAULTS.theme,
         model: typeof saved.model === 'string' && saved.model ? saved.model : DEFAULTS.model,
+        instructions:
+          typeof saved.instructions === 'string' ? saved.instructions : DEFAULTS.instructions,
+        keepAlive: KEEP_ALIVES.includes(saved.keepAlive as KeepAlive)
+          ? (saved.keepAlive as KeepAlive)
+          : DEFAULTS.keepAlive,
+        think: typeof saved.think === 'boolean' ? saved.think : DEFAULTS.think,
       };
     } catch {
       return { ...DEFAULTS };

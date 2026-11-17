@@ -1,10 +1,11 @@
 //! Conversations enregistrées : un fichier JSON par conversation, `conversations/<id>.json`
 //! dans le dossier de données de GRAM Harness (`fr.gram.harness/`), écrit de façon atomique
-//! (`gram_link::json::save`).
+//! (`gram_link::json::save`). Les images jointes sont à côté, dans `conversations/<id>/`.
 //!
 //! Chaque modification relit le fichier, le change et le réécrit sous un verrou du processus :
 //! renommer une conversation pendant une réponse ne perd ni le titre ni la réponse.
 
+use crate::images::{Image, ImageKind};
 use chrono::{DateTime, Utc};
 use gram_ollama::ChatDone;
 use serde::{Deserialize, Serialize};
@@ -49,6 +50,9 @@ pub struct ChatStats {
     pub load_duration: u64,
     pub prompt_eval_duration: u64,
     pub total_duration: u64,
+    /// Contexte du modèle chargé, en tokens (`context_length` de `/api/ps`, lu après la
+    /// réponse) ; absent si Ollama ne l'a pas donné.
+    pub context_length: Option<u32>,
 }
 
 impl From<ChatDone> for ChatStats {
@@ -61,6 +65,7 @@ impl From<ChatDone> for ChatStats {
             load_duration: d.load_duration,
             prompt_eval_duration: d.prompt_eval_duration,
             total_duration: d.total_duration,
+            context_length: None,
         }
     }
 }
@@ -74,9 +79,17 @@ pub struct ChatMessage {
     /// Texte du message (Markdown pour une réponse) ; vide pour une réponse en échec avant son
     /// premier mot.
     pub content: String,
+    /// Images jointes à un message de l'utilisateur : noms des fichiers enregistrés dans
+    /// `conversations/<id>/`.
+    #[serde(default)]
+    pub images: Vec<String>,
     /// Réflexion du modèle avant sa réponse.
     #[serde(default)]
     pub thinking: Option<String>,
+    /// Durée de la réflexion, en millisecondes : de son premier morceau au premier mot de la
+    /// réponse (ou à la fin, si la réponse n'a pas commencé).
+    #[serde(default)]
+    pub thinking_ms: Option<u64>,
     /// Modèle qui a répondu (nom dans Ollama) : on peut en changer en cours de conversation.
     #[serde(default)]
     pub model: Option<String>,
@@ -97,7 +110,9 @@ impl ChatMessage {
         Self {
             role: ChatRole::User,
             content: content.into(),
+            images: Vec::new(),
             thinking: None,
+            thinking_ms: None,
             model: None,
             stats: None,
             interrupted: false,
@@ -129,6 +144,10 @@ pub struct Conversation {
     /// Instructions, envoyées en message `system` avant la conversation.
     #[serde(default)]
     pub instructions: Option<String>,
+    /// Réflexion demandée au modèle (bascule « Réflexion », retenue par conversation) ;
+    /// absente : pas encore choisie.
+    #[serde(default)]
+    pub think: Option<bool>,
     pub created_at: DateTime<Utc>,
     /// Dernier message ; un changement de titre ne la modifie pas.
     pub updated_at: DateTime<Utc>,
@@ -189,6 +208,8 @@ pub enum StoreError {
     Newer,
     #[error("Conversation non enregistrée ({0}) : vérifier la place sur le disque")]
     Io(String),
+    #[error("Image introuvable : elle a peut-être été supprimée du dossier de la conversation")]
+    ImageNotFound,
 }
 
 /// Les conversations d'un dossier.
@@ -239,7 +260,17 @@ impl ConversationStore {
     }
 
     /// Enregistre une nouvelle conversation sous un identifiant libre, tiré de `created_at`.
-    pub fn create(&self, mut conversation: Conversation) -> Result<Conversation, StoreError> {
+    pub fn create(&self, conversation: Conversation) -> Result<Conversation, StoreError> {
+        self.create_with_images(conversation, &[])
+    }
+
+    /// Comme [`create`](Self::create), avec les images jointes au dernier message (celui de
+    /// l'utilisateur), enregistrées dans `<id>/` avant la conversation.
+    pub fn create_with_images(
+        &self,
+        mut conversation: Conversation,
+        images: &[Image],
+    ) -> Result<Conversation, StoreError> {
         let _guard = self.lock();
         let base = conversation
             .created_at
@@ -253,11 +284,102 @@ impl ConversationStore {
                     format!("{base}-{n}")
                 }
             })
-            .find(|id| !self.dir.join(format!("{id}.json")).exists())
+            .find(|id| !self.dir.join(format!("{id}.json")).exists() && !self.dir.join(id).exists())
             .expect("identifiant libre");
+        if !images.is_empty() {
+            let at = conversation.created_at;
+            let names = self.write_images(&id, images, at)?;
+            if let Some(last) = conversation.messages.last_mut() {
+                last.images = names;
+            }
+        }
         conversation.id = id;
-        self.write(&conversation)?;
-        Ok(conversation)
+        let written = self.write(&conversation);
+        if written.is_err() {
+            self.remove_dir(&conversation.id);
+        }
+        written.map(|()| conversation)
+    }
+
+    /// Enregistre les images d'un nouveau message dans `<id>/` ; renvoie leurs noms de fichier.
+    /// Rien n'est gardé si l'une d'elles ne peut pas l'être.
+    pub fn save_images(
+        &self,
+        id: &str,
+        images: &[Image],
+        at: DateTime<Utc>,
+    ) -> Result<Vec<String>, StoreError> {
+        self.path(id)?;
+        let _guard = self.lock();
+        self.write_images(id, images, at)
+    }
+
+    /// Supprime des images (message finalement non enregistré).
+    pub fn remove_images(&self, id: &str, names: &[String]) {
+        for name in names.iter().filter(|n| valid_image_name(n)) {
+            if valid_id(id) {
+                let _ = std::fs::remove_file(self.dir.join(id).join(name));
+            }
+        }
+    }
+
+    /// Une image enregistrée : son format et son contenu.
+    pub fn read_image(&self, id: &str, name: &str) -> Result<Image, StoreError> {
+        if !valid_id(id) || !valid_image_name(name) {
+            return Err(StoreError::ImageNotFound);
+        }
+        let path = self.dir.join(id).join(name);
+        let bytes = match gram_link::json::read(&path) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => return Err(StoreError::ImageNotFound),
+            Err(e) => return Err(StoreError::Invalid(e.to_string())),
+        };
+        let kind = ImageKind::detect(&bytes)
+            .or_else(|| ImageKind::from_name(name))
+            .ok_or(StoreError::ImageNotFound)?;
+        Ok(Image { kind, bytes })
+    }
+
+    fn write_images(
+        &self,
+        id: &str,
+        images: &[Image],
+        at: DateTime<Utc>,
+    ) -> Result<Vec<String>, StoreError> {
+        let dir = self.dir.join(id);
+        let stem = at.format("%Y%m%d-%H%M%S%3f").to_string();
+        let mut names: Vec<String> = Vec::with_capacity(images.len());
+        let mut n = 0;
+        for image in images {
+            // Numéro libre quelle que soit l'extension : `…-2.png` ne suit pas `…-2.jpg`.
+            let free = |n: usize| {
+                ImageKind::ALL
+                    .iter()
+                    .all(|k| !dir.join(format!("{stem}-{n}.{}", k.extension())).exists())
+            };
+            n += 1;
+            while !free(n) {
+                n += 1;
+            }
+            let name = format!("{stem}-{n}.{}", image.kind.extension());
+            if let Err(e) = gram_link::json::save_bytes(&dir.join(&name), &image.bytes) {
+                self.remove_images(id, &names);
+                return Err(StoreError::Io(e.to_string()));
+            }
+            names.push(name);
+        }
+        Ok(names)
+    }
+
+    fn remove_dir(&self, id: &str) {
+        if !valid_id(id) {
+            return;
+        }
+        match std::fs::remove_dir_all(self.dir.join(id)) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => tracing::warn!(id, "images de la conversation non supprimées : {e}"),
+        }
     }
 
     /// Relit la conversation, la change avec `f` et la réécrit ; rien n'est écrit si `f`
@@ -276,15 +398,17 @@ impl ConversationStore {
         Ok(result)
     }
 
-    /// Supprime la conversation ; `false` si elle n'existait pas.
+    /// Supprime la conversation et ses images ; `false` si elle n'existait pas.
     pub fn delete(&self, id: &str) -> Result<bool, StoreError> {
         let path = self.path(id)?;
         let _guard = self.lock();
-        match std::fs::remove_file(&path) {
-            Ok(()) => Ok(true),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
-            Err(e) => Err(StoreError::Io(e.to_string())),
-        }
+        let existed = match std::fs::remove_file(&path) {
+            Ok(()) => true,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => false,
+            Err(e) => return Err(StoreError::Io(e.to_string())),
+        };
+        self.remove_dir(id);
+        Ok(existed)
     }
 
     /// Chemin du fichier ; un identifiant qui n'en est pas un (`../x`…) est introuvable.
@@ -354,6 +478,12 @@ pub fn valid_id(id: &str) -> bool {
     (1..=64).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
 }
 
+/// Nom d'une image enregistrée : comme un identifiant, puis `.png`, `.jpg` ou `.webp`.
+pub fn valid_image_name(name: &str) -> bool {
+    name.rsplit_once('.')
+        .is_some_and(|(stem, _)| valid_id(stem) && ImageKind::from_name(name).is_some())
+}
+
 /// Titre tiré du premier message : espaces réunis, 60 caractères au plus (« … » à la coupe).
 pub fn auto_title(content: &str) -> String {
     let text = collapse(content);
@@ -416,6 +546,7 @@ pub(crate) mod tests {
             title: auto_title(content),
             model: "gram/qwen3-1.7b:q4_k_m".into(),
             instructions: None,
+            think: None,
             created_at: created,
             updated_at: created,
             messages: vec![ChatMessage::user(content, created)],
@@ -444,7 +575,9 @@ pub(crate) mod tests {
             load_duration: 1_467_873_600,
             prompt_eval_duration: 62_248_000,
             total_duration: 1_784_520_700,
+            context_length: Some(16384),
         });
+        answer.thinking_ms = Some(1_250);
         let pushed = answer.clone();
         store
             .update(&first.id, |c| {
@@ -465,7 +598,10 @@ pub(crate) mod tests {
         assert_eq!(raw["version"], 1);
         assert_eq!(raw["createdAt"], "2026-11-13T09:00:00Z");
         assert_eq!(raw["messages"][1]["stats"]["evalCount"], 104);
+        assert_eq!(raw["messages"][1]["stats"]["contextLength"], 16384);
+        assert_eq!(raw["messages"][1]["thinkingMs"], 1250);
         assert_eq!(raw["messages"][1]["interrupted"], false);
+        assert_eq!(raw["messages"][0]["images"], serde_json::json!([]));
 
         // Liste : la plus récente d'abord.
         let ids: Vec<String> = store.list().into_iter().map(|s| s.id).collect();
@@ -564,6 +700,99 @@ pub(crate) mod tests {
             Err(StoreError::NotFound)
         ));
         assert!(dir.0.join("secret.json").exists());
+    }
+
+    #[test]
+    fn images_a_cote_de_la_conversation() {
+        use crate::images::tests::{JPEG, PNG};
+        let dir = TempDir::new("conv-images");
+        let store = ConversationStore::new(dir.0.join("conversations"));
+        let png = Image {
+            kind: ImageKind::Png,
+            bytes: PNG.to_vec(),
+        };
+        let jpeg = Image {
+            kind: ImageKind::Jpeg,
+            bytes: JPEG.to_vec(),
+        };
+
+        // Nouvelle conversation : images enregistrées dans `<id>/`, noms dans le message.
+        let c = store
+            .create_with_images(
+                conversation("Décris", at(9, 0)),
+                &[png.clone(), jpeg.clone()],
+            )
+            .unwrap();
+        let names = c.messages[0].images.clone();
+        assert_eq!(
+            names,
+            ["20261113-090000000-1.png", "20261113-090000000-2.jpg"]
+        );
+        assert_eq!(store.get(&c.id).unwrap().messages[0].images, names);
+        assert_eq!(store.read_image(&c.id, &names[0]).unwrap(), png);
+        assert_eq!(
+            store.read_image(&c.id, &names[1]).unwrap().kind,
+            ImageKind::Jpeg
+        );
+        // Le dossier des images n'est pas une conversation.
+        assert_eq!(store.list().len(), 1);
+
+        // Message suivant, même instant : noms libres.
+        let more = store
+            .save_images(&c.id, std::slice::from_ref(&png), at(9, 0))
+            .unwrap();
+        assert_eq!(more, ["20261113-090000000-3.png"]);
+        store.remove_images(&c.id, &more);
+        assert!(matches!(
+            store.read_image(&c.id, &more[0]),
+            Err(StoreError::ImageNotFound)
+        ));
+        assert!(matches!(
+            store.save_images("../x", std::slice::from_ref(&png), at(9, 0)),
+            Err(StoreError::NotFound)
+        ));
+
+        // Noms refusés avant tout accès au disque.
+        std::fs::write(dir.0.join("secret.png"), PNG).unwrap();
+        for (id, name) in [
+            (c.id.as_str(), "../../secret.png"),
+            (c.id.as_str(), "a.gif"),
+            (c.id.as_str(), "a"),
+            (c.id.as_str(), ".png"),
+            ("..", "secret.png"),
+        ] {
+            assert!(!valid_image_name(name) || !valid_id(id), "{id}/{name}");
+            assert!(matches!(
+                store.read_image(id, name),
+                Err(StoreError::ImageNotFound)
+            ));
+        }
+
+        // Supprimer la conversation supprime ses images.
+        assert!(store.delete(&c.id).unwrap());
+        assert!(!store.dir().join(&c.id).exists());
+        assert!(dir.0.join("secret.png").exists());
+    }
+
+    #[test]
+    fn fichier_sans_les_champs_recents() {
+        // Fichier de la phase 5 : ni images, ni durée de réflexion, ni contexte, ni `think`.
+        let dir = TempDir::new("conv-ancien");
+        let store = ConversationStore::new(dir.0.clone());
+        let old = r#"{"version":1,"id":"ancien","title":"Bonjour","model":"qwen3:8b",
+            "instructions":null,"createdAt":"2026-11-13T09:00:00Z",
+            "updatedAt":"2026-11-13T09:01:00Z","messages":[
+            {"role":"user","content":"Bonjour","createdAt":"2026-11-13T09:00:00Z"},
+            {"role":"assistant","content":"Salut","thinking":"…","model":"qwen3:8b",
+             "stats":{"doneReason":"stop","promptEvalCount":9,"evalCount":3,"evalDuration":1,
+             "loadDuration":0,"promptEvalDuration":1,"totalDuration":2},
+             "interrupted":false,"error":null,"createdAt":"2026-11-13T09:01:00Z"}]}"#;
+        std::fs::write(dir.0.join("ancien.json"), old).unwrap();
+        let c = store.get("ancien").unwrap();
+        assert_eq!(c.think, None);
+        assert!(c.messages[0].images.is_empty());
+        assert_eq!(c.messages[1].thinking_ms, None);
+        assert_eq!(c.messages[1].stats.as_ref().unwrap().context_length, None);
     }
 
     #[test]

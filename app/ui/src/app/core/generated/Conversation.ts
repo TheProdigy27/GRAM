@@ -20,7 +20,12 @@ model: string,
 /**
  * Instructions, envoyées en message `system` avant la conversation.
  */
-instructions: string | null, createdAt: string, 
+instructions: string | null, 
+/**
+ * Réflexion demandée au modèle (bascule « Réflexion », retenue par conversation) ;
+ * absente : pas encore choisie.
+ */
+think: boolean | null, createdAt: string, 
 /**
  * Dernier message ; un changement de titre ne la modifie pas.
  */

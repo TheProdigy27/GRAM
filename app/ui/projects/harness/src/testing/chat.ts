@@ -40,6 +40,8 @@ export class FakeChat {
   refuse: string | null = null;
   active: ActiveReply | null = null;
   readonly requests: ChatSend[] = [];
+  /** Images enregistrées, en adresses `data:`, par `conversation/nom`. */
+  readonly images = new Map<string, string>();
   private channel: Channel<ChatEvent> | null = null;
   private resolve: (() => void) | null = null;
   private nextId = 1;
@@ -62,6 +64,21 @@ export class FakeChat {
         c.title = (a['title'] as string).trim();
         return summary(c);
       },
+      set_instructions: (a) => {
+        const instructions = ((a['instructions'] as string | null) ?? '').trim();
+        this.get(a['id'] as string).instructions = instructions || null;
+        return null;
+      },
+      set_think: (a) => {
+        this.get(a['id'] as string).think = a['think'] as boolean;
+        return null;
+      },
+      get_image: (a) => {
+        const url = this.images.get(`${a['conversationId'] as string}/${a['name'] as string}`);
+        if (!url)
+          throw 'Image introuvable : elle a peut-être été supprimée du dossier de la conversation';
+        return url;
+      },
       delete_conversation: (a) => {
         if (this.active?.conversation.id === a['id']) this.stop(a['id'] as string);
         return this.conversations.delete(a['id'] as string);
@@ -83,7 +100,9 @@ export class FakeChat {
     const message: ChatMessage = {
       role: 'assistant',
       content: active.content,
+      images: [],
       thinking: active.thinking || null,
+      thinkingMs: active.thinking ? 1200 : null,
       model: active.request.model,
       stats: {
         doneReason: 'stop',
@@ -93,6 +112,7 @@ export class FakeChat {
         loadDuration: 2_000_000,
         promptEvalDuration: 12_000_000,
         totalDuration: 280_000_000,
+        contextLength: 16384,
       },
       interrupted: false,
       error: null,
@@ -124,31 +144,47 @@ export class FakeChat {
     }
     const now = new Date().toISOString();
     let conversation: Conversation;
+    let saved: ChatMessage | null = null;
     if (request.conversationId) {
       conversation = this.get(request.conversationId);
       if (request.content !== null) {
-        conversation.messages.push(user(request.content, now));
+        saved = user(request.content, now);
+        conversation.messages.push(saved);
       } else if (conversation.messages.at(-1)?.role === 'assistant') {
         conversation.messages.pop();
       }
       conversation.model = request.model;
+      if (request.think !== null) conversation.think = request.think;
       conversation.updatedAt = now;
     } else {
       const content = request.content ?? '';
+      saved = user(content, now);
       conversation = {
         id: `nouvelle-${this.nextId++}`,
-        title: content.slice(0, 60),
+        title: content.slice(0, 60) || 'Nouvelle conversation',
         model: request.model,
-        instructions: null,
+        instructions: request.instructions?.trim() || null,
+        think: request.think,
         createdAt: now,
         updatedAt: now,
-        messages: [user(content, now)],
+        messages: [saved],
       };
       this.conversations.set(conversation.id, conversation);
     }
+    // Images enregistrées sous un nom de fichier, comme le backend.
+    if (saved) {
+      saved.images = request.images.map((data, i) => {
+        const name = `${now.replace(/\D/g, '').slice(0, 17)}-${i + 1}.png`;
+        this.images.set(`${conversation.id}/${name}`, `data:image/png;base64,${data}`);
+        return name;
+      });
+    }
     this.active = { request, conversation, content: '', thinking: '' };
     this.channel = channel;
-    channel.onmessage({ event: 'started', data: { conversation: summary(conversation) } });
+    channel.onmessage({
+      event: 'started',
+      data: { conversation: summary(conversation), message: saved && copy(saved) },
+    });
     const done = new Promise<void>((resolve) => (this.resolve = resolve));
     if (!this.manual) {
       if (this.reply.thinking) this.delta('', this.reply.thinking);
@@ -186,7 +222,9 @@ function user(content: string, at: string): ChatMessage {
   return {
     role: 'user',
     content,
+    images: [],
     thinking: null,
+    thinkingMs: null,
     model: null,
     stats: null,
     interrupted: false,

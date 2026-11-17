@@ -30,6 +30,21 @@ class Host {
   }
 }
 
+@Component({
+  imports: [FIELD],
+  template: `<g-field label="Instructions" clearable>
+    <textarea
+      gInput
+      rows="4"
+      [value]="value()"
+      (input)="value.set($any($event.target).value)"
+    ></textarea>
+  </g-field>`,
+})
+class MultilineHost {
+  readonly value = signal('Réponds en français.');
+}
+
 describe('Field', () => {
   async function render() {
     const fixture = TestBed.createComponent(Host);
@@ -133,6 +148,23 @@ describe('Field', () => {
     host.value.set(0.81);
     await fixture.whenStable();
     expect(input.value).toBe('0,81');
+  });
+
+  it('<textarea> : boîte à la hauteur du texte, Effacer comme pour un champ', async () => {
+    const fixture = TestBed.createComponent(MultilineHost);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const box = el.querySelector('.g-field__box')!;
+    expect(box.classList.contains('g-field__box--multiline')).toBe(true);
+    const area = el.querySelector('textarea')!;
+    expect(area.value).toBe('Réponds en français.');
+    expect(el.querySelector('label')?.htmlFor).toBe(area.id);
+    await clearField(fixture, el.querySelector<HTMLElement>('g-field')!);
+    expect(fixture.componentInstance.value()).toBe('');
+
+    // Un <input> garde sa hauteur fixe.
+    const { el: single } = await render();
+    expect(single.querySelector('.g-field__box--multiline')).toBeNull();
   });
 });
 

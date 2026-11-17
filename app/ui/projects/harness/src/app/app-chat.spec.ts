@@ -110,11 +110,20 @@ describe('Discussion (GRAM Harness)', () => {
     chat.delta('', 'Un conte, donc.');
     await settle(fixture);
     expect(text(byTestId('message-waiting', el))).toBe('Le modèle réfléchit…');
-    expect(text(byTestId('message-thinking', el).querySelector('summary'))).toBe('Réflexion…');
+    // La réflexion s'écrit en direct, ouverte, minutée.
+    const toggle = byTestId('thinking-toggle', el);
+    expect(text(toggle)).toBe('Réflexion… < 1 s');
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(text(byTestId('thinking-text', el))).toBe('Un conte, donc.');
     expect(byTestId('message-assistant', el).getAttribute('aria-busy')).toBe('true');
 
     chat.delta('Il était **une fois**');
     await settle(fixture);
+    // Repliée dès que la réponse commence ; on peut la rouvrir.
+    expect(byTestId('thinking-toggle', el).getAttribute('aria-expanded')).toBe('false');
+    expect(queryTestId('thinking-text', el)).toBeNull();
+    await click(fixture, byTestId('thinking-toggle', el));
+    expect(text(byTestId('thinking-text', el))).toBe('Un conte, donc.');
     expect(queryTestId('message-waiting', el)).toBeNull();
     expect(text(byTestId('message-assistant', el).querySelector('.md strong'))).toBe('une fois');
     // Pas d'actions sur une réponse en cours.
@@ -129,7 +138,8 @@ describe('Discussion (GRAM Harness)', () => {
     await settle(fixture);
     expect(countOf(calls, 'chat_stop')).toBe(1);
     expect(text(byTestId('message-interrupted', el))).toBe('Interrompue');
-    expect(text(byTestId('message-thinking', el).querySelector('summary'))).toBe('Réflexion');
+    // Durée enregistrée par le backend (1,2 s dans le faux backend).
+    expect(text(byTestId('thinking-toggle', el))).toBe('Réflexion · 1 s');
     expect(queryTestId('composer-send', el)).not.toBeNull();
     // Échap sans réponse en cours : sans effet.
     await press(fixture, input(el), 'Escape');
@@ -158,7 +168,7 @@ describe('Discussion (GRAM Harness)', () => {
     expect(queryTestId('message-regenerate', el)).toBeNull();
     await click(fixture, byTestId('message-retry', el));
     await settle(fixture);
-    expect(chat.requests.at(-1)).toEqual({
+    expect(chat.requests.at(-1)).toMatchObject({
       conversationId: CONVERSATION_OLD.id,
       model: 'gram/qwen3-8b:q4_k_m',
       content: null,
@@ -287,6 +297,7 @@ describe('Discussion (GRAM Harness)', () => {
     const rows = [...document.querySelectorAll('[data-testid="shortcut-row"]')];
     expect(rows.map((r) => text(r.querySelector('dd')))).toEqual([
       'Nouvelle conversation',
+      'Paramètres',
       'Arrêter la réponse ; fermer le dialogue ou le menu',
       'Afficher cette aide',
       'Actualiser la liste des modèles',

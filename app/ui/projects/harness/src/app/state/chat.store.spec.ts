@@ -5,12 +5,21 @@ import { FakeChat } from '../../testing/chat';
 import {
   CONVERSATIONS,
   CONVERSATION_TODAY,
+  CONVERSATION_VISION,
   CONVERSATION_WEEK,
   GRAM_MODEL,
   OTHER_MODEL,
+  VISION_MODEL,
 } from '../../testing/fixtures';
 import { ChatStore, NEXT_FRAME } from './chat.store';
+import { ImagesStore } from './images.store';
 import { ModelsStore } from './models.store';
+import { PrefsStore } from './prefs.store';
+
+/** Fichier image de `size` octets. */
+function image(name: string, type = 'image/png', size = 3): File {
+  return new File([new Uint8Array(size).fill(65)], name, { type });
+}
 
 /** Images en attente : le test les déclenche (`frames.run()`). */
 class Frames {
@@ -50,8 +59,17 @@ describe('ChatStore', () => {
     store.draft.set('  Bonjour  ');
     const sending = store.send(store.draft());
     expect(store.draft()).toBe('');
+    // Réflexion (le modèle sait réfléchir), mémoire et instructions des paramètres.
     expect(chat.requests).toEqual([
-      { conversationId: null, model: GRAM_MODEL.name, content: 'Bonjour' },
+      {
+        conversationId: null,
+        model: GRAM_MODEL.name,
+        content: 'Bonjour',
+        images: [],
+        think: true,
+        keepAlive: 'ollama',
+        instructions: null,
+      },
     ]);
     // `started` est déjà passé : la conversation a son identifiant et figure dans la liste.
     await settle();
@@ -68,12 +86,16 @@ describe('ChatStore', () => {
     expect(frames.queue).toHaveLength(1);
     expect(store.streaming()?.content).toBe('');
     frames.run();
-    expect(store.streaming()).toEqual({
+    expect(store.streaming()).toMatchObject({
       conversationId: 'nouvelle-1',
       model: GRAM_MODEL.name,
       content: 'Bonjour !',
       thinking: 'Je réfléchis',
     });
+    // Réflexion puis réponse arrivées dans la même image : même instant.
+    const { thinkingFrom, thinkingTo } = store.streaming()!;
+    expect(thinkingFrom).not.toBeNull();
+    expect(thinkingTo).toBe(thinkingFrom);
 
     chat.delta(' Encore');
     chat.finish();
@@ -94,10 +116,12 @@ describe('ChatStore', () => {
     models.select(OTHER_MODEL.name);
     expect(await store.send(' \n ')).toBe(false);
     expect(await store.send('Et Q6_K ?')).toBe(true);
-    expect(chat.requests.at(-1)).toEqual({
+    expect(chat.requests.at(-1)).toMatchObject({
       conversationId: CONVERSATION_TODAY.id,
       model: OTHER_MODEL.name,
       content: 'Et Q6_K ?',
+      // Conversation existante : ses instructions sont déjà enregistrées.
+      instructions: null,
     });
     expect(store.messages()).toHaveLength(4);
     expect(store.messages()[3].model).toBe(OTHER_MODEL.name);
@@ -144,10 +168,11 @@ describe('ChatStore', () => {
 
     chat.manual = false;
     await store.regenerate();
-    expect(chat.requests.at(-1)).toEqual({
+    expect(chat.requests.at(-1)).toMatchObject({
       conversationId: 'nouvelle-1',
       model: GRAM_MODEL.name,
       content: null,
+      images: [],
     });
     expect(store.messages()).toHaveLength(2);
     expect(store.messages()[1].error).toBeNull();
@@ -228,5 +253,157 @@ describe('ChatStore', () => {
       },
     });
     expect(store.listError()).toContain('Dossier de données introuvable');
+  });
+
+  it('images jointes : formats, taille, nombre, vision ; envoyées en base64, enregistrées sous leur nom', async () => {
+    const { store, chat, models, calls } = await setup();
+    // Modèle sans vision : refusées.
+    expect(await store.attach([image('a.png')])).toBe(
+      'Qwen3 8B Q4_K_M n’accepte pas d’images : choisir un modèle avec la vision',
+    );
+    expect(store.attachments()).toEqual([]);
+
+    models.select(VISION_MODEL.name);
+    const problems = await store.attach([
+      image('photo.png'),
+      image('anim.gif', 'image/gif'),
+      image('scan.jpg', 'image/jpeg', 11 * 2 ** 20),
+    ]);
+    expect(problems).toBe(
+      'anim.gif : format non pris en charge (PNG, JPEG ou WebP) · scan.jpg : 11 Mo, 10 Mo au plus',
+    );
+    expect(store.attachments().map((a) => a.name)).toEqual(['photo.png']);
+    expect(store.attachments()[0].url).toBe('data:image/png;base64,QUFB');
+    // 4 au plus.
+    expect(await store.attach([1, 2, 3, 4].map((n) => image(`${n}.webp`, 'image/webp')))).toBe(
+      '4 images au plus par message',
+    );
+    expect(store.attachments()).toHaveLength(4);
+    store.detach(store.attachments()[1].id);
+    expect(store.attachments().map((a) => a.name)).toEqual(['photo.png', '2.webp', '3.webp']);
+
+    // Envoi sans texte : images seules, en base64 ; pas de réflexion (Gemma ne réfléchit pas).
+    expect(await store.send('  ')).toBe(true);
+    expect(chat.requests[0]).toMatchObject({ content: '', think: null });
+    expect(chat.requests[0].images).toEqual(['QUFB', 'QUFB', 'QUFB']);
+    expect(store.attachments()).toEqual([]);
+    // Le message affiché est celui enregistré, avec les noms des images, déjà en cache.
+    const user = store.messages()[0];
+    expect(user.images).toHaveLength(3);
+    expect(user.images.every((n) => n.endsWith('.png'))).toBe(true);
+    const images = TestBed.inject(ImagesStore);
+    expect(images.url('nouvelle-1', user.images[0])).toBe('data:image/png;base64,QUFB');
+    expect(countOf(calls, 'get_image')).toBe(0);
+    expect(store.hasImages()).toBe(true);
+
+    // Plus de vision : l'envoi d'images ne part pas.
+    await store.attach([image('b.png')]);
+    models.select(GRAM_MODEL.name);
+    expect(await store.send('Et ça ?')).toBe(false);
+    expect(chat.requests).toHaveLength(1);
+  });
+
+  it('envoi refusé : texte et images rendus', async () => {
+    const chat = new FakeChat();
+    chat.refuse = 'Image 1 illisible : la joindre de nouveau';
+    const { store, models } = await setup(chat);
+    models.select(VISION_MODEL.name);
+    await store.attach([image('photo.png')]);
+    await store.send('Décris');
+    await settle();
+    expect(store.draft()).toBe('Décris');
+    expect(store.attachments().map((a) => a.name)).toEqual(['photo.png']);
+    expect(store.sendError()).toContain('illisible');
+  });
+
+  it('images enregistrées : lues une fois, introuvables signalées, oubliées avec la conversation', async () => {
+    const chat = new FakeChat([CONVERSATION_VISION]);
+    chat.images.set(`${CONVERSATION_VISION.id}/a.png`, 'data:image/png;base64,QUFB');
+    const { store, calls } = await setup(chat);
+    const images = TestBed.inject(ImagesStore);
+    expect(images.url(CONVERSATION_VISION.id, 'a.png')).toBeUndefined();
+    expect(images.url(CONVERSATION_VISION.id, 'a.png')).toBeUndefined();
+    await settle();
+    expect(images.url(CONVERSATION_VISION.id, 'a.png')).toBe('data:image/png;base64,QUFB');
+    expect(images.url(CONVERSATION_VISION.id, 'absente.png')).toBeUndefined();
+    await settle();
+    expect(images.url(CONVERSATION_VISION.id, 'absente.png')).toBeNull();
+    expect(countOf(calls, 'get_image')).toBe(2);
+    await store.remove(CONVERSATION_VISION.id);
+    expect(images.url(CONVERSATION_VISION.id, 'a.png')).toBeUndefined();
+  });
+
+  it('réflexion : retenue par la conversation, dernier choix pour les nouvelles', async () => {
+    const { store, chat, calls } = await setup(new FakeChat(CONVERSATIONS));
+    const prefs = TestBed.inject(PrefsStore);
+    expect(store.think()).toBe(true);
+    // Nouvelle conversation : partira avec le premier message.
+    await store.setThink(false);
+    expect(prefs.think()).toBe(false);
+    expect(countOf(calls, 'set_think')).toBe(0);
+    await store.send('Vite');
+    expect(chat.requests[0].think).toBe(false);
+    expect(chat.conversations.get('nouvelle-1')?.think).toBe(false);
+
+    // Conversation sans choix : le dernier ; puis enregistré tout de suite.
+    await store.open(CONVERSATION_TODAY.id);
+    expect(store.think()).toBe(false);
+    await store.setThink(true);
+    expect(calls.find((c) => c.cmd === 'set_think')?.args).toEqual({
+      id: CONVERSATION_TODAY.id,
+      think: true,
+    });
+    expect(store.current()?.think).toBe(true);
+    // La conversation précédente garde le sien.
+    await store.open('nouvelle-1');
+    expect(store.think()).toBe(false);
+    // Nouvelle conversation : le dernier choix.
+    store.newConversation();
+    expect(store.think()).toBe(true);
+  });
+
+  it('instructions et mémoire : paramètres pour une nouvelle conversation, puis enregistrées', async () => {
+    const { store, chat, calls } = await setup(new FakeChat(CONVERSATIONS));
+    const prefs = TestBed.inject(PrefsStore);
+    prefs.setInstructions('Réponds en français.');
+    prefs.setKeepAlive('forever');
+    expect(store.instructions()).toBe('Réponds en français.');
+    await store.send('Bonjour');
+    expect(chat.requests[0]).toMatchObject({
+      instructions: 'Réponds en français.',
+      keepAlive: 'forever',
+    });
+
+    // Changées avant le premier message.
+    store.newConversation();
+    await store.setInstructions('  Tutoie-moi.  ');
+    expect(store.instructions()).toBe('Tutoie-moi.');
+    expect(countOf(calls, 'set_instructions')).toBe(0);
+    await store.send('Salut');
+    expect(chat.requests[1].instructions).toBe('Tutoie-moi.');
+    // Nouvelle conversation suivante : de nouveau celles des paramètres.
+    store.newConversation();
+    expect(store.instructions()).toBe('Réponds en français.');
+
+    // Conversation existante : enregistrées tout de suite ; vides, aucune.
+    await store.open(CONVERSATION_TODAY.id);
+    expect(store.instructions()).toBe('');
+    await store.setInstructions('Sois bref.');
+    expect(calls.filter((c) => c.cmd === 'set_instructions').map((c) => c.args)).toEqual([
+      { id: CONVERSATION_TODAY.id, instructions: 'Sois bref.' },
+    ]);
+    expect(store.instructions()).toBe('Sois bref.');
+    await store.setInstructions(' ');
+    expect(store.current()?.instructions).toBeNull();
+    expect(chat.conversations.get(CONVERSATION_TODAY.id)?.instructions).toBeNull();
+  });
+
+  it('jauge : contexte occupé par la dernière réponse', async () => {
+    const { store } = await setup(new FakeChat([CONVERSATION_TODAY, CONVERSATION_VISION]));
+    expect(store.context()).toBeNull();
+    await store.open(CONVERSATION_TODAY.id);
+    expect(store.context()).toMatchObject({ used: 230, max: 16384, level: 'ok' });
+    await store.open(CONVERSATION_VISION.id);
+    expect(store.context()).toMatchObject({ level: 'warn', label: '26k / 32k' });
   });
 });

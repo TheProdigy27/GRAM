@@ -7,7 +7,8 @@ import { ModelsStore } from '../../state/models.store';
 
 /**
  * Sélecteur de modèle de l'en-tête : modèles de GRAM puis autres modèles d'Ollama, avec les
- * capacités du modèle choisi (vision, réflexion, outils) en étiquettes.
+ * capacités du modèle choisi (vision, réflexion, outils) en étiquettes, masquées dans une
+ * fenêtre étroite (elles restent dans la liste et sur l'écran d'accueil).
  */
 @Component({
   selector: 'app-model-picker',
@@ -25,6 +26,7 @@ import { ModelsStore } from '../../state/models.store';
     />
     @for (c of caps(); track c.key) {
       <g-tag
+        class="cap"
         size="sm"
         [icon]="c.icon"
         [gTooltip]="c.description"
@@ -44,6 +46,12 @@ import { ModelsStore } from '../../state/models.store';
       flex: 0 1 340px;
       min-width: 160px;
       margin-right: 4px;
+    }
+    /* Fenêtre étroite : place à la jauge de contexte ; les capacités restent dans la liste. */
+    @media (max-width: 1023px) {
+      .cap {
+        display: none;
+      }
     }
   `,
 })

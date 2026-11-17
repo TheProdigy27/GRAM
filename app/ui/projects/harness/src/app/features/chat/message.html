@@ -1,6 +1,11 @@
 @let m = message();
 @if (m.role === 'user') {
-  <div class="bubble" data-testid="message-user">{{ m.content }}</div>
+  @if (m.images.length > 0) {
+    <app-message-images [conversationId]="conversationId()" [names]="m.images" />
+  }
+  @if (m.content) {
+    <div class="bubble" data-testid="message-user">{{ m.content }}</div>
+  }
 } @else {
   <article class="answer" data-testid="message-assistant" [attr.aria-busy]="streaming() || null">
     <header class="head">
@@ -10,12 +15,22 @@
       }
     </header>
     @if (m.thinking; as thinking) {
-      <details class="thinking" data-testid="message-thinking">
-        <summary class="thinking__summary">
-          {{ streaming() && !m.content ? 'Réflexion…' : 'Réflexion' }}
-        </summary>
-        <p class="thinking__text">{{ thinking }}</p>
-      </details>
+      <div class="thinking" data-testid="message-thinking">
+        <button
+          type="button"
+          class="thinking__toggle"
+          data-testid="thinking-toggle"
+          [attr.aria-expanded]="thinkingOpen()"
+          [attr.aria-controls]="thinkingId"
+          (click)="toggleThinking()"
+        >
+          <g-icon [name]="thinkingOpen() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+          {{ thinkingLabel() }}
+        </button>
+        @if (thinkingOpen()) {
+          <p class="thinking__text" data-testid="thinking-text" [id]="thinkingId">{{ thinking }}</p>
+        }
+      </div>
     }
     @if (m.content) {
       <app-markdown [text]="m.content" />
@@ -68,6 +83,15 @@
           >
             <g-icon name="refresh" [size]="16" />
           </button>
+        }
+        @if (speed(); as speed) {
+          @if (estimate(); as estimate) {
+            <span class="speed" tabindex="0" data-testid="message-speed" [gTooltip]="estimate"
+              >{{ speed }}<span class="g-sr-only"> ({{ estimate }})</span></span
+            >
+          } @else {
+            <span class="speed" data-testid="message-speed">{{ speed }}</span>
+          }
         }
       </div>
     }

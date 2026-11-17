@@ -215,8 +215,9 @@ pub struct ChatRequest<'a> {
     /// `message.thinking` (constaté avec Ollama 0.40.16, `chat-default.ndjson`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub think: Option<bool>,
-    /// Durée de chargement après la réponse (« 5m », « -1 » : toujours) ; absente : celle
-    /// d'Ollama (5 min).
+    /// Durée de chargement après la réponse (« 30m », « -1m » : toujours) ; absente : celle
+    /// d'Ollama (5 min, ou `OLLAMA_KEEP_ALIVE`). Une durée sans unité (« -1 ») est refusée
+    /// (HTTP 400, constaté avec Ollama 0.40.16).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<&'a str>,
     /// Absentes : les paramètres du modèle (dont `num_ctx` d'un modèle dérivé de GRAM).
@@ -358,6 +359,13 @@ pub fn parse_chat_line(line: &[u8]) -> Result<ChatChunk> {
 /// Erreur d'Ollama qui dit que le modèle n'est pas installé (`model '…' not found`, HTTP 404).
 pub fn is_model_not_found(status: u16, message: &str) -> bool {
     status == 404 && message.contains("not found")
+}
+
+/// Erreur d'Ollama qui dit que le modèle n'accepte pas d'images (`image input is not
+/// supported…`, HTTP 500), même quand l'image n'est que dans l'historique
+/// (`chat-image-unsupported.json`).
+pub fn is_image_unsupported(message: &str) -> bool {
+    message.contains("image input is not supported")
 }
 
 // ── POST /api/pull : téléchargement, en flux NDJSON ─────────────────────────────────────────
@@ -815,6 +823,14 @@ mod tests {
         assert_eq!(message, "model 'gram/absent:q4_k_m' not found");
         assert!(is_model_not_found(404, &message));
         assert!(!is_model_not_found(500, &message));
+        // Image pour un modèle sans vision : HTTP 500, avant tout flux.
+        let message = error_message(fixture!("chat-image-unsupported.json"));
+        assert!(
+            message.starts_with("image input is not supported"),
+            "{message}"
+        );
+        assert!(is_image_unsupported(&message));
+        assert!(!is_image_unsupported("model 'x' not found"));
     }
 
     #[test]

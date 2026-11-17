@@ -19,7 +19,11 @@
         </p>
       }
       @for (m of store.messages(); track $index; let last = $last) {
-        <app-message [message]="m" [last]="last && !streamingMessage()" />
+        <app-message
+          [message]="m"
+          [conversationId]="store.currentId() ?? ''"
+          [last]="last && !streamingMessage()"
+        />
       }
       @if (streamingMessage(); as m) {
         <app-message [message]="m" streaming />
@@ -37,11 +41,42 @@
 
 @if (showComposer()) {
   <div class="bottom">
+    @if (store.context(); as context) {
+      @if (context.level !== 'ok') {
+        <g-callout kind="warn" data-testid="context-warning">
+          @if (context.level === 'full') {
+            Les premiers messages sont sortis du contexte : le modèle ne les voit plus. Nouvelle
+            conversation conseillée.
+          } @else {
+            Les premiers messages vont bientôt sortir du contexte : nouvelle conversation
+            conseillée.
+          }
+          <button
+            gButton
+            gCalloutAction
+            size="sm"
+            data-testid="context-new"
+            (click)="store.newConversation()"
+          >
+            Nouvelle conversation
+          </button>
+        </g-callout>
+      }
+    }
     @if (store.sendError(); as error) {
       <g-callout class="send-error" kind="error" role="alert" data-testid="send-error">
         {{ error }}
       </g-callout>
     }
     <app-composer />
+  </div>
+}
+
+@if (dragging()) {
+  <div class="drop" data-testid="drop-zone" aria-hidden="true">
+    <span class="drop__text">
+      <g-icon name="image" [size]="22" />
+      {{ dropText() }}
+    </span>
   </div>
 }

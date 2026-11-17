@@ -178,7 +178,14 @@ fn erreurs_en_francais() {
 #[test]
 fn discussion_et_conversations() {
     let dir = TempDir::new("ipc-discussion");
-    let fake = FakeOllama::standard();
+    // Modèle de vision (`/api/show` de SmolVLM) : l'image jointe part avec le message.
+    let fake = FakeOllama::start(|r| match r.path.as_str() {
+        "/api/show" => (
+            200,
+            include_str!("../../../tests/fixtures/ollama/show-vision.json").into(),
+        ),
+        _ => gram_ollama::testing::standard_response(r),
+    });
     let h = Harness::with_config(
         Config {
             ollama: Some(OllamaClient::new(fake.url()).unwrap()),
@@ -202,6 +209,9 @@ fn discussion_et_conversations() {
         conversation_id: None,
         model: "gram/qwen3-1.7b:q4_k_m".into(),
         content: Some("Combien font 12 × 3 ?".into()),
+        images: vec![crate::images::to_base64(crate::images::tests::PNG)],
+        instructions: Some("Réponds brièvement.".into()),
+        ..ChatSend::default()
     };
     tauri::async_runtime::block_on(crate::commands::chat_send(
         h.webview.state(),
@@ -222,6 +232,19 @@ fn discussion_et_conversations() {
     assert_eq!(conversation["title"], "Combien font 12 × 3 ?");
     assert_eq!(conversation["model"], "gram/qwen3-1.7b:q4_k_m");
     let id = conversation["id"].as_str().unwrap().to_string();
+    // Le message tel qu'enregistré, avec le nom de son image.
+    let user = &events[0]["data"]["message"];
+    assert_eq!(user["role"], "user");
+    let image = user["images"][0].as_str().unwrap().to_string();
+    assert!(image.ends_with("-1.png"), "{image}");
+    let chat = fake
+        .requests()
+        .into_iter()
+        .rfind(|r| r.path == "/api/chat")
+        .unwrap()
+        .json();
+    assert_eq!(chat["messages"][0]["role"], "system");
+    assert_eq!(chat["messages"][1]["images"].as_array().unwrap().len(), 1);
     assert_eq!(events[1]["data"], json!({ "content": "1", "thinking": "" }));
     let message = &events.last().unwrap()["data"]["message"];
     assert_eq!(message["role"], "assistant");
@@ -231,6 +254,29 @@ fn discussion_et_conversations() {
     assert_eq!(message["stats"]["doneReason"], "stop");
     assert_eq!(message["interrupted"], false);
     assert_eq!(message["error"], Value::Null);
+    assert_eq!(message["thinkingMs"], Value::Null);
+    assert_eq!(message["stats"]["contextLength"], Value::Null);
+
+    // Image : adresse `data:` ; nom invalide refusé.
+    let url = h
+        .invoke("get_image", json!({ "conversationId": id, "name": image }))
+        .unwrap();
+    assert!(
+        url.as_str()
+            .unwrap()
+            .starts_with("data:image/png;base64,iVBORw0KGgo"),
+        "{url}"
+    );
+    let err = h
+        .invoke(
+            "get_image",
+            json!({ "conversationId": id, "name": "../secret.png" }),
+        )
+        .unwrap_err();
+    assert!(
+        err.as_str().unwrap().starts_with("Image introuvable"),
+        "{err}"
+    );
 
     // Conversations.
     let list = h.invoke("list_conversations", json!({})).unwrap();
@@ -239,7 +285,35 @@ fn discussion_et_conversations() {
     let full = h.invoke("get_conversation", json!({ "id": id })).unwrap();
     assert_eq!(full["messages"].as_array().unwrap().len(), 2);
     assert_eq!(full["messages"][0]["content"], "Combien font 12 × 3 ?");
-    assert_eq!(full["instructions"], Value::Null);
+    assert_eq!(full["instructions"], "Réponds brièvement.");
+    assert_eq!(full["think"], Value::Null);
+
+    // Instructions et réflexion de la conversation, sans effet sur la date.
+    h.invoke(
+        "set_instructions",
+        json!({ "id": id, "instructions": "  Tutoie-moi. " }),
+    )
+    .unwrap();
+    h.invoke("set_think", json!({ "id": id, "think": false }))
+        .unwrap();
+    let changed = h.invoke("get_conversation", json!({ "id": id })).unwrap();
+    assert_eq!(changed["instructions"], "Tutoie-moi.");
+    assert_eq!(changed["think"], false);
+    assert_eq!(changed["updatedAt"], full["updatedAt"]);
+    h.invoke("set_instructions", json!({ "id": id, "instructions": " " }))
+        .unwrap();
+    assert_eq!(
+        h.invoke("get_conversation", json!({ "id": id })).unwrap()["instructions"],
+        Value::Null
+    );
+    let err = h
+        .invoke("set_think", json!({ "id": "absente", "think": true }))
+        .unwrap_err();
+    assert!(
+        err.as_str()
+            .unwrap()
+            .starts_with("Conversation introuvable")
+    );
     let renamed = h
         .invoke(
             "rename_conversation",
@@ -303,6 +377,9 @@ fn configuration() {
     assert_eq!(conf["identifier"], "fr.gram.harness");
     assert_eq!(conf["productName"], "GRAM Harness");
     assert_eq!(conf["app"]["windows"][0]["label"], "main");
+    // Sans quoi, sous Windows, Tauri intercepte les fichiers glissés : pas de glisser-déposer
+    // HTML5 pour joindre des images.
+    assert_eq!(conf["app"]["windows"][0]["dragDropEnabled"], false);
     assert_eq!(conf["app"]["security"], gram["app"]["security"]);
 
     let angular: Value = serde_json::from_str(include_str!("../../ui/angular.json")).unwrap();

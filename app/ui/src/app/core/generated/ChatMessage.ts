@@ -12,9 +12,19 @@ export type ChatMessage = { role: ChatRole,
  */
 content: string, 
 /**
+ * Images jointes à un message de l'utilisateur : noms des fichiers enregistrés dans
+ * `conversations/<id>/`.
+ */
+images: Array<string>, 
+/**
  * Réflexion du modèle avant sa réponse.
  */
 thinking: string | null, 
+/**
+ * Durée de la réflexion, en millisecondes : de son premier morceau au premier mot de la
+ * réponse (ou à la fin, si la réponse n'a pas commencé).
+ */
+thinkingMs: number | null, 
 /**
  * Modèle qui a répondu (nom dans Ollama) : on peut en changer en cours de conversation.
  */
