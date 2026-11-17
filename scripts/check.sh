@@ -2,11 +2,12 @@
 # CI locale de GRAM sous macOS (ou Linux) : équivalent de scripts/check.ps1, à lancer avant
 # chaque commit de fin de phase.
 #
-#   1. cargo fmt (vérification)
-#   2. cargo clippy -D warnings
-#   3. cargo test (régénère aussi les types TypeScript via ts-rs)
-#   4. vérifie que les types TypeScript générés sont à jour dans git
-#   5. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
+#   1. vérifie que app/ui/node_modules correspond à package-lock.json (sinon : npm ci)
+#   2. cargo fmt (vérification)
+#   3. cargo clippy -D warnings
+#   4. cargo test (régénère aussi les types TypeScript via ts-rs)
+#   5. vérifie que les types TypeScript générés sont à jour dans git
+#   6. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
 #
 # Usage : scripts/check.sh
 set -euo pipefail
@@ -22,6 +23,11 @@ fail() {
   printf '\033[31mÉCHEC : %s\033[0m\n' "$1"
   exit 1
 }
+
+# En premier : un node_modules périmé ne ferait échouer que les tests Angular, après les
+# longues étapes cargo.
+step 'dépendances npm à jour'
+node scripts/check-npm-deps.mjs || fail 'dépendances npm à jour'
 
 step 'cargo fmt'
 cargo fmt --all -- --check || fail 'cargo fmt'

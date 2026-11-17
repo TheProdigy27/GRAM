@@ -3,11 +3,12 @@
   CI locale de GRAM : à lancer avant chaque commit de fin de phase.
 
 .DESCRIPTION
-  1. cargo fmt (vérification)
-  2. cargo clippy -D warnings
-  3. cargo test (régénère aussi les types TypeScript via ts-rs)
-  4. vérifie que les types TypeScript générés sont à jour dans git
-  5. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
+  1. vérifie que app/ui/node_modules correspond à package-lock.json (sinon : npm ci)
+  2. cargo fmt (vérification)
+  3. cargo clippy -D warnings
+  4. cargo test (régénère aussi les types TypeScript via ts-rs)
+  5. vérifie que les types TypeScript générés sont à jour dans git
+  6. tests Angular (Vitest) et builds de production des deux interfaces (GRAM, GRAM Harness)
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts/check.ps1
@@ -25,6 +26,9 @@ function Invoke-Step([string]$Name, [scriptblock]$Command) {
     }
 }
 
+# En premier : un node_modules périmé ne ferait échouer que les tests Angular, après les
+# longues étapes cargo.
+Invoke-Step 'dépendances npm à jour' { node scripts/check-npm-deps.mjs }
 Invoke-Step 'cargo fmt' { cargo fmt --all -- --check }
 Invoke-Step 'cargo clippy' { cargo clippy --workspace --all-targets -- -D warnings }
 Invoke-Step 'cargo test' { cargo test --workspace }
