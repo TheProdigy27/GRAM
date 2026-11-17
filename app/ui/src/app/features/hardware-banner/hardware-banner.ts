@@ -17,6 +17,7 @@ import { runtimeRows } from '../../shared/runtimes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
 import { Icon } from '../../shared/ui/icon/icon';
+import { InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Tag } from '../../shared/ui/tag/tag';
 import { ToastService } from '../../shared/ui/toast/toast';
@@ -24,7 +25,13 @@ import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { HardwareStore } from '../../state/hardware.store';
 import { HarnessStore } from '../../state/harness.store';
 import { RankingStore } from '../../state/ranking.store';
-import { machineCards, machinePills, shortGpuName, usableSummary } from './machine-cards';
+import {
+  machineCards,
+  machinePills,
+  shortGpuName,
+  usableInfo,
+  usableSummary,
+} from './machine-cards';
 
 /** Libellé de la simulation : « RTX 4090 24 Go », « RAM 32 Go », ou les deux. */
 export function simulationLabel(p: HardwareProfile): string {
@@ -47,7 +54,7 @@ export function simulationLabel(p: HardwareProfile): string {
  */
 @Component({
   selector: 'app-hardware-banner',
-  imports: [Button, Callout, Icon, Skeleton, Tag, Tooltip],
+  imports: [Button, Callout, Icon, InfoTip, Skeleton, Tag, Tooltip],
   templateUrl: './hardware-banner.html',
   styleUrl: './hardware-banner.scss',
 })
@@ -80,6 +87,11 @@ export class HardwareBanner {
   protected readonly summary = computed(() => {
     const b = this.budget();
     return b ? usableSummary(b) : null;
+  });
+
+  protected readonly summaryInfo = computed(() => {
+    const b = this.budget();
+    return b ? usableInfo(b) : null;
   });
 
   protected readonly cards = computed(() => {

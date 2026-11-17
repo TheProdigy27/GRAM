@@ -7,6 +7,7 @@ import {
   machinePills,
   shortCpuName,
   shortGpuName,
+  usableInfo,
   usableSummary,
 } from './machine-cards';
 
@@ -153,6 +154,17 @@ describe('usableSummary', () => {
     );
     expect(usableSummary({ ...BUDGET, vram: 0, gpuBandwidthGbs: null })).toBe(
       '47,3 Go utilisables par un modèle',
+    );
+  });
+});
+
+describe('usableInfo', () => {
+  it('« à deux vitesses » expliqué ; mémoire unifiée et CPU seul à part', () => {
+    expect(usableInfo(BUDGET).term).toBe('Mémoire utilisable');
+    expect(usableInfo(BUDGET).text).toContain('d’abord la VRAM de la carte graphique, rapide');
+    expect(usableInfo(MAC_BUDGET).text).toContain('mémoire unifiée');
+    expect(usableInfo({ ...BUDGET, vram: 0, gpuBandwidthGbs: null }).text).toContain(
+      'Sans VRAM utilisable',
     );
   });
 });

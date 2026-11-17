@@ -13,7 +13,12 @@
           [class.th--num]="c.num"
           [attr.data-col]="c.key"
           [attr.aria-sort]="ariaSort(sort(), c.key)"
+          [attr.aria-label]="headerName(c)"
         >
+          <!-- « i » avant les en-têtes de nombres : le libellé reste aligné sur les chiffres. -->
+          @if (c.num && c.info) {
+            <g-info [entry]="c.info" />
+          }
           <button
             type="button"
             class="th__button"
@@ -32,6 +37,9 @@
               <g-icon [name]="a" [size]="12" />
             }
           </button>
+          @if (!c.num && c.info) {
+            <g-info [entry]="c.info" />
+          }
         </div>
       }
     </div>
@@ -185,11 +193,11 @@
               <div class="model__sub">
                 @if (docked()) {
                   <span class="mono" data-testid="model-quant-size"
-                    >{{ row.item.best.variant.label }} ·
+                    >{{ row.item.best.variant | quant }} ·
                     {{ row.item.best.variant.sizeBytes | gb }}</span
                   >
                 } @else {
-                  <span class="model__quant mono">{{ row.item.best.variant.label }} · </span
+                  <span class="model__quant mono">{{ row.item.best.variant | quant }} · </span
                   >{{ row.item.paramsTotal | params: row.item.paramsActive }} ·
                   {{ row.item.repoId }}
                 }
@@ -199,7 +207,7 @@
 
           @if (!docked()) {
             <div class="td td--quant mono" role="gridcell" data-col="quant">
-              {{ row.item.best.variant.label }}
+              {{ row.item.best.variant | quant }}
             </div>
           }
 

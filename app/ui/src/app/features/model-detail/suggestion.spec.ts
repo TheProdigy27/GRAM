@@ -35,6 +35,7 @@ describe('gpuSuggestion', () => {
   it('hybride : la plus grosse quantification qui tient en VRAM, gain et contexte', () => {
     expect(gpuSuggestion(variants(), 'Q5_K_M')).toEqual({
       label: 'Q4_K_M',
+      name: 'Q4_K_M',
       speed: '~53 tok/s',
       after: ' (+61 %) pour une qualité à peine moindre, mais 10k de contexte au plus.',
     });
@@ -57,6 +58,7 @@ describe('gpuSuggestion', () => {
     list[1].withinSize = false;
     expect(gpuSuggestion(list, 'Q5_K_M')).toEqual({
       label: 'Q3_K_L',
+      name: 'Q3_K_L',
       speed: '~110 tok/s',
       after: ' (+233 %) mais une qualité nettement moindre et 40k de contexte au plus.',
     });

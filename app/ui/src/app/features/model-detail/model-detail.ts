@@ -2,13 +2,15 @@ import { Component, computed, inject, output } from '@angular/core';
 import type { Os } from '../../core/generated/Os';
 import { TauriService, errorMessage } from '../../core/tauri.service';
 import { count, ctxK, paramCount, relativeTime } from '../../shared/format';
+import { GLOSSARY } from '../../shared/glossary';
 import { runtimeLabel, useCaseLabel } from '../../shared/labels';
-import { CountPipe, CtxPipe } from '../../shared/pipes';
+import { CountPipe, CtxPipe, QuantNamePipe } from '../../shared/pipes';
 import { scoreTooltip } from '../../shared/score';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
+import { InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Tag } from '../../shared/ui/tag/tag';
@@ -48,6 +50,7 @@ const SHELLS: Record<Os, string> = {
     CommandBlock,
     HarnessPanel,
     Icon,
+    InfoTip,
     MeasurePanel,
     MemoryBar,
     Progress,
@@ -59,6 +62,7 @@ const SHELLS: Record<Os, string> = {
     Tooltip,
     CountPipe,
     CtxPipe,
+    QuantNamePipe,
   ],
   templateUrl: './model-detail.html',
   styleUrl: './model-detail.scss',
@@ -78,6 +82,7 @@ export class ModelDetailPanel {
   protected readonly selected = this.store.selected;
 
   protected readonly scoreTooltip = scoreTooltip;
+  protected readonly glossary = GLOSSARY;
 
   protected readonly viewOptions: ToggleOption<QuantView>[] = [
     { value: 'chart', label: 'Graphique', icon: 'chart' },
@@ -148,14 +153,28 @@ export class ModelDetailPanel {
         label: 'Paramètres',
         value: paramCount(m.paramsTotal),
         sub: moe ? `${paramCount(m.paramsActive!)} actifs` : '',
+        info: GLOSSARY.params,
       },
-      { key: 'ctx', label: 'Contexte d’entraînement', value: ctxK(m.ctxTrain), sub: '' },
-      { key: 'downloads', label: 'Téléchargements 30 j', value: count(m.downloads), sub: '' },
+      {
+        key: 'ctx',
+        label: 'Contexte d’entraînement',
+        value: ctxK(m.ctxTrain),
+        sub: '',
+        info: GLOSSARY.ctxTrain,
+      },
+      {
+        key: 'downloads',
+        label: 'Téléchargements 30 j',
+        value: count(m.downloads),
+        sub: '',
+        info: null,
+      },
       {
         key: 'arch',
         label: 'Architecture',
         value: arch?.architecture ?? 'inconnue',
         sub: experts,
+        info: GLOSSARY.arch,
       },
     ];
   });

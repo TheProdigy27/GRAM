@@ -2,7 +2,7 @@
   <section class="measure" aria-labelledby="measure-title" data-testid="measure-panel">
     <div class="measure__head">
       <h3 class="measure__title" id="measure-title">
-        Mesure réelle de <span class="mono">{{ variant().variant.label }}</span> avec Ollama
+        Mesure réelle de <span class="mono">{{ variant().variant | quant }}</span> avec Ollama
       </h3>
       @if (variant().ollamaModel) {
         <g-tag tone="ok" size="sm" [gTooltip]="'Installée dans Ollama : ' + variant().ollamaModel"
@@ -148,9 +148,14 @@
 
     @if (calibration(); as c) {
       <div class="calibration" data-testid="calibration">
-        <h4 class="calibration__title">
-          Calibration · {{ c.measurements.length }} mesure{{ c.measurements.length > 1 ? 's' : '' }}
-        </h4>
+        <div class="calibration__head">
+          <h4 class="calibration__title">
+            Calibration · {{ c.measurements.length }} mesure{{
+              c.measurements.length > 1 ? 's' : ''
+            }}
+          </h4>
+          <g-info [entry]="glossary.calibration" />
+        </div>
         <p class="calibration__summary" data-testid="calibration-summary">{{ c.summary }}</p>
         <div class="actions">
           @if (c.changed && (c.gpuEfficiency !== null || c.ramEfficiency !== null)) {

@@ -4,7 +4,7 @@ import type { RunMode } from '../../core/generated/RunMode';
 import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { niceAxis } from '../../shared/chart';
 import { ctxK, gb, int, tokS } from '../../shared/format';
-import { MODE_LABELS } from '../../shared/labels';
+import { MODE_LABELS, quantName } from '../../shared/labels';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 
 type ModeKind = RunMode['kind'];
@@ -24,7 +24,10 @@ const ALL_LABELS_UP_TO = 7;
 const AXIS_LABELS = 5;
 
 export interface ChartBar {
+  /** Libellé de la quantification (identifiant). */
   label: string;
+  /** Nom affiché, sans le nom du modèle. */
+  name: string;
   mode: ModeKind;
   /** Hauteur, en % de la zone de tracé. */
   height: number;
@@ -35,6 +38,8 @@ export interface ChartBar {
   best: boolean;
   /** Nom sous l'axe (★ devant la meilleure) ; vide pour la plupart des barres. */
   axisLabel: string;
+  /** Largeur permise au nom sous l'axe, en colonnes : jusqu'à mi-chemin de ses voisins. */
+  axisRoom: number;
   /** Alignement des textes centrés sur la barre, près des bords. */
   align: 'start' | 'center' | 'end';
   /** Infobulle et description accessible. */
@@ -54,28 +59,56 @@ export interface QuantChartModel {
 }
 
 /**
- * Noms affichés sous l'axe : tous jusqu'à 7 quantifications, sinon 5 répartis régulièrement,
- * dont la meilleure à la place du plus proche.
+ * Noms affichés sous l'axe : tous jusqu'à 7 quantifications, sinon environ 5 répartis
+ * régulièrement autour de la meilleure. Les deux bouts ne sont nommés que s'ils sont assez loin
+ * de la meilleure, et aucun nom n'est à moins des trois quarts de l'écart régulier d'un autre :
+ * ils restent lisibles côte à côte.
  */
 export function axisIndices(count: number, best: number | null): Set<number> {
   if (count <= ALL_LABELS_UP_TO) return new Set(Array.from({ length: count }, (_, i) => i));
-  const picks = Array.from({ length: AXIS_LABELS }, (_, k) =>
-    Math.round((k * (count - 1)) / (AXIS_LABELS - 1)),
-  );
-  if (best !== null && best >= 0 && best < count && !picks.includes(best)) {
-    let nearest = 0;
-    for (let k = 1; k < picks.length; k++) {
-      if (Math.abs(picks[k] - best) < Math.abs(picks[nearest] - best)) nearest = k;
-    }
-    picks[nearest] = best;
+  const last = count - 1;
+  const step = last / (AXIS_LABELS - 1);
+  const minGap = step * 0.75;
+  const anchors =
+    best !== null && best >= 0 && best < count
+      ? [...(best >= minGap ? [0] : []), best, ...(last - best >= minGap ? [last] : [])]
+      : [0, last];
+  const picks = new Set(anchors);
+  for (let k = 1; k < anchors.length; k++) {
+    const [from, to] = [anchors[k - 1], anchors[k]];
+    const parts = Math.max(1, Math.round((to - from) / step));
+    for (let p = 1; p < parts; p++) picks.add(Math.round(from + ((to - from) * p) / parts));
   }
-  return new Set(picks);
+  return picks;
 }
 
 function align(index: number, count: number): ChartBar['align'] {
   if (count <= 2) return 'center';
   const at = (index + 0.5) / count;
   return at < 0.1 ? 'start' : at > 0.9 ? 'end' : 'center';
+}
+
+/**
+ * Largeur permise à chaque nom sous l'axe, en colonnes (0 sans nom) : un nom centré va jusqu'à
+ * mi-chemin de ses voisins des deux côtés, un nom calé sur un bord jusqu'à mi-chemin du voisin
+ * de l'autre côté. Au-delà, il est tronqué : deux noms ne se chevauchent jamais.
+ */
+export function axisRooms(labelled: ReadonlySet<number>, count: number): number[] {
+  const rooms = new Array<number>(count).fill(0);
+  const sorted = [...labelled].sort((a, b) => a - b);
+  sorted.forEach((i, k) => {
+    const center = i + 0.5;
+    const left = k > 0 ? (sorted[k - 1] + 0.5 + center) / 2 : 0;
+    const right = k < sorted.length - 1 ? (sorted[k + 1] + 0.5 + center) / 2 : count;
+    const a = align(i, count);
+    rooms[i] =
+      a === 'start'
+        ? right - i
+        : a === 'end'
+          ? i + 1 - left
+          : 2 * Math.min(center - left, right - center);
+  });
+  return rooms;
 }
 
 function modeText(mode: RunMode): string {
@@ -98,24 +131,29 @@ export function quantChart(
   const n = variants.length;
   const axis = niceAxis(Math.max(0, ...variants.map((v) => v.estimate.tokS)));
   const labelled = axisIndices(n, best);
+  const rooms = axisRooms(labelled, n);
+  const names = variants.map((v) => quantName(v.variant));
 
   const bars = variants.map((v, i): ChartBar => {
     const e = v.estimate;
     const isBest = i === best;
+    const name = names[i];
     const tooltip = [
-      `${v.variant.label}${isBest ? ' · ★ meilleure pour cette machine' : ''}`,
+      `${name}${isBest ? ' · ★ meilleure pour cette machine' : ''}`,
       `${gb(v.variant.sizeBytes)} · ${modeText(e.mode)}`,
       `${tokS(e.tokS)} tok/s · contexte max ${ctxK(e.ctxMax)} · score ${Math.round(v.score.total)}`,
       ...(v.withinSize ? [] : ['Au-dessus de la taille maximale demandée']),
     ].join('\n');
     return {
       label: v.variant.label,
+      name,
       mode: e.mode.kind,
       height: axis.max > 0 ? (Math.max(e.tokS, 0) / axis.max) * 100 : 0,
       speed: tokS(e.tokS),
       dimmed: !v.withinSize,
       best: isBest,
-      axisLabel: labelled.has(i) ? `${isBest ? '★ ' : ''}${v.variant.label}` : '',
+      axisLabel: labelled.has(i) ? `${isBest ? '★ ' : ''}${name}` : '',
+      axisRoom: rooms[i],
       align: align(i, n),
       tooltip,
     };
@@ -136,10 +174,10 @@ export function quantChart(
       : null;
 
   const present = new Set(variants.map((v) => v.estimate.mode.kind));
-  const range = n > 0 ? `de ${variants[0].variant.label} à ${variants[n - 1].variant.label}` : '';
+  const range = n > 0 ? `de ${names[0]} à ${names[n - 1]}` : '';
   const overflow =
     cut > 0
-      ? ` Au-delà de ${variants[cut - 1].variant.label}, le modèle déborde de la VRAM : ` +
+      ? ` Au-delà de ${names[cut - 1]}, le modèle déborde de la VRAM : ` +
         `${tokS(variants[cut - 1].estimate.tokS)} puis ${tokS(variants[cut].estimate.tokS)} tok/s.`
       : '';
 
@@ -210,7 +248,7 @@ export function quantChart(
                 [attr.data-mode]="b.mode"
                 [attr.data-label]="b.label"
                 [attr.aria-selected]="i === selectedIndex()"
-                [attr.aria-label]="b.label"
+                [attr.aria-label]="b.name"
                 [tabIndex]="i === focusIndex() ? 0 : -1"
                 [gTooltip]="b.tooltip"
                 (click)="choose(i)"
@@ -221,7 +259,7 @@ export function quantChart(
                     aria-hidden="true"
                     [attr.data-align]="b.align"
                     [style.bottom]="'calc(' + b.height + '% + 8px)'"
-                    ><span class="mono">{{ b.label }}</span
+                    ><span class="col__name mono">{{ b.name }}</span
                     ><span class="col__speed"> {{ b.speed }} tok/s</span></span
                   >
                 }
@@ -233,9 +271,12 @@ export function quantChart(
         <div class="x-axis" aria-hidden="true">
           @for (b of m.bars; track b.label) {
             <span class="x-axis__slot"
-              ><span class="x-axis__label mono" [attr.data-align]="b.align">{{
-                b.axisLabel
-              }}</span></span
+              ><span
+                class="x-axis__label mono"
+                [attr.data-align]="b.align"
+                [style.--room]="b.axisRoom"
+                >{{ b.axisLabel }}</span
+              ></span
             >
           }
         </div>

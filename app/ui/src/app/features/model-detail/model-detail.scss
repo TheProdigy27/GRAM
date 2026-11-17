@@ -146,6 +146,11 @@
   gap: 8px 12px;
 }
 
+.section__titles {
+  display: flex;
+  align-items: center;
+}
+
 .section__title {
   margin: 0;
   font-size: 14px;

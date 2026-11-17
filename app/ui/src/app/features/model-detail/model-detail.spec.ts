@@ -91,6 +91,18 @@ describe('ModelDetailPanel', () => {
       ['Téléchargements 30 j', '1,2 M'],
       ['Architecture', 'inconnue'],
     ]);
+    // « i » : tuiles (sauf téléchargements), quantification, légende de la mémoire.
+    const info = (root: Element | null) =>
+      [...(root?.querySelectorAll('g-info button') ?? [])].map((b) => b.getAttribute('aria-label'));
+    const tileInfo = (key: string) => info(byTestId(`tile-${key}`, el));
+    expect(['params', 'ctx', 'downloads', 'arch'].map(tileInfo)).toEqual([
+      ['Aide : Paramètres'],
+      ['Aide : Contexte d’entraînement'],
+      [],
+      ['Aide : Architecture'],
+    ]);
+    expect(info(el.querySelector('.section__titles'))).toEqual(['Aide : Quantification']);
+    expect(info(el.querySelector('app-memory-bar'))).toEqual(['Aide : Cache KV', 'Aide : Surcoût']);
 
     // Une barre par quantification, couleur du mode ; Q8_0 (la meilleure) cerclée.
     expect(bars(el).map((b) => [b.dataset['label'], b.dataset['mode']])).toEqual([
@@ -163,11 +175,25 @@ describe('ModelDetailPanel', () => {
     await chooseOption(fixture, byTestId('quant-view', el), 'Tableau');
     expect(TestBed.inject(DisplayStore).quantView()).toBe('table');
     expect(bars(el)).toHaveLength(0);
+    // En-têtes : « i » sauf Quant (titre de la section) et Taille, nommés par leur libellé seul.
+    const headers = [...el.querySelectorAll('app-quant-table th')].map((h) => [
+      h.getAttribute('aria-label'),
+      !!h.querySelector('g-info'),
+    ]);
+    expect(headers).toEqual([
+      [null, false],
+      [null, false],
+      ['Bits/poids', true],
+      ['Mode', true],
+      ['tok/s', true],
+      ['Ctx max', true],
+      ['Score', true],
+    ]);
     const rows = allByTestId('variant-row', el);
     expect(rows).toHaveLength(3);
     expect(rows.map((r) => r.dataset['fit'])).toEqual(['ok', 'ok', 'bad']);
     expect(queryTestId('variant-best', rows[1])).not.toBeNull();
-    expect(text(queryTestId('variant-installed', rows[0]))).toBe('Installée');
+    expect(queryTestId('variant-installed', rows[0])?.getAttribute('aria-label')).toBe('Installée');
     expect(rows[1].classList).toContain('is-selected');
     const buttons = allByTestId<HTMLButtonElement>('variant-select', el);
     expect(buttons.map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
@@ -309,6 +335,9 @@ describe('ModelDetailPanel', () => {
       expect(text(byTestId('calibration-summary', el))).toBe(
         'D’après 1 mesure : efficacité GPU 0,48 (actuelle 0,81).',
       );
+      expect(
+        byTestId('calibration', el).querySelector('g-info button')?.getAttribute('aria-label'),
+      ).toBe('Aide : Calibration');
 
       const detailCalls = argsOf(calls, 'get_model_detail').length;
       await click(fixture, 'apply-calibration');

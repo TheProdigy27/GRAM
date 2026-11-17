@@ -17,7 +17,7 @@
 
   th {
     height: 34px;
-    padding: 0 8px;
+    padding: 0 6px;
     text-align: left;
     font-size: 12px;
     font-weight: 600;
@@ -29,7 +29,7 @@
 
   td {
     height: 38px;
-    padding: 0 8px;
+    padding: 0 6px;
     border-top: 1px solid var(--g-line-2);
     white-space: nowrap;
   }
@@ -69,10 +69,36 @@
   }
 }
 
-.quant {
+// En-tête sur deux lignes (« Bits/ poids », « Ctx max »), son « i » contre le texte : la fiche
+// est trop étroite pour sept colonnes aux en-têtes sur une ligne.
+.th {
   display: inline-flex;
   align-items: center;
+  line-height: 1.15;
+
+  > span {
+    width: min-content;
+    white-space: normal;
+  }
+}
+
+// La colonne Quant prend toute la place laissée par les autres, réduites à leur contenu ;
+// `max-width: 0` retire le sien de la largeur minimale du tableau. Un nom trop long (fichier au
+// nom exotique) est tronqué, les autres colonnes ne sont jamais coupées.
+.td-quant {
+  width: 100%;
+  max-width: 0;
+}
+
+.quant {
+  display: flex;
+  align-items: center;
   gap: 6px;
+  min-width: 0;
+
+  > :not(.quant__name) {
+    flex: none;
+  }
 }
 
 .fit {
@@ -88,15 +114,18 @@
 }
 
 .quant__name {
+  min-width: 0;
   height: 28px;
   margin: 0 -4px;
   padding: 0 4px;
+  overflow: hidden;
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--g-fg);
   font-size: 12.5px;
   font-weight: 600;
+  text-overflow: ellipsis;
   cursor: pointer;
 
   &:hover {
@@ -110,6 +139,11 @@
 
 .best {
   color: var(--g-warn);
+}
+
+.installed {
+  color: var(--g-ok);
+  border-radius: 4px;
 }
 
 .approx {

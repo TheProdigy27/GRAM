@@ -1,7 +1,7 @@
 <section class="harness" aria-labelledby="harness-title" data-testid="harness-panel">
   <div class="head">
     <h3 #title class="title" id="harness-title" tabindex="-1">
-      Discuter avec <span class="mono">{{ variant().variant.label }}</span>
+      Discuter avec <span class="mono">{{ variant().variant | quant }}</span>
     </h3>
     @if (entry()) {
       <g-tag tone="accent" size="sm" icon="check" data-testid="harness-tag"
@@ -150,8 +150,8 @@
           </div>
         } @else {
           <p class="muted">
-            Installe <span class="mono">{{ variant().variant.label }}</span> dans Ollama, réglée au
-            contexte calculé par GRAM, pour discuter avec le modèle dans GRAM Harness.
+            Installe <span class="mono">{{ variant().variant | quant }}</span> dans Ollama, réglée
+            au contexte calculé par GRAM, pour discuter avec le modèle dans GRAM Harness.
           </p>
           <div class="actions">
             <button

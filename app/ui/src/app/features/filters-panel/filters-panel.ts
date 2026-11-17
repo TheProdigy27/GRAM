@@ -4,10 +4,12 @@ import type { UseCase } from '../../core/generated/UseCase';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
 import { CTX_STEPS, ctxK, decimal } from '../../shared/format';
+import { GLOSSARY } from '../../shared/glossary';
 import { RUNTIMES, USE_CASES, USE_CASE_ICONS } from '../../shared/labels';
 import { type RuntimeRow, runtimeRows } from '../../shared/runtimes';
 import { FIELD } from '../../shared/ui/field/field';
 import { Icon } from '../../shared/ui/icon/icon';
+import { InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { Switch } from '../../shared/ui/switch/switch';
 import { ToastService } from '../../shared/ui/toast/toast';
 import { ToggleGroup, type ToggleOption } from '../../shared/ui/toggle-group/toggle-group';
@@ -26,7 +28,7 @@ const GIB = 2 ** 30;
  */
 @Component({
   selector: 'app-filters-panel',
-  imports: [FIELD, Icon, Switch, ToggleGroup, Tooltip],
+  imports: [FIELD, Icon, InfoTip, Switch, ToggleGroup, Tooltip],
   templateUrl: './filters-panel.html',
   styleUrl: './filters-panel.scss',
 })
@@ -36,6 +38,7 @@ export class FiltersPanel {
   private readonly settings = inject(SettingsStore);
   private readonly hardware = inject(HardwareStore);
   private readonly toast = inject(ToastService);
+  protected readonly glossary = GLOSSARY;
 
   protected readonly useCases = USE_CASES.map((u, i) => ({
     ...u,

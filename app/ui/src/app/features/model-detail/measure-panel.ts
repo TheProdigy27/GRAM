@@ -3,10 +3,12 @@ import type { ModelDetail } from '../../core/generated/ModelDetail';
 import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { errorMessage } from '../../core/tauri.service';
 import { ctxK, decimal, gb, int, relativeTime } from '../../shared/format';
-import { CtxPipe, TokSPipe } from '../../shared/pipes';
+import { GLOSSARY } from '../../shared/glossary';
+import { CtxPipe, QuantNamePipe, TokSPipe } from '../../shared/pipes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
 import { Icon } from '../../shared/ui/icon/icon';
+import { InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Tag } from '../../shared/ui/tag/tag';
 import { ToastService } from '../../shared/ui/toast/toast';
@@ -27,7 +29,19 @@ const MEASURE_TOKENS = 128;
  */
 @Component({
   selector: 'app-measure-panel',
-  imports: [Button, Callout, CommandBlock, Icon, Progress, Tag, Tooltip, CtxPipe, TokSPipe],
+  imports: [
+    Button,
+    Callout,
+    CommandBlock,
+    Icon,
+    InfoTip,
+    Progress,
+    Tag,
+    Tooltip,
+    CtxPipe,
+    QuantNamePipe,
+    TokSPipe,
+  ],
   templateUrl: './measure-panel.html',
   styleUrl: './measure-panel.scss',
 })
@@ -40,6 +54,7 @@ export class MeasurePanel {
   private readonly toast = inject(ToastService);
 
   protected readonly tokens = MEASURE_TOKENS;
+  protected readonly glossary = GLOSSARY;
 
   protected readonly ollama = computed(() => this.hardware.runtimes()?.ollama ?? null);
 

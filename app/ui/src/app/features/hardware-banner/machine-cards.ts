@@ -11,6 +11,7 @@ import type { Source } from '../../core/generated/Source';
 import { bandwidth, gb, int, roundSize } from '../../shared/format';
 import { RAM_KIND_LABELS, SOURCE_LABELS } from '../../shared/labels';
 import { memoryScale } from '../../shared/memory-scale';
+import type { InfoEntry } from '../../shared/ui/info-tip/info-tip';
 
 /** Barre d'une carte : part de sa mémoire qu'un modèle peut occuper. */
 export interface CardUsage {
@@ -122,6 +123,18 @@ export function usableSummary(b: MemoryBudget): string {
   const total = `${gb(scale.total)} utilisables par un modèle`;
   if (scale.unified) return `${total}, dont ${gb(b.vram)} pour le GPU`;
   return scale.vramEnd > 0 ? `${total}, à deux vitesses` : total;
+}
+
+/** Explication du résumé (« i ») : d'où viennent ces Go et pourquoi « à deux vitesses ». */
+export function usableInfo(b: MemoryBudget): InfoEntry {
+  const scale = memoryScale(b);
+  const margins = 'Les marges se règlent dans les paramètres.';
+  const text = scale.unified
+    ? `Mémoire qu’un modèle peut occuper, une fois réservée la part du système et des applications. Le processeur et le GPU partagent cette mémoire (mémoire unifiée) ; le GPU, plus rapide, n’en utilise qu’une partie. ${margins}`
+    : scale.vramEnd > 0
+      ? `Mémoire qu’un modèle peut occuper, une fois réservée la part du système et des applications : d’abord la VRAM de la carte graphique, rapide, puis la RAM, plusieurs fois plus lente. Un modèle qui tient en VRAM génère bien plus vite ; la part qui déborde en RAM ralentit tout. ${margins}`
+      : `Mémoire qu’un modèle peut occuper, une fois réservée la part du système et des applications. Sans VRAM utilisable, le modèle tourne en RAM, sur le processeur. ${margins}`;
+  return { term: 'Mémoire utilisable', text };
 }
 
 function gpuCard(p: HardwareProfile, b: MemoryBudget | null): MachineCard {

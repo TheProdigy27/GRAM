@@ -2,13 +2,14 @@ import { Component, input, output } from '@angular/core';
 import type { FitLevel } from '../../core/generated/FitLevel';
 import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { decimal } from '../../shared/format';
-import { FIT_LABELS } from '../../shared/labels';
-import { CtxPipe, GbPipe, TokSPipe } from '../../shared/pipes';
+import { GLOSSARY } from '../../shared/glossary';
+import { FIT_LABELS, quantName } from '../../shared/labels';
+import { CtxPipe, GbPipe, QuantNamePipe, TokSPipe } from '../../shared/pipes';
 import { scoreTooltip } from '../../shared/score';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
+import { InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
-import { Tag } from '../../shared/ui/tag/tag';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 
 /** Adéquation mémoire d'une quantification : icône, ton et libellé. */
@@ -25,6 +26,21 @@ const FIT_ICONS: Record<FitLevel, IconName> = {
   tooTight: 'minus-circle',
 };
 
+/**
+ * Caractères au-delà desquels le nom peut être tronqué dans une fiche étroite (la colonne Quant
+ * prend la place qui reste) : 11 suffisent aux libellés ordinaires, jusqu'à « UD-Q2_K_XXS ».
+ */
+const NAME_FITS_CHARS = 11;
+
+/** Infobulle du nom : le nom entier s'il risque d'être tronqué, puis l'avertissement de taille. */
+export function nameTooltip(v: VariantDetail): string {
+  const name = quantName(v.variant);
+  return [
+    ...(name.length > NAME_FITS_CHARS ? [name] : []),
+    ...(v.withinSize ? [] : ['Au-dessus de la taille maximale demandée']),
+  ].join('\n');
+}
+
 export function fitMark(v: VariantDetail): FitMark {
   if (v.estimate.mode.kind === 'tooBig')
     return { icon: 'close', tone: 'bad', label: 'Ne tient pas' };
@@ -40,7 +56,7 @@ export function fitMark(v: VariantDetail): FitMark {
  */
 @Component({
   selector: 'app-quant-table',
-  imports: [Icon, ModeBadge, Tag, Tooltip, CtxPipe, GbPipe, TokSPipe],
+  imports: [Icon, InfoTip, ModeBadge, Tooltip, CtxPipe, GbPipe, QuantNamePipe, TokSPipe],
   templateUrl: './quant-table.html',
   styleUrl: './quant-table.scss',
 })
@@ -53,8 +69,10 @@ export class QuantTable {
   readonly selectedChange = output<string>();
 
   protected readonly fitMark = fitMark;
+  protected readonly nameTooltip = nameTooltip;
   protected readonly scoreTooltip = scoreTooltip;
   protected readonly decimal = decimal;
+  protected readonly glossary = GLOSSARY;
 
   protected choose(event: Event, label: string): void {
     event.stopPropagation();

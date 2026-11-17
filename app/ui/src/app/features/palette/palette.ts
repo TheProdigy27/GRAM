@@ -18,7 +18,7 @@ import { ShortcutsService } from '../../core/shortcuts.service';
 import { TauriService } from '../../core/tauri.service';
 import { ThemeService } from '../../core/theme.service';
 import { CTX_STEPS, ctxK, fileSize, int, tokS } from '../../shared/format';
-import { MODE_LABELS, USE_CASES, USE_CASE_ICONS } from '../../shared/labels';
+import { MODE_LABELS, USE_CASES, USE_CASE_ICONS, quantName } from '../../shared/labels';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
 import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
@@ -574,7 +574,7 @@ function modelView(m: PaletteModel): Partial<OptionView> {
   }
   const { variant, estimate } = item.best;
   const sub = [
-    `${variant.label} · ${fileSize(variant.sizeBytes)}`,
+    `${quantName(variant)} · ${fileSize(variant.sizeBytes)}`,
     ...(item.installed.includes(variant.label) ? ['installé'] : []),
     ...(estimate.approximate ? ['approximatif'] : []),
     ...(m.section === 'slow' ? ['lent'] : []),

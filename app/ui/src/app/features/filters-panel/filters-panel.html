@@ -20,7 +20,10 @@
 
   <div class="group group--ctx">
     <div class="group__head">
-      <h2 class="group__label" id="filter-ctx">Contexte</h2>
+      <div class="group__title">
+        <h2 class="group__label" id="filter-ctx">Contexte</h2>
+        <g-info position="right" [entry]="glossary.context" />
+      </div>
       <span class="group__value" data-testid="ctx-value"
         ><strong class="mono">{{ ctxLabel() }}</strong>
         @if (ranking.ctx() === null) {
@@ -44,7 +47,10 @@
   </div>
 
   <div class="group" role="group" aria-labelledby="filter-runtime" data-testid="filter-runtime">
-    <h2 class="group__label" id="filter-runtime">Runtime</h2>
+    <div class="group__title">
+      <h2 class="group__label" id="filter-runtime">Runtime</h2>
+      <g-info position="right" [entry]="glossary.runtime" />
+    </div>
     @for (r of runtimes(); track r.value) {
       <button
         type="button"
@@ -69,7 +75,10 @@
   </div>
 
   <div class="group group--size">
-    <label class="group__label" for="filter-max-size">Taille max</label>
+    <div class="group__title">
+      <label class="group__label" for="filter-max-size">Taille max</label>
+      <g-info position="right" [entry]="glossary.maxSize" />
+    </div>
     <g-field
       suffix="Go"
       hint="Fichiers de la quantification"

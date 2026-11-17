@@ -81,7 +81,12 @@
     <div class="head">
       <h2 class="label" id="machine-title">Votre machine</h2>
       @if (summary(); as s) {
-        <span class="summary" data-testid="hw-usable">{{ s }}</span>
+        <span class="summary" data-testid="hw-usable"
+          >{{ s }}
+          @if (summaryInfo(); as info) {
+            <g-info position="below" [entry]="info" />
+          }
+        </span>
       } @else if (!budgetPending()) {
         <span class="summary" data-testid="hw-usable">
           Mémoire utilisable inconnue : elle est calculée avec le classement.

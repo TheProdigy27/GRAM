@@ -66,7 +66,12 @@
       <div class="tiles">
         @for (t of tiles(); track t.key) {
           <div class="tile" [attr.data-testid]="'tile-' + t.key">
-            <span class="tile__label">{{ t.label }}</span>
+            <span class="tile__label"
+              >{{ t.label }}
+              @if (t.info; as info) {
+                <g-info [entry]="info" />
+              }
+            </span>
             <span class="tile__value mono">{{ t.value }}</span>
             @if (t.sub) {
               <span class="tile__sub">{{ t.sub }}</span>
@@ -78,10 +83,13 @@
       <!-- Vitesse selon la quantification -->
       <section class="section" aria-labelledby="quant-title">
         <div class="section__head">
-          <h3 class="section__title" id="quant-title">
-            Vitesse estimée selon la quantification
-            <span class="section__count">· {{ d.variants.length }} proposées</span>
-          </h3>
+          <div class="section__titles">
+            <h3 class="section__title" id="quant-title">
+              Vitesse estimée selon la quantification
+              <span class="section__count">· {{ d.variants.length }} proposées</span>
+            </h3>
+            <g-info [entry]="glossary.quant" />
+          </div>
           @if (d.variants.length > 0) {
             <g-toggle-group
               appearance="segmented"
@@ -120,7 +128,7 @@
         @if (suggestion(); as s) {
           <g-callout class="suggestion" icon="bolt" data-testid="suggestion">
             <!-- Espaces dans les textes : Angular retire celles entre deux éléments. -->
-            <strong class="mono">{{ s.label }}</strong> tient entièrement en VRAM :
+            <strong class="mono">{{ s.name }}</strong> tient entièrement en VRAM :
             <strong>{{ s.speed }}</strong
             >{{ s.after }}
             <button
@@ -130,7 +138,7 @@
               data-testid="choose-suggestion"
               (click)="select(s.label)"
             >
-              Choisir {{ s.label }}
+              Choisir {{ s.name }}
             </button>
           </g-callout>
         }
@@ -140,7 +148,7 @@
         <!-- Mémoire -->
         <section class="section" aria-labelledby="mem-title">
           <h3 class="section__title" id="mem-title">
-            Mémoire en <span class="mono">{{ v.variant.label }}</span> au contexte
+            Mémoire en <span class="mono">{{ v.variant | quant }}</span> au contexte
             {{ v.estimate.ctxUsed | ctx }}
           </h3>
           <app-memory-bar [estimate]="v.estimate" [budget]="d.budget" />
@@ -166,7 +174,7 @@
         <section class="section" aria-labelledby="launch-title">
           <div class="section__head">
             <h3 class="section__title" id="launch-title">
-              Lancer <span class="mono">{{ v.variant.label }}</span> avec {{ runtimeName() }}
+              Lancer <span class="mono">{{ v.variant | quant }}</span> avec {{ runtimeName() }}
             </h3>
             @if (shell() && v.launch.commands.length > 0) {
               <span class="section__aside">{{ shell() }}</span>

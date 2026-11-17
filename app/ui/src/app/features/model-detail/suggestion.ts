@@ -3,6 +3,7 @@
 
 import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { ctxK, signedPercent, tokS } from '../../shared/format';
+import { quantName } from '../../shared/labels';
 
 /** Gain de vitesse minimal pour suggérer une autre quantification. */
 const MIN_GAIN = 0.1;
@@ -10,6 +11,8 @@ const MIN_GAIN = 0.1;
 export interface GpuSuggestion {
   /** Quantification suggérée. */
   label: string;
+  /** Son nom affiché. */
+  name: string;
   /** « ~53 tok/s ». */
   speed: string;
   /**
@@ -59,6 +62,7 @@ export function gpuSuggestion(
   const gainText = gain === null ? '' : ` (${signedPercent(gain)})`;
   return {
     label: pick.variant.label,
+    name: quantName(pick.variant),
     speed: `${tokS(after)} tok/s`,
     after: `${gainText} ${quality.text}${context}.`,
   };

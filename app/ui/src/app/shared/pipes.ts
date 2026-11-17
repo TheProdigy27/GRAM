@@ -1,5 +1,6 @@
 import { Pipe, type PipeTransform } from '@angular/core';
 import { count, ctxK, gb, params, tokS } from './format';
+import { quantName } from './labels';
 
 /** Octets → « 15,9 Go ». */
 @Pipe({ name: 'gb' })
@@ -38,5 +39,13 @@ export class CountPipe implements PipeTransform {
 export class ParamsPipe implements PipeTransform {
   transform(total: number, active: number | null): string {
     return params(total, active);
+  }
+}
+
+/** Quantification → son nom affiché, sans le nom du modèle (« Underdog-Saluki-Swift-1.5-IQ2 »). */
+@Pipe({ name: 'quant' })
+export class QuantNamePipe implements PipeTransform {
+  transform(variant: { label: string; repoId: string }): string {
+    return quantName(variant);
   }
 }

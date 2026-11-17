@@ -63,6 +63,9 @@ describe('bande « Votre machine »', () => {
     expect(text(byTestId('hw-usable', el))).toBe(
       '61,6 Go utilisables par un modèle, à deux vitesses',
     );
+    expect(
+      byTestId('hw-usable', el).querySelector('g-info button')?.getAttribute('aria-label'),
+    ).toBe('Aide : Mémoire utilisable');
     expect(card('hw-gpu', el)).toEqual([
       'NVIDIA GeForce RTX 5080',
       'GPU',
@@ -170,6 +173,7 @@ describe('bande « Votre machine »', () => {
     expect(text(byTestId('hw-usable', el))).toBe(
       'Mémoire utilisable inconnue : elle est calculée avec le classement.',
     );
+    expect(byTestId('hw-usable', el).querySelector('g-info')).toBeNull();
     expect(byTestId('hw-gpu', el).querySelector('.usage, g-skeleton')).toBeNull();
     expect(card('hw-gpu', el)[0]).toBe('NVIDIA GeForce RTX 5080');
   });

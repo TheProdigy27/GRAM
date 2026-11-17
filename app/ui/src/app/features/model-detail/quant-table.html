@@ -2,15 +2,22 @@
   <table class="variants" [attr.aria-labelledby]="labelledBy() || null">
     <thead>
       <tr>
+        <!-- La quantification est expliquée par le « i » du titre de la section. Les en-têtes
+             qui ont un « i » sont nommés par leur libellé seul ; « i » avant les nombres. -->
         <th scope="col">Quant</th>
         <th scope="col" class="num">Taille</th>
-        <th scope="col" class="num">
-          <span gTooltip="Bits par poids réels">Bits/poids</span>
+        <!-- « Bits/poids » et « Ctx max » sur deux lignes : le tableau tient dans la fiche. -->
+        <th scope="col" class="num" aria-label="Bits/poids">
+          <span class="th"
+            ><g-info [entry]="glossary.bpw" /><span>Bits/<wbr />poids</span></span
+          >
         </th>
-        <th scope="col">Mode</th>
-        <th scope="col" class="num">tok/s</th>
-        <th scope="col" class="num">Ctx max</th>
-        <th scope="col" class="num">Score</th>
+        <th scope="col" aria-label="Mode">Mode<g-info [entry]="glossary.mode" /></th>
+        <th scope="col" class="num" aria-label="tok/s"><g-info [entry]="glossary.tokS" />tok/s</th>
+        <th scope="col" class="num" aria-label="Ctx max">
+          <span class="th"><g-info [entry]="glossary.ctxMax" /><span>Ctx max</span></span>
+        </th>
+        <th scope="col" class="num" aria-label="Score"><g-info [entry]="glossary.score" />Score</th>
       </tr>
     </thead>
     <tbody>
@@ -24,7 +31,7 @@
           [attr.data-fit]="fit.tone"
           (click)="selectedChange.emit(v.variant.label)"
         >
-          <td>
+          <td class="td-quant">
             <span class="quant">
               <g-icon
                 class="fit"
@@ -39,10 +46,10 @@
                 class="quant__name mono"
                 data-testid="variant-select"
                 [attr.aria-pressed]="isSelected"
-                [gTooltip]="v.withinSize ? '' : 'Au-dessus de la taille maximale demandée'"
+                [gTooltip]="nameTooltip(v)"
                 (click)="choose($event, v.variant.label)"
               >
-                {{ v.variant.label }}
+                {{ v.variant | quant }}
               </button>
               @if (i === best()) {
                 <g-icon
@@ -55,13 +62,16 @@
                 />
               }
               @if (v.ollamaModel) {
-                <g-tag
-                  tone="ok"
-                  size="sm"
+                <!-- Une icône plutôt qu'une étiquette : le tableau tient dans la fiche. -->
+                <g-icon
+                  class="installed"
+                  name="download"
+                  tabindex="0"
+                  label="Installée"
                   data-testid="variant-installed"
                   [gTooltip]="'Installée dans Ollama : ' + v.ollamaModel"
-                  >Installée</g-tag
-                >
+                  [size]="14"
+                />
               }
               @if (!v.variant.exact) {
                 <span

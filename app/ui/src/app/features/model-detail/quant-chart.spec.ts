@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { allByTestId, click, press, queryTestId, text } from '../../../testing/dom';
 import { BUDGET, GIB, makeDetail, makeEstimate } from '../../../testing/fixtures';
 import type { VariantDetail } from '../../core/generated/VariantDetail';
-import { QuantChart, axisIndices, quantChart } from './quant-chart';
+import { QuantChart, axisIndices, axisRooms, quantChart } from './quant-chart';
 
 /** Fiche à 4 quantifications : deux en VRAM, une hybride (au-dessus de la taille max), une CPU. */
 function variants(): VariantDetail[] {
@@ -26,11 +26,31 @@ function variants(): VariantDetail[] {
   return [q4, q8, hybrid, cpu];
 }
 
+const sorted = (s: Set<number>) => [...s].sort((a, b) => a - b);
+
 describe('axisIndices', () => {
-  it('toutes les quantifications jusqu’à 7, sinon 5 dont la meilleure', () => {
+  it('toutes les quantifications jusqu’à 7, sinon 5 répartis autour de la meilleure', () => {
     expect([...axisIndices(3, 1)]).toEqual([0, 1, 2]);
-    expect([...axisIndices(28, 11)].sort((a, b) => a - b)).toEqual([0, 7, 11, 20, 27]);
-    expect([...axisIndices(28, null)].sort((a, b) => a - b)).toEqual([0, 7, 14, 20, 27]);
+    expect(sorted(axisIndices(28, 11))).toEqual([0, 6, 11, 19, 27]);
+    expect(sorted(axisIndices(28, null))).toEqual([0, 7, 14, 20, 27]);
+  });
+
+  it('pas de nom collé à celui de la meilleure : le bout trop proche n’est pas nommé', () => {
+    // Avant : 0, 8, 13, 24, 32 (13 à la place de 16), deux noms à 5 colonnes l’un de l’autre.
+    expect(sorted(axisIndices(33, 13))).toEqual([0, 7, 13, 23, 32]);
+    expect(sorted(axisIndices(33, 2))).toEqual([2, 10, 17, 25, 32]);
+    expect(sorted(axisIndices(33, 31))).toEqual([0, 8, 16, 23, 31]);
+  });
+});
+
+describe('axisRooms', () => {
+  it('chaque nom va jusqu’à mi-chemin de ses voisins ; les bouts, calés au bord', () => {
+    const labelled = axisIndices(28, null);
+    const rooms = axisRooms(labelled, 28);
+    expect(sorted(labelled).map((i) => rooms[i])).toEqual([4, 7, 6, 6, 4]);
+    expect(rooms.filter((r) => r > 0)).toHaveLength(5);
+    // Toutes nommées : une colonne chacune.
+    expect(axisRooms(axisIndices(4, 1), 4)).toEqual([1, 1, 1, 1]);
   });
 });
 
@@ -53,6 +73,16 @@ describe('quantChart', () => {
       'Vitesse estimée en tokens par seconde pour 4 quantifications, de Q4_K_M à BF16. ' +
         'Au-delà de Q8_0, le modèle déborde de la VRAM : ~62 puis ~21 tok/s.',
     );
+  });
+
+  it('nom de fichier exotique : affiché sans le nom du modèle', () => {
+    const vs = variants();
+    vs[2] = { ...vs[2], variant: { ...vs[2].variant, label: 'Qwen3-8B-Swift-1.5-IQ2' } };
+    const m = quantChart(vs, 1, BUDGET);
+    expect(m.bars[2].label).toBe('Qwen3-8B-Swift-1.5-IQ2');
+    expect(m.bars[2].name).toBe('Swift-1.5-IQ2');
+    expect(m.bars[2].axisLabel).toBe('Swift-1.5-IQ2');
+    expect(m.bars[2].tooltip.split('\n')[0]).toBe('Swift-1.5-IQ2');
   });
 
   it('mémoire unifiée : limite du GPU ; tout sur le CPU : pas de repère', () => {

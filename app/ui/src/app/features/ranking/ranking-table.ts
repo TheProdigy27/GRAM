@@ -14,9 +14,11 @@ import {
 } from '@angular/core';
 import type { MemoryBudget } from '../../core/generated/MemoryBudget';
 import type { RankItem } from '../../core/generated/RankItem';
-import { CtxPipe, GbPipe, ParamsPipe, TokSPipe } from '../../shared/pipes';
+import { GLOSSARY } from '../../shared/glossary';
+import { CtxPipe, GbPipe, ParamsPipe, QuantNamePipe, TokSPipe } from '../../shared/pipes';
 import { Icon } from '../../shared/ui/icon/icon';
 import type { IconName } from '../../shared/ui/icon/icons';
+import { type InfoEntry, InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { ModeBadge } from '../../shared/ui/mode-badge/mode-badge';
 import { Tag } from '../../shared/ui/tag/tag';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
@@ -60,6 +62,7 @@ const PAGE_STEP = 10;
   imports: [
     FootprintCell,
     Icon,
+    InfoTip,
     ModeBadge,
     ScoreCell,
     Tag,
@@ -67,6 +70,7 @@ const PAGE_STEP = 10;
     CtxPipe,
     GbPipe,
     ParamsPipe,
+    QuantNamePipe,
     TokSPipe,
   ],
   templateUrl: './ranking-table.html',
@@ -104,15 +108,21 @@ export class RankingTable {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
 
-  private readonly allColumns: readonly { key: SortKey; label: string; num?: boolean }[] = [
+  /** `info` : explication du « i » de l'en-tête (pas quand la fiche est ouverte). */
+  private readonly allColumns: readonly {
+    key: SortKey;
+    label: string;
+    num?: boolean;
+    info?: InfoEntry;
+  }[] = [
     { key: 'rank', label: '#', num: true },
     { key: 'model', label: 'Modèle' },
-    { key: 'quant', label: 'Quant' },
-    { key: 'size', label: 'Taille' },
-    { key: 'mode', label: 'Mode' },
-    { key: 'tokS', label: 'tok/s', num: true },
-    { key: 'ctxMax', label: 'Ctx max', num: true },
-    { key: 'score', label: 'Score', num: true },
+    { key: 'quant', label: 'Quant', info: GLOSSARY.quant },
+    { key: 'size', label: 'Taille', info: GLOSSARY.footprint },
+    { key: 'mode', label: 'Mode', info: GLOSSARY.mode },
+    { key: 'tokS', label: 'tok/s', num: true, info: GLOSSARY.tokS },
+    { key: 'ctxMax', label: 'Ctx max', num: true, info: GLOSSARY.ctxMax },
+    { key: 'score', label: 'Score', num: true, info: GLOSSARY.score },
   ];
 
   /** Familles repliées ou dépliées à la main ; oubliées quand la recherche change. */
@@ -157,9 +167,16 @@ export class RankingTable {
   protected readonly tabbable = computed(() => Math.max(this.currentIndex(), 0));
 
   protected readonly scale = computed(() => scaleLabel(this.budget()));
-  /** Fiche ouverte : sans Quant, Taille ni Ctx max (quant · taille passent en sous-ligne). */
+  /**
+   * Fiche ouverte : sans Quant, Taille ni Ctx max (quant · taille passent en sous-ligne), ni
+   * « i » (la fiche a les siens).
+   */
   protected readonly columns = computed(() =>
-    this.docked() ? this.allColumns.filter((c) => !DOCKED_HIDDEN.has(c.key)) : this.allColumns,
+    this.docked()
+      ? this.allColumns
+          .filter((c) => !DOCKED_HIDDEN.has(c.key))
+          .map((c) => ({ ...c, info: undefined }))
+      : this.allColumns,
   );
   /** Colonnes couvertes par « Voir les N autres » (toutes sauf #). */
   protected readonly moreSpan = computed(() => this.columns().length - 1);
@@ -174,6 +191,15 @@ export class RankingTable {
 
   protected sortBy(key: SortKey): void {
     this.sort.set(nextSort(this.sort(), key));
+  }
+
+  /**
+   * Nom d'un en-tête qui a un « i » : son libellé seul, sans le nom du bouton d'aide (« Aide :
+   * Quantification ») que le contenu y ajouterait.
+   */
+  protected headerName(c: { key: SortKey; label: string; info?: InfoEntry }): string | null {
+    if (!c.info) return null;
+    return c.key === 'size' ? `${c.label} · ${this.scale()}` : c.label;
   }
 
   protected arrow(key: SortKey): IconName | null {

@@ -110,3 +110,19 @@ export function speedWord(tokS: number, slowTokS: number): string {
   if (tokS >= slowTokS) return 'correct';
   return 'lent';
 }
+
+/**
+ * Nom d'une quantification à l'affichage. Un fichier au nom exotique a pour libellé le nom du
+ * fichier entier (« Huihui-Qwen3.8-27B-abliterated-Underdog-Saluki-Swift-1.5-IQ2 ») : le nom du
+ * modèle, que le dépôt porte déjà, en est retiré (« Underdog-Saluki-Swift-1.5-IQ2 »). Le libellé
+ * complet reste l'identifiant de la quantification (commandes, choix, infobulles).
+ */
+export function quantName(variant: { label: string; repoId: string }): string {
+  const { label, repoId } = variant;
+  const model = repoId.slice(repoId.lastIndexOf('/') + 1).replace(/[-_.]gguf$/i, '');
+  if (model === '' || label.length <= model.length) return label;
+  if (label.slice(0, model.length).toLowerCase() !== model.toLowerCase()) return label;
+  if (!/[-_. ]/.test(label[model.length])) return label;
+  const rest = label.slice(model.length).replace(/^[-_. ]+/, '');
+  return rest === '' ? label : rest;
+}

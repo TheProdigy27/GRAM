@@ -242,6 +242,11 @@ p {
   color: var(--g-vram-fg);
 }
 
+.calibration__head {
+  display: flex;
+  align-items: center;
+}
+
 .calibration__title {
   margin: 0;
   font-size: 11px;

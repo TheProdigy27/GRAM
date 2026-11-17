@@ -28,6 +28,12 @@
   gap: 8px;
 }
 
+// Étiquette et son « i ».
+.group__title {
+  display: flex;
+  align-items: center;
+}
+
 // Étiquette de groupe : 11 px / 600, majuscules.
 .group__label {
   margin: 0;

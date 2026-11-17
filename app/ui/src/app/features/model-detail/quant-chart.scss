@@ -207,6 +207,13 @@
   }
 }
 
+// Un nom de fichier exotique est tronqué : l'infobulle de la barre le donne en entier.
+.col__name {
+  max-width: 16ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .col__speed {
   font-weight: 500;
   color: var(--g-fg-2);
@@ -227,14 +234,19 @@
   min-width: 0;
 }
 
+// Chaque nom a droit à `--room` colonnes (écarts compris), jusqu'à mi-chemin de ses voisins :
+// au-delà, il est tronqué plutôt que de chevaucher le suivant.
 .x-axis__label {
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
+  max-width: calc(var(--room, 1) * (100% + var(--bar-gap)) - 8px);
+  overflow: hidden;
   font-size: 10.5px;
   color: var(--g-muted);
   white-space: nowrap;
+  text-overflow: ellipsis;
 
   &[data-align='start'] {
     left: 0;

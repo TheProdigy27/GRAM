@@ -76,6 +76,20 @@ describe('RankingTable', () => {
       'Ctx max',
       'Score',
     ]);
+    // « i » des termes techniques ; l'en-tête garde son libellé pour nom.
+    const infos = [...el.querySelectorAll('[role="columnheader"] g-info button')];
+    expect(infos.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Aide : Quantification',
+      'Aide : Taille',
+      'Aide : Mode',
+      'Aide : tok/s',
+      'Aide : Ctx max',
+      'Aide : Score',
+    ]);
+    const header = (col: string) => el.querySelector(`[role="columnheader"][data-col="${col}"]`);
+    expect(header('size')?.getAttribute('aria-label')).toBe('Taille · 0–62 Go');
+    expect(header('ctxMax')?.getAttribute('aria-label')).toBe('Ctx max');
+    expect(header('model')?.hasAttribute('aria-label')).toBe(false);
 
     const [rapide, hybride, vision] = rows();
     expect(rows()).toHaveLength(3);
@@ -112,6 +126,9 @@ describe('RankingTable', () => {
     expect(cell(rows()[1], 'mode')).toBe('Hybride');
     expect(rows()[0].querySelector('.spark')).toBeNull();
     expect(text(byTestId('score', rows()[0]))).toBe('90');
+    // Pas de « i » : la fiche a les siens.
+    expect(el.querySelector('[role="columnheader"] g-info')).toBeNull();
+    expect(el.querySelector('[role="columnheader"][aria-label]')).toBeNull();
     // Les lignes restent navigables et ouvrent la fiche.
     await press(fixture, rows()[1], 'Enter');
     expect(host.opened).toEqual(['org/Hybride-GGUF']);

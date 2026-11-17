@@ -2,8 +2,17 @@ import { Component, computed, input } from '@angular/core';
 import type { Estimate } from '../../core/generated/Estimate';
 import type { MemoryBudget } from '../../core/generated/MemoryBudget';
 import { gb } from '../../shared/format';
-import { memoryBar } from '../../shared/memory-bar';
+import { GLOSSARY } from '../../shared/glossary';
+import { type SegmentKey, memoryBar } from '../../shared/memory-bar';
+import { type InfoEntry, InfoTip } from '../../shared/ui/info-tip/info-tip';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
+
+/** « i » de la légende : les parts qui ne parlent pas d'elles-mêmes. */
+const SEGMENT_INFO: Partial<Record<SegmentKey, InfoEntry>> = {
+  kv: GLOSSARY.kv,
+  vision: GLOSSARY.vision,
+  overhead: GLOSSARY.overhead,
+};
 
 /**
  * Barre mémoire empilée [poids | KV | vision | surcoût] sur une échelle qui contient la VRAM :
@@ -12,7 +21,7 @@ import { Tooltip } from '../../shared/ui/tooltip/tooltip';
  */
 @Component({
   selector: 'app-memory-bar',
-  imports: [Tooltip],
+  imports: [InfoTip, Tooltip],
   template: `
     @let m = model();
     <div class="bar" role="img" [class.bar--over]="m.overflow" [attr.aria-label]="ariaLabel()">
@@ -63,6 +72,9 @@ import { Tooltip } from '../../shared/ui/tooltip/tooltip';
         <li>
           <span class="swatch" [attr.data-key]="s.key" aria-hidden="true"></span>{{ s.label }}
           <strong class="mono">{{ gb(s.bytes) }}</strong>
+          @if (info[s.key]; as entry) {
+            <g-info [entry]="entry" />
+          }
         </li>
       }
       @if (m.ram) {
@@ -84,6 +96,7 @@ export class MemoryBar {
   readonly budget = input.required<MemoryBudget>();
 
   protected readonly gb = gb;
+  protected readonly info = SEGMENT_INFO;
   protected readonly model = computed(() => memoryBar(this.estimate(), this.budget()));
 
   /** Où va la mémoire : VRAM et RAM occupées face à ce qui est utilisable. */

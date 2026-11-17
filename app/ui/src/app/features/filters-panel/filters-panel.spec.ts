@@ -101,7 +101,7 @@ describe('FiltersPanel', () => {
         },
       }),
     });
-    const options = [...byTestId('filter-runtime', el).querySelectorAll('button')];
+    const options = [...byTestId('filter-runtime', el).querySelectorAll<HTMLElement>('.opt')];
     expect(options.map(text)).toEqual([
       'Ollama en cours',
       'LM Studio absent',
@@ -123,6 +123,17 @@ describe('FiltersPanel', () => {
     expect(document.activeElement).toBe(options[2]);
     await press(fixture, options[2], 'Home');
     expect(document.activeElement).toBe(options[0]);
+  });
+
+  it('« i » à côté des termes techniques, hors des titres de groupe', async () => {
+    const { el } = await render();
+    const infos = [...el.querySelectorAll('g-info button')];
+    expect(infos.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Aide : Contexte',
+      'Aide : Runtime',
+      'Aide : Taille max',
+    ]);
+    expect(el.querySelector('.group__label g-info')).toBeNull();
   });
 
   it('taille max : saisie avec virgule, bouton effacer, « Tient en VRAM »', async () => {

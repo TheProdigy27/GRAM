@@ -17,7 +17,7 @@ import type { VariantDetail } from '../../core/generated/VariantDetail';
 import { TauriService, errorMessage } from '../../core/tauri.service';
 import { ctxK, decimal, fileSize, int, roundSize, tokS } from '../../shared/format';
 import { installPercent, installStep, sameVariant } from '../../shared/harness';
-import { CtxPipe } from '../../shared/pipes';
+import { CtxPipe, QuantNamePipe } from '../../shared/pipes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
 import { DialogService } from '../../shared/ui/dialog/dialog';
@@ -44,7 +44,7 @@ type PanelState = 'absent' | 'stopped' | 'new' | 'installing' | 'added';
  */
 @Component({
   selector: 'app-harness-panel',
-  imports: [Button, Callout, CommandBlock, Icon, Progress, Skeleton, Tag, CtxPipe],
+  imports: [Button, Callout, CommandBlock, Icon, Progress, Skeleton, Tag, CtxPipe, QuantNamePipe],
   templateUrl: './harness-panel.html',
   styleUrl: './harness-panel.scss',
 })

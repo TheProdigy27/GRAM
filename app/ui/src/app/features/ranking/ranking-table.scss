@@ -3,7 +3,7 @@
 
 :host {
   display: block;
-  --cols: 32px minmax(180px, 1fr) 88px 132px 124px 52px 56px 80px;
+  --cols: 32px minmax(180px, 1fr) 88px 132px 124px 52px 64px 80px;
   --row-height: 56px;
   --child-height: 48px;
   --more-height: 40px;
@@ -327,7 +327,7 @@ g-tag {
 
 @media (max-width: 1160px) {
   :host {
-    --cols: 28px minmax(160px, 1fr) 120px 124px 52px 56px 80px;
+    --cols: 28px minmax(160px, 1fr) 120px 124px 52px 64px 80px;
   }
 
   [data-col='quant'] {
