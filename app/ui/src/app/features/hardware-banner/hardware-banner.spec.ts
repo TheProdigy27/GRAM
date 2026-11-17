@@ -2,7 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { argsOf, mockBackend } from '../../../testing/backend';
 import { byTestId, click, press, queryTestId, text } from '../../../testing/dom';
-import { GIB, HARDWARE, MAC_HARDWARE, makeResponse } from '../../../testing/fixtures';
+import {
+  GIB,
+  HARDWARE,
+  HARNESS_STATUS_ADDED,
+  MAC_HARDWARE,
+  RUNTIMES,
+  RUNTIMES_INSTALLED,
+  makeResponse,
+} from '../../../testing/fixtures';
 import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import { HardwareStore } from '../../state/hardware.store';
 import { FILTER_DEBOUNCE_MS } from '../../state/ranking.store';
@@ -112,6 +120,45 @@ describe('bande « Votre machine »', () => {
     answer(makeResponse([]));
     await fixture.whenStable();
     expect(text(byTestId('hw-gpu', el).querySelector('.usage__label'))).toBe('14,3 Go utilisables');
+  });
+
+  it('carte des runtimes : lien vers les modèles installés, qui ouvre la liste', async () => {
+    let runtimes = RUNTIMES_INSTALLED;
+    const { fixture, el } = await render({
+      detect_runtimes: () => structuredClone(runtimes),
+      harness_status: () => HARNESS_STATUS_ADDED,
+    });
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+    // Le modèle de GRAM Harness et sa base comptent pour un.
+    const link = byTestId('open-installed', el);
+    expect(text(link)).toBe('4 modèles installés');
+    expect(described(link)).toContain('Voir les modèles d’Ollama, en retirer ou en supprimer');
+
+    await click(fixture, link);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(text(dialog.querySelector('h2'))).toBe('Modèles installés');
+    await press(fixture, dialog, 'Escape');
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+
+    const store = TestBed.inject(HardwareStore);
+    runtimes = { ...RUNTIMES, ollamaModels: [] };
+    await store.refreshRuntimes();
+    await fixture.whenStable();
+    expect(text(byTestId('open-installed', el))).toBe('Aucun modèle installé');
+    // Ollama arrêté : nombre inconnu.
+    runtimes = { ...RUNTIMES, ollama: { ...RUNTIMES.ollama, running: false }, ollamaModels: [] };
+    await store.refreshRuntimes();
+    await fixture.whenStable();
+    expect(text(byTestId('open-installed', el))).toBe('Modèles installés');
+    // Pas d'Ollama : pas de lien.
+    runtimes = {
+      ...RUNTIMES,
+      ollama: { installed: false, running: false, path: null, version: null },
+    };
+    await store.refreshRuntimes();
+    await fixture.whenStable();
+    expect(queryTestId('open-installed', el)).toBeNull();
   });
 
   it('classement en échec : mémoire utilisable inconnue, cartes sans barre', async () => {

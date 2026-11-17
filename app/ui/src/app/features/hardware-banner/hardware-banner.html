@@ -188,18 +188,35 @@
       <li class="card" data-kind="runtimes">
         <span class="card__icon" aria-hidden="true"><g-icon name="terminal" [size]="20" /></span>
         @if (runtimes(); as list) {
-          <ul class="runtimes" aria-label="Runtimes" data-testid="hw-runtimes">
-            @for (r of list; track r.value) {
-              <li class="runtime" [attr.data-state]="r.state" [gTooltip]="r.tooltip">
-                <span class="runtime__dot" aria-hidden="true"></span>
-                <strong>{{ r.label }}</strong>
-                <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
-                <span class="muted">
-                  {{ r.version ? r.stateLabel + ' · ' + r.version : r.stateLabel }}</span
-                >
-              </li>
+          <div class="card__body">
+            <ul class="runtimes" aria-label="Runtimes" data-testid="hw-runtimes">
+              @for (r of list; track r.value) {
+                <li class="runtime" [attr.data-state]="r.state" [gTooltip]="r.tooltip">
+                  <span class="runtime__dot" aria-hidden="true"></span>
+                  <strong>{{ r.label }}</strong>
+                  <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+                  <span class="muted">
+                    {{ r.version ? r.stateLabel + ' · ' + r.version : r.stateLabel }}</span
+                  >
+                </li>
+              }
+            </ul>
+            @if (installedLabel(); as label) {
+              <button
+                gButton
+                variant="ghost"
+                size="sm"
+                class="installed"
+                data-testid="open-installed"
+                gTooltip="Voir les modèles d’Ollama, en retirer ou en supprimer"
+                gTooltipShortcut="I"
+                (click)="openInstalled($event)"
+              >
+                {{ label }}
+                <g-icon name="chevron-right" [size]="14" />
+              </button>
             }
-          </ul>
+          </div>
         } @else {
           <p class="runtimes muted" data-testid="hw-runtimes">Runtimes : détection…</p>
         }

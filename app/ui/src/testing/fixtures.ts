@@ -17,6 +17,7 @@ import type { Measurement } from '../app/core/generated/Measurement';
 import type { MemoryBudget } from '../app/core/generated/MemoryBudget';
 import type { ModelDetail } from '../app/core/generated/ModelDetail';
 import type { ModelEntry } from '../app/core/generated/ModelEntry';
+import type { OllamaModel } from '../app/core/generated/OllamaModel';
 import type { PickKind } from '../app/core/generated/PickKind';
 import type { Preflight } from '../app/core/generated/Preflight';
 import type { RankItem } from '../app/core/generated/RankItem';
@@ -622,6 +623,36 @@ export const SHARED_MODEL: SharedModel = {
   measuredTokS: 83,
   addedAt: '2026-11-12T18:00:00Z',
 };
+
+/**
+ * Ollama avec `SHARED_MODEL` (modèle dérivé et base) et trois modèles installés sans GRAM
+ * Harness, dont une bibliothèque d'Ollama ; dans le désordre.
+ */
+export const INSTALLED_MODELS: OllamaModel[] = [
+  { name: 'qwen3:8b', repoId: null, quant: 'Q4_K_M', size: 5.2 * GIB },
+  { name: 'gram/qwen3-8b:q4_k_m', repoId: null, quant: 'Q4_K_M', size: 4.7 * GIB },
+  {
+    name: 'hf.co/unsloth/Qwen3-1.7B-GGUF:Q4_K_M',
+    repoId: 'unsloth/Qwen3-1.7B-GGUF',
+    quant: 'Q4_K_M',
+    size: 1.1 * GIB,
+  },
+  {
+    name: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
+    repoId: 'Qwen/Qwen3-8B-GGUF',
+    quant: 'Q4_K_M',
+    size: 4.7 * GIB,
+  },
+  {
+    name: 'hf.co/huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF:IQ1_S',
+    repoId: 'huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF',
+    quant: 'IQ1_S',
+    size: 1.67 * GIB,
+  },
+];
+
+/** Runtimes avec les modèles de `INSTALLED_MODELS`. */
+export const RUNTIMES_INSTALLED: RuntimesStatus = { ...RUNTIMES, ollamaModels: INSTALLED_MODELS };
 
 export const HARNESS_STATUS_EMPTY: HarnessStatus = { models: [], install: null, presence: null };
 

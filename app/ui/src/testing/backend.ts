@@ -70,6 +70,7 @@ const DEFAULTS: Record<string, Handler> = {
   harness_cancel: () => false,
   harness_remove: () => ({ removed: true, baseRemoved: false }),
   harness_open: () => null,
+  ollama_delete: () => true,
   check_update: () => ({ currentVersion: '0.1.0', update: null }),
   install_update: () => new Promise(() => undefined), // l'application redémarre
   'plugin:clipboard-manager|write_text': () => null,

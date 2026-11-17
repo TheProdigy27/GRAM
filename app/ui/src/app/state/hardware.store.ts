@@ -3,6 +3,7 @@ import type { HardwareProfile } from '../core/generated/HardwareProfile';
 import type { Overrides } from '../core/generated/Overrides';
 import type { RuntimesStatus } from '../core/generated/RuntimesStatus';
 import { TauriService, errorMessage } from '../core/tauri.service';
+import { sameOllamaName } from '../shared/installed';
 
 /** Matériel détecté et runtimes installés (bandeau du haut). */
 @Injectable({ providedIn: 'root' })
@@ -80,6 +81,20 @@ export class HardwareStore {
   async refreshRuntimes(): Promise<void> {
     await this.loadRuntimes();
     this.version.update((v) => v + 1);
+  }
+
+  /**
+   * Retire des modèles d'Ollama connus, tout juste supprimés : la liste « Modèles installés »
+   * n'attend pas la détection suivante (que l'appelant lance).
+   */
+  forgetOllamaModels(names: readonly string[]): void {
+    this.runtimes.update(
+      (r) =>
+        r && {
+          ...r,
+          ollamaModels: r.ollamaModels.filter((m) => !names.some((n) => sameOllamaName(n, m.name))),
+        },
+    );
   }
 
   private async loadRuntimes(): Promise<void> {

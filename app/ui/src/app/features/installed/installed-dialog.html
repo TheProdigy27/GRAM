@@ -1,0 +1,153 @@
+<g-dialog heading="Modèles installés">
+  <div class="content">
+    <ng-template #refreshButton>
+      <button
+        gButton
+        variant="ghost"
+        size="sm"
+        data-testid="installed-refresh"
+        [busy]="refreshing()"
+        (click)="refresh()"
+      >
+        @if (!refreshing()) {
+          <g-icon name="refresh" />
+        }
+        Actualiser
+      </button>
+    </ng-template>
+
+    @if (state() === 'list' || state() === 'empty' || state() === 'loading') {
+      <div class="bar">
+        <p class="summary" data-testid="installed-summary" aria-live="polite">
+          @switch (state()) {
+            @case ('list') {
+              Dans Ollama · {{ summary() }}
+            }
+            @case ('empty') {
+              Dans Ollama · aucun modèle
+            }
+            @default {
+              Lecture des modèles d’Ollama…
+            }
+          }
+        </p>
+        <ng-container *ngTemplateOutlet="refreshButton" />
+      </div>
+    }
+
+    @switch (state()) {
+      @case ('loading') {
+        <div class="rows" aria-hidden="true">
+          <g-skeleton height="58px" radius="10px" />
+          <g-skeleton height="58px" radius="10px" />
+        </div>
+      }
+      @case ('absent') {
+        <g-empty-state
+          icon="terminal"
+          heading="Ollama n’est pas installé"
+          description="GRAM installe les modèles dans Ollama : l’installer depuis ollama.com, puis actualiser."
+          data-testid="installed-absent"
+        >
+          <ng-container *ngTemplateOutlet="refreshButton" />
+        </g-empty-state>
+      }
+      @case ('stopped') {
+        <g-empty-state
+          icon="terminal"
+          heading="Ollama est arrêté"
+          description="Le lancer pour voir ses modèles ou en supprimer, puis actualiser."
+          data-testid="installed-stopped"
+        >
+          <ng-container *ngTemplateOutlet="refreshButton" />
+        </g-empty-state>
+      }
+      @case ('empty') {
+        <g-empty-state
+          icon="database"
+          heading="Aucun modèle dans Ollama"
+          description="Pour en ajouter un : fiche d’un modèle, puis « Ajouter à GRAM Harness »."
+          data-testid="installed-empty"
+        />
+      }
+      @case ('list') {
+        @if (installed().harness.length > 0) {
+          <section class="group" aria-labelledby="installed-harness-title">
+            <h3 class="group__title" id="installed-harness-title">Ajoutés à GRAM Harness</h3>
+            <ul class="rows" data-testid="installed-harness">
+              @for (row of installed().harness; track row.entry.model.ollamaName) {
+                @let m = row.entry.model;
+                <li class="row" data-testid="installed-row" [attr.data-name]="m.ollamaName">
+                  <div class="row__main">
+                    <strong class="row__title">{{ m.displayName }} {{ m.quant }}</strong>
+                    <span class="row__facts">
+                      <span class="mono">{{ m.ollamaName }}</span>
+                      <!-- Espace dans le texte : Angular retire celles entre deux éléments. -->
+                      <span> · contexte {{ ctx(m.ctx) }}</span>
+                      @if (installing(row)) {
+                        <span data-testid="installed-installing"> · ajout en cours</span>
+                      }
+                    </span>
+                  </div>
+                  <span class="row__size mono">{{ size(row.size) }}</span>
+                  <button
+                    gButton
+                    size="sm"
+                    data-row-action
+                    data-testid="installed-remove"
+                    [attr.aria-label]="'Retirer ' + m.displayName + ' ' + m.quant"
+                    [busy]="removingThis(m.ollamaName)"
+                    [disabled]="busyElsewhere(m.ollamaName) || installing(row)"
+                    (click)="remove(row, $event)"
+                  >
+                    Retirer
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+        @if (installed().others.length > 0) {
+          <section class="group" aria-labelledby="installed-others-title">
+            <h3 class="group__title" id="installed-others-title">
+              @if (installed().harness.length > 0) {
+                Autres modèles d’Ollama
+              } @else {
+                Modèles d’Ollama
+              }
+            </h3>
+            <ul class="rows" data-testid="installed-others">
+              @for (row of installed().others; track row.model.name) {
+                <li class="row" data-testid="installed-row" [attr.data-name]="row.model.name">
+                  <div class="row__main">
+                    <strong class="row__title" [class.mono]="row.title === row.model.name">{{
+                      row.title
+                    }}</strong>
+                    @if (row.title !== row.model.name) {
+                      <span class="row__facts mono">{{ row.model.name }}</span>
+                    } @else if (row.model.quant) {
+                      <span class="row__facts">{{ row.model.quant }}</span>
+                    }
+                  </div>
+                  <span class="row__size mono">{{ size(row.model.size) }}</span>
+                  <button
+                    gButton
+                    size="sm"
+                    data-row-action
+                    data-testid="installed-delete"
+                    [attr.aria-label]="'Supprimer ' + row.model.name"
+                    [busy]="removingThis(row.model.name)"
+                    [disabled]="busyElsewhere(row.model.name)"
+                    (click)="delete(row, $event)"
+                  >
+                    Supprimer
+                  </button>
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    }
+  </div>
+</g-dialog>

@@ -236,6 +236,24 @@ describe('App', () => {
     expect(dialogs()).toHaveLength(0);
   });
 
+  it('touche I : modèles installés dans Ollama', async () => {
+    mockBackend();
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    await press(fixture, byTestId('filter-max-size', el), 'i');
+    expect(dialogs()).toHaveLength(0);
+
+    await press(fixture, document.body, 'i');
+    expect(dialogTitle(dialogs().at(-1))).toBe('Modèles installés');
+    expect(text(byTestId('installed-summary'))).toBe('Dans Ollama · 1 modèle · 4,7 Go');
+    // Pas un deuxième dialogue par-dessus.
+    await press(fixture, document.body, 'i');
+    expect(dialogs()).toHaveLength(1);
+    await press(fixture, document.body, 'Escape');
+    expect(dialogs()).toHaveLength(0);
+  });
+
   it('ouvre la fiche détail au clic sur une ligne', async () => {
     const calls = mockBackend();
     const fixture = await start();

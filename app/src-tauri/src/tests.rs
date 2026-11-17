@@ -1027,6 +1027,46 @@ fn ajout_avec_telechargement_remplacement_et_retrait() {
 }
 
 #[test]
+fn suppression_depuis_les_modeles_installes() {
+    let ollama = OllamaModels::start(
+        &[BASE_Q4, "qwen3:8b"],
+        gram_ollama::testing::Reply::new(500, "{}"),
+        false,
+    );
+    let dir = TempDir::new("ollama-suppression");
+    let h = Harness::with_ollama(&dir, ollama.client());
+    h.ok("harness_add", add_args("Q4_K_M", 16_384));
+    let known = || {
+        let state = h.app.state::<AppState>();
+        let status = tauri::async_runtime::block_on(state.known_runtimes()).unwrap();
+        let names: Vec<String> = status.ollama_models.into_iter().map(|m| m.name).collect();
+        names
+    };
+
+    // Un modèle installé sans GRAM : `harness_remove` le refuse, `ollama_delete` le supprime.
+    assert_eq!(h.ok("ollama_delete", json!({ "name": "qwen3:8b" })), true);
+    assert_eq!(
+        ollama.calls("/api/delete"),
+        [json!({ "model": "qwen3:8b" })]
+    );
+    // Les modèles d'Ollama connus de GRAM sont relus (repère « Installée », préflight).
+    assert_eq!(known(), [BASE_Q4, ALIAS]);
+    assert_eq!(manifest(&dir)["models"].as_array().unwrap().len(), 1);
+    // Déjà absent : pas une erreur.
+    assert_eq!(h.ok("ollama_delete", json!({ "name": "qwen3:8b" })), false);
+
+    // Un modèle dérivé de GRAM sort aussi du manifeste ; sa base reste.
+    assert_eq!(h.ok("ollama_delete", json!({ "name": ALIAS })), true);
+    assert_eq!(manifest(&dir)["models"], json!([]));
+    assert_eq!(known(), [BASE_Q4]);
+
+    // La base, comme n'importe quel modèle.
+    assert_eq!(h.ok("ollama_delete", json!({ "name": BASE_Q4 })), true);
+    assert!(ollama.names().is_empty());
+    assert!(known().is_empty());
+}
+
+#[test]
 fn modeles_disparus_et_mesure_reportee() {
     let ollama = OllamaModels::start(
         &[BASE_Q4, ALIAS],
@@ -1106,6 +1146,12 @@ fn ajout_annule() {
             );
             let remove = json!({ "ollamaName": "gram/qwen3-8b:q8_0", "removeBase": false });
             let err = invoke(&webview, "harness_remove", remove).unwrap_err();
+            assert_eq!(
+                err,
+                "gram/qwen3-8b:q8_0 est en cours d'ajout : annuler l'ajout d'abord."
+            );
+            let delete = json!({ "name": "gram/qwen3-8b:q8_0" });
+            let err = invoke(&webview, "ollama_delete", delete).unwrap_err();
             assert_eq!(
                 err,
                 "gram/qwen3-8b:q8_0 est en cours d'ajout : annuler l'ajout d'abord."

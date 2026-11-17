@@ -10,6 +10,9 @@
 //! « Ouvrir dans GRAM Harness » (`harness_open`) passe par le lien profond
 //! `gram-harness://open?model=…`, ouvert depuis Rust, seulement si GRAM Harness s'est déclaré
 //! installé (`harness.json`, qu'il écrit à chaque démarrage).
+//!
+//! La liste « Modèles installés » de GRAM supprime aussi des modèles d'Ollama qu'il n'a pas
+//! ajoutés (`ollama_delete`) ; « Retirer » (`harness_remove`) s'en tient aux siens.
 
 use crate::error::{CmdResult, CommandError};
 use crate::events::{self, HARNESS_DONE, HARNESS_PROGRESS};
@@ -313,6 +316,32 @@ pub async fn harness_remove(
         removed,
         base_removed,
     })
+}
+
+/// Supprime un modèle d'Ollama, quelle que soit son origine (liste « Modèles installés ») ;
+/// `false` s'il en avait déjà disparu. Ollama n'efface que les couches qu'aucun autre modèle
+/// n'utilise. Un modèle dérivé de GRAM sort aussi du manifeste. Refusé pour le modèle dérivé
+/// en cours d'ajout.
+#[tauri::command]
+pub async fn ollama_delete(state: State<'_, AppState>, name: String) -> CmdResult<bool> {
+    let client = state.require_ollama()?;
+    if state
+        .install_progress()
+        .is_some_and(|p| same_model(&p.ollama_name, &name))
+    {
+        return Err(CommandError::msg(format!(
+            "{name} est en cours d'ajout : annuler l'ajout d'abord."
+        )));
+    }
+    let removed = client.delete(&name).await?;
+    match update_manifest(state.shared_dir(), |m| m.remove(&name).is_some()) {
+        Ok(true) => tracing::info!(model = %name, "retiré du manifeste de GRAM Harness"),
+        Ok(false) => {}
+        Err(e) => tracing::warn!("manifeste de GRAM Harness non mis à jour : {e}"),
+    }
+    tracing::info!(model = %name, removed, "supprimé d'Ollama");
+    refresh_ollama_models(&state, &client).await;
+    Ok(removed)
 }
 
 /// Modèles ajoutés à GRAM Harness, ajout en cours et présence de GRAM Harness. Quand Ollama

@@ -291,6 +291,15 @@ export class Palette {
       keywords: 'détecter détection',
       run: () => c.rescan(),
     });
+    list.push({
+      id: 'installed',
+      label: 'Modèles installés',
+      hint: 'Ollama : voir, retirer, supprimer',
+      icon: 'database',
+      keys: ['I'],
+      keywords: 'ollama supprimer désinstaller retirer gérer liste disque place gram harness',
+      run: () => c.openInstalled(),
+    });
     if (!this.catalog.syncing()) {
       list.push({
         id: 'refresh-catalog',

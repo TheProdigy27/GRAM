@@ -183,6 +183,14 @@ export class TauriService {
     return this.call('harness_open', { ollamaName });
   }
 
+  /**
+   * Supprime un modèle d'Ollama, quelle que soit son origine (liste « Modèles installés ») ;
+   * `false` s'il en avait déjà disparu. Un modèle dérivé de GRAM sort aussi du manifeste.
+   */
+  ollamaDelete(name: string): Promise<boolean> {
+    return this.call('ollama_delete', { name });
+  }
+
   // ── Paramètres et token ──────────────────────────────────────────────────────────────────
 
   getSettings(): Promise<Settings> {

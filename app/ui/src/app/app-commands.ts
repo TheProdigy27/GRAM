@@ -28,6 +28,7 @@ export class AppCommands {
 
   readonly exporting = signal(false);
   private paletteOpen = false;
+  private installedOpen = false;
 
   /** Le classement est là et aucun export n'est en cours. */
   canExport(): boolean {
@@ -77,6 +78,27 @@ export class AppCommands {
     this.pendingTasks.run(async () => {
       const { CorrectionsDialog } = await import('./features/hardware-banner/corrections-dialog');
       this.dialogs.open(CorrectionsDialog, { width: '720px' });
+    });
+  }
+
+  /**
+   * « Modèles installés » (bande « Votre machine », touche I, palette) : les modèles d'Ollama,
+   * à retirer ou supprimer. Le focus revient à `origin` à la fermeture.
+   */
+  openInstalled(origin?: HTMLElement): void {
+    // Un seul dialogue, même si la touche I est répétée pendant son chargement.
+    if (this.installedOpen) return;
+    this.installedOpen = true;
+    this.pendingTasks.run(async () => {
+      try {
+        const { InstalledDialog } = await import('./features/installed/installed-dialog');
+        this.dialogs
+          .open(InstalledDialog, { width: '680px', restoreFocus: origin ?? true })
+          .closed.subscribe(() => (this.installedOpen = false));
+      } catch (e) {
+        this.installedOpen = false;
+        throw e;
+      }
     });
   }
 

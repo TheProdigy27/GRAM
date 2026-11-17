@@ -12,6 +12,7 @@ import type { HardwareProfile } from '../../core/generated/HardwareProfile';
 import { ShortcutsService } from '../../core/shortcuts.service';
 import { errorMessage } from '../../core/tauri.service';
 import { roundSize } from '../../shared/format';
+import { modelCount } from '../../shared/installed';
 import { runtimeRows } from '../../shared/runtimes';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
@@ -21,6 +22,7 @@ import { Tag } from '../../shared/ui/tag/tag';
 import { ToastService } from '../../shared/ui/toast/toast';
 import { Tooltip } from '../../shared/ui/tooltip/tooltip';
 import { HardwareStore } from '../../state/hardware.store';
+import { HarnessStore } from '../../state/harness.store';
 import { RankingStore } from '../../state/ranking.store';
 import { machineCards, machinePills, shortGpuName, usableSummary } from './machine-cards';
 
@@ -52,6 +54,7 @@ export function simulationLabel(p: HardwareProfile): string {
 export class HardwareBanner {
   protected readonly hardware = inject(HardwareStore);
   protected readonly ranking = inject(RankingStore);
+  private readonly harness = inject(HarnessStore);
   private readonly commands = inject(AppCommands);
   private readonly toast = inject(ToastService);
 
@@ -99,6 +102,18 @@ export class HardwareBanner {
     return status ? runtimeRows(status) : null;
   });
 
+  /**
+   * Lien vers « Modèles installés » : « 4 modèles installés » quand Ollama répond, sans nombre
+   * quand il est arrêté ; rien sans Ollama.
+   */
+  protected readonly installedLabel = computed(() => {
+    const ollama = this.hardware.runtimes()?.ollama;
+    if (!ollama || (!ollama.installed && !ollama.running)) return null;
+    if (!ollama.running) return 'Modèles installés';
+    const n = this.harness.installed().count;
+    return n === 0 ? 'Aucun modèle installé' : `${modelCount(n)} installé${n > 1 ? 's' : ''}`;
+  });
+
   protected readonly warnings = computed(() => this.profile()?.warnings ?? []);
 
   /** VRAM et RAM utilisables, en pastilles (bande resserrée). */
@@ -121,6 +136,11 @@ export class HardwareBanner {
 
   protected openCorrections(): void {
     this.commands.openCorrections();
+  }
+
+  /** « 4 modèles installés » : la liste d'Ollama, d'où retirer ou supprimer. */
+  protected openInstalled(event: Event): void {
+    this.commands.openInstalled(event.currentTarget as HTMLElement);
   }
 
   protected stopSimulation(): void {

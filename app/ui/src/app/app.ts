@@ -114,6 +114,7 @@ export class App {
         { key: 'f', mod: true, inInputs: true, run: () => this.commands.openPalette() },
         { key: 'k', mod: true, inInputs: true, run: () => this.commands.openPalette() },
         { key: 'e', run: () => this.openExportMenu() },
+        { key: 'i', run: () => this.commands.openInstalled() },
         { key: '?', run: () => this.commands.openShortcuts() },
         { key: 'Escape', inInputs: true, run: () => this.onEscape() },
       ]),

@@ -119,6 +119,7 @@ describe('Palette', () => {
       'Exporter le classement en Markdown',
       'Exporter le classement en CSV',
       'Ré-analyser le matériel',
+      'Modèles installés',
       'Actualiser les modèles',
       'Corriger ou simuler le matériel',
       'Ouvrir les paramètres',
@@ -133,6 +134,7 @@ describe('Palette', () => {
       );
     expect(kbd('Exporter le classement en CSV')).toBe('E C');
     expect(kbd('Raccourcis clavier')).toBe('?');
+    expect(kbd('Modèles installés')).toBe('I');
 
     // Combobox : le focus reste dans le champ, l'option active est désignée.
     expect(document.activeElement).toBe(p.input);
@@ -233,6 +235,19 @@ describe('Palette', () => {
       p.options().find((o) => o.dataset['key'] === 'command:export-csv')!,
     );
     expect(argsOf(p.calls, 'export_ranking')).toEqual([{ format: 'csv' }]);
+  });
+
+  it('« Modèles installés » : trouvé par « désinstaller », ouvre la liste d’Ollama', async () => {
+    const p = await open();
+    await typeInto(p.fixture, p.input, 'desinstaller');
+    expect(p.labels('command')).toEqual(['Modèles installés']);
+    const option = p.options().find((o) => o.dataset['key'] === 'command:installed')!;
+    expect(text(option.querySelector('.opt__hint'))).toBe('Ollama : voir, retirer, supprimer');
+    await click(p.fixture, option);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(p.closed()).toBe(1);
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+    expect(text(dialog?.querySelector('h2'))).toBe('Modèles installés');
   });
 
   it('recherche active : saisie pré-remplie et sélectionnée, commande « Effacer la recherche »', async () => {

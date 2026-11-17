@@ -20,6 +20,7 @@ export function shortcutGroups(mod: (key: string) => string): ShortcutGroup[] {
         { keys: ['Échap'], label: 'Fermer la fiche, le dialogue ou la palette' },
         { keys: ['R'], label: 'Ré-analyser le matériel' },
         { keys: ['E'], label: 'Exporter : menu, puis M (Markdown) ou C (CSV)' },
+        { keys: ['I'], label: 'Modèles installés dans Ollama' },
       ],
     },
     {

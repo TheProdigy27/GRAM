@@ -208,6 +208,12 @@
   }
 }
 
+// « 4 modèles installés », en bas de la carte, texte aligné sur la liste.
+.installed {
+  align-self: flex-start;
+  margin: auto 0 -4px -8px;
+}
+
 // Point plein : en cours (vert) ou installé (gris) ; cercle vide : absent.
 .runtime__dot {
   width: 8px;

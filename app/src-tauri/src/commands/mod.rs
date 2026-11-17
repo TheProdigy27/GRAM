@@ -48,6 +48,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         harness::harness_cancel,
         harness::harness_remove,
         harness::harness_status,
+        harness::ollama_delete,
         harness::harness_open,
         update::check_update,
         update::install_update,

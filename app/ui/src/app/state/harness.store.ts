@@ -14,12 +14,14 @@ import type { HarnessEntry } from '../core/generated/HarnessEntry';
 import type { HarnessStatus } from '../core/generated/HarnessStatus';
 import type { InstallDone } from '../core/generated/InstallDone';
 import type { InstallProgress } from '../core/generated/InstallProgress';
+import type { OllamaModel } from '../core/generated/OllamaModel';
 import type { Preflight } from '../core/generated/Preflight';
 import type { RemoveOutcome } from '../core/generated/RemoveOutcome';
 import type { SharedModel } from '../core/generated/SharedModel';
 import { TauriService, errorMessage } from '../core/tauri.service';
 import { ctxK, fileSize } from '../shared/format';
 import { type VariantRef, sameVariant } from '../shared/harness';
+import { installedModels } from '../shared/installed';
 import { ToastService } from '../shared/ui/toast/toast';
 import { sameJson } from './async';
 import { DetailStore } from './detail.store';
@@ -69,6 +71,10 @@ export class HarnessStore {
   /** GRAM Harness, s'il est installé (il a écrit `harness.json` et son exécutable est là). */
   readonly presence = computed(() => this.status()?.presence ?? null);
   readonly ollamaRunning = computed(() => !!this.hardware.runtimes()?.ollama.running);
+  /** Lignes de la liste « Modèles installés » (vide si Ollama ne répond pas). */
+  readonly installed = computed(() =>
+    installedModels(this.hardware.runtimes()?.ollamaModels ?? [], this.entries()),
+  );
 
   /** Ajout lancé ici, en attente de sa réponse. */
   private pending: VariantRef | null = null;
@@ -270,6 +276,9 @@ export class HarnessStore {
       this.addedWarnings.update((w) =>
         Object.fromEntries(Object.entries(w).filter(([name]) => name !== model.ollamaName)),
       );
+      this.hardware.forgetOllamaModels(
+        r.baseRemoved ? [model.ollamaName, model.baseName] : [model.ollamaName],
+      );
       const base = r.baseRemoved
         ? ` ${model.baseName} est supprimé d’Ollama (${fileSize(model.size)} libérés).`
         : '';
@@ -284,6 +293,37 @@ export class HarnessStore {
         duration: LONG_TOAST_MS,
       });
       return null;
+    } finally {
+      await this.refresh();
+      this.removing.set(null);
+      void this.hardware.refreshRuntimes();
+    }
+  }
+
+  /**
+   * Supprime d'Ollama un modèle installé sans GRAM Harness (liste « Modèles installés »). Ne
+   * rejette pas : l'issue est annoncée par un toast ; `false` en cas d'échec.
+   */
+  async deleteModel(model: OllamaModel): Promise<boolean> {
+    if (this.removing()) return false;
+    this.removing.set(model.name);
+    try {
+      const removed = await this.tauri.ollamaDelete(model.name);
+      this.hardware.forgetOllamaModels([model.name]);
+      // Pas de place libérée annoncée : un fichier partagé avec un autre modèle reste.
+      this.toast.show(
+        removed
+          ? `${model.name} est supprimé d’Ollama.`
+          : `${model.name} n’était déjà plus dans Ollama.`,
+        { kind: 'success', duration: 6000 },
+      );
+      return true;
+    } catch (e) {
+      this.toast.show(`Suppression impossible : ${errorMessage(e)}`, {
+        kind: 'error',
+        duration: LONG_TOAST_MS,
+      });
+      return false;
     } finally {
       await this.refresh();
       this.removing.set(null);
