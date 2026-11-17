@@ -34,6 +34,9 @@ pub const PULL_ERROR_QUANT: &str =
 pub const PULL_ERROR_GATED: &str =
     include_str!("../../../tests/fixtures/ollama/pull-error-gated.ndjson");
 pub const CREATE: &str = include_str!("../../../tests/fixtures/ollama/create.json");
+/// `POST /api/create` depuis une base qui n'est qu'une partie d'un modèle découpé (HTTP 500).
+pub const CREATE_ERROR_SPLIT: &str =
+    include_str!("../../../tests/fixtures/ollama/create-error-split.json");
 /// `POST /api/show` du modèle dérivé de Qwen3 1.7B, réglé à 16 384 tokens.
 pub const SHOW_ALIAS: &str = include_str!("../../../tests/fixtures/ollama/show-alias.json");
 /// `POST /api/chat` de Qwen3 1.7B sans `think` : réflexion (à part) puis réponse, 100 lignes.

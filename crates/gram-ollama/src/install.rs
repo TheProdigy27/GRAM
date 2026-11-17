@@ -5,7 +5,7 @@
 use crate::api::{ModelShow, same_model};
 use crate::client::OllamaClient;
 use crate::error::{OllamaError, Result};
-use gram_core::harness::{InstallPhase, PullProgress, PullTracker};
+use gram_core::harness::{InstallPhase, PullFailure, PullProgress, PullTracker};
 use std::future::Future;
 use std::time::Instant;
 
@@ -29,6 +29,10 @@ pub struct Installed {
 /// garde ce qu'il a reçu, le prochain ajout reprend) et la fonction renvoie `None`.
 /// L'annulation vaut jusqu'à la création du modèle dérivé, qui prend moins d'une seconde : un
 /// ajout annulé ne crée ni ne modifie jamais de modèle dérivé.
+///
+/// Si Ollama refuse de créer le modèle dérivé parce que la base qu'il vient de télécharger
+/// n'est qu'une partie d'un modèle découpé ([`PullFailure::SplitPart`]), cette base est
+/// supprimée avant de renvoyer l'erreur.
 pub async fn install(
     client: &OllamaClient,
     base: &str,
@@ -75,7 +79,23 @@ pub async fn install(
 
     tracker.set_phase(InstallPhase::Creating);
     on_progress(tracker.progress(start.elapsed()));
-    client.create(alias, &base_name, ctx).await?;
+    if let Err(e) = client.create(alias, &base_name, ctx).await {
+        if pulled && e.pull_failure() == Some(PullFailure::SplitPart) {
+            // Hugging Face n'a servi qu'une partie d'un modèle découpé : la base qui vient
+            // d'arriver est inutilisable, autant rendre la place. Une base déjà là avant cet
+            // ajout n'est pas touchée.
+            match client.delete(&base_name).await {
+                Ok(_) => tracing::info!(base = base_name, "base incomplète supprimée d'Ollama"),
+                Err(d) => {
+                    tracing::warn!(
+                        base = base_name,
+                        "base incomplète non supprimée d'Ollama : {d}"
+                    );
+                }
+            }
+        }
+        return Err(e);
+    }
     let show = client.show(alias).await?;
     if show.num_ctx != Some(ctx) {
         tracing::warn!(alias, ctx, num_ctx = ?show.num_ctx, "contexte inattendu dans le modèle dérivé");
@@ -108,8 +128,8 @@ mod tests {
     use super::*;
     use crate::api::Capability;
     use crate::testing::{
-        CREATE, FakeOllama, PULL_ERROR_QUANT, PULL_RESUME, PULL_RESUME_TOTAL, Recorded, Reply,
-        SHOW_ALIAS, tags_json,
+        CREATE, CREATE_ERROR_SPLIT, FakeOllama, PULL_ERROR_QUANT, PULL_RESUME, PULL_RESUME_TOTAL,
+        Recorded, Reply, SHOW_ALIAS, tags_json,
     };
     use std::future::pending;
     use std::sync::Arc;
@@ -278,6 +298,65 @@ mod tests {
             "{err:?}"
         );
         assert_eq!(paths(&fake), ["/api/tags", "/api/pull"]);
+    }
+
+    /// Ollama où la création échoue comme pour une partie de modèle découpé ; la base est
+    /// installée d'emblée si `installed`, sinon après le téléchargement.
+    fn ollama_split(installed: bool) -> FakeOllama {
+        let present = Arc::new(AtomicBool::new(installed));
+        FakeOllama::streaming(
+            move |r: &Recorded| match (r.method.as_str(), r.path.as_str()) {
+                (_, "/api/tags") if present.load(Ordering::SeqCst) => {
+                    Reply::new(200, tags_json(&[BASE]))
+                }
+                (_, "/api/tags") => Reply::new(200, tags_json(&[])),
+                (_, "/api/pull") => {
+                    present.store(true, Ordering::SeqCst);
+                    Reply::ndjson(PULL_RESUME)
+                }
+                (_, "/api/create") => Reply::new(500, CREATE_ERROR_SPLIT),
+                ("DELETE", "/api/delete") => Reply::new(200, ""),
+                _ => Reply::new(404, r#"{"error":"404 page not found"}"#),
+            },
+        )
+    }
+
+    #[tokio::test]
+    async fn partie_de_modele_decoupe_supprimee_apres_telechargement() {
+        let fake = ollama_split(false);
+        let client = OllamaClient::new(fake.url()).unwrap();
+        let err = install(&client, BASE, ALIAS, 4096, |_| {}, pending())
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(&err, OllamaError::Api { status: 500, .. }),
+            "{err:?}"
+        );
+        assert_eq!(err.pull_failure(), Some(PullFailure::SplitPart));
+        assert_eq!(
+            paths(&fake),
+            [
+                "/api/tags",
+                "/api/pull",
+                "/api/tags",
+                "/api/create",
+                "/api/delete"
+            ]
+        );
+        let delete = &fake.requests()[4];
+        assert_eq!(delete.method, "DELETE");
+        assert_eq!(delete.json()["model"], BASE);
+    }
+
+    #[tokio::test]
+    async fn partie_de_modele_decoupe_deja_installee_gardee() {
+        let fake = ollama_split(true);
+        let client = OllamaClient::new(fake.url()).unwrap();
+        let err = install(&client, BASE, ALIAS, 4096, |_| {}, pending())
+            .await
+            .unwrap_err();
+        assert_eq!(err.pull_failure(), Some(PullFailure::SplitPart));
+        assert_eq!(paths(&fake), ["/api/tags", "/api/create"]);
     }
 
     #[tokio::test]

@@ -297,6 +297,9 @@ pub enum PullFailure {
     UnknownQuant,
     /// Quantification découpée en plusieurs fichiers, refusée dès le manifeste.
     Sharded,
+    /// Fichier qui n'est qu'une partie d'un modèle découpé, sous un nom qui ne le dit pas :
+    /// Hugging Face le sert seul, Ollama le télécharge, puis refuse d'en créer un modèle.
+    SplitPart,
 }
 
 impl PullFailure {
@@ -321,6 +324,11 @@ impl PullFailure {
                 "{label} de {repo_id} est découpé en plusieurs fichiers, que Hugging Face ne sert \
                  pas à Ollama : choisir une quantification en un seul fichier, ou lancer le modèle \
                  avec llama.cpp."
+            ),
+            Self::SplitPart => format!(
+                "{label} de {repo_id} n'est qu'une partie d'un modèle découpé en plusieurs \
+                 fichiers (son nom ne l'indique pas) : Ollama ne peut pas s'en servir. Choisir \
+                 une autre quantification ou un autre dépôt."
             ),
         }
     }
@@ -862,6 +870,10 @@ mod tests {
             msg(PullFailure::UnknownQuant, false).starts_with("Hugging Face ne propose pas Q4_K_M")
         );
         assert!(msg(PullFailure::Sharded, false).contains("llama.cpp"));
+        assert!(
+            msg(PullFailure::SplitPart, false)
+                .starts_with("Q4_K_M de Org/Repo-GGUF n'est qu'une partie d'un modèle découpé")
+        );
     }
 
     #[test]

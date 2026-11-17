@@ -447,7 +447,10 @@ pub fn parse_pull_line(line: &[u8]) -> Result<PullEvent> {
 ///   inexistant depuis `hf.co/`) et `401: {"error":"Invalid username or password."}` (depuis
 ///   `huggingface.co/`, clé d'Ollama non enregistrée) ;
 /// - `400: {"error":"The specified tag is not a valid quantization scheme…"}` ;
-/// - `400: {"error":"This repository only contains sharded GGUF files…"}`.
+/// - `400: {"error":"This repository only contains sharded GGUF files…"}` ;
+/// - `invalid split GGUF: split GGUF has 2 remaining shards, expected 5`, renvoyé par
+///   `/api/create` (HTTP 500) quand le fichier téléchargé n'est que la première partie d'un
+///   modèle découpé, sous un nom qui ne le dit pas (`create-error-split.json`).
 pub fn pull_failure(message: &str) -> Option<PullFailure> {
     if message.contains("does not match original host") || message.contains("manifest: 401") {
         Some(PullFailure::Unauthorized)
@@ -455,6 +458,8 @@ pub fn pull_failure(message: &str) -> Option<PullFailure> {
         Some(PullFailure::UnknownQuant)
     } else if message.contains("sharded GGUF") {
         Some(PullFailure::Sharded)
+    } else if message.contains("invalid split GGUF") {
+        Some(PullFailure::SplitPart)
     } else {
         None
     }
@@ -991,6 +996,12 @@ mod tests {
         assert_eq!(
             failure(fixture!("pull-error-sharded.ndjson")),
             Some(PullFailure::Sharded)
+        );
+        let split: serde_json::Value =
+            serde_json::from_slice(fixture!("create-error-split.json")).unwrap();
+        assert_eq!(
+            pull_failure(split["error"].as_str().unwrap()),
+            Some(PullFailure::SplitPart)
         );
         assert_eq!(
             pull_failure("pull model manifest: file does not exist"),

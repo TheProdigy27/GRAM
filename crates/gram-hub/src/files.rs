@@ -21,13 +21,19 @@ pub struct RepoFiles {
     pub mmproj: Option<Mmproj>,
     /// Quantifications écartées pour des bits par poids hors de [1, 40].
     pub rejected: usize,
+    /// Taille totale des quantifications écartées.
+    pub rejected_bytes: u64,
 }
 
 impl RepoFiles {
-    /// Plus de fichiers écartés que gardés : c'est le nombre de paramètres annoncé par
-    /// Hugging Face qui est faux (calculé sur un petit fichier auxiliaire, par exemple).
+    /// Plus de fichiers écartés que gardés, en nombre ou en octets : c'est le nombre de
+    /// paramètres annoncé par Hugging Face qui est faux (calculé sur un petit fichier auxiliaire,
+    /// ou sur une seule partie d'un modèle découpé). Les octets comptent aussi : une poignée de
+    /// vraies quantifications de plusieurs centaines de Go ne doit pas passer derrière une
+    /// dizaine de petits fichiers annexes qui, eux, tombent dans la plage plausible.
     pub fn params_suspect(&self) -> bool {
-        self.rejected > self.variants.len()
+        let kept: u64 = self.variants.iter().map(|v| v.size_bytes).sum();
+        self.rejected > self.variants.len() || self.rejected_bytes > kept
     }
 }
 
@@ -211,6 +217,7 @@ pub fn analyze(repo_id: &str, files: &[RepoFile], params_total: u64) -> RepoFile
 
     let mut variants: Vec<QuantVariant> = Vec::new();
     let mut rejected = 0;
+    let mut rejected_bytes = 0;
     for ((dir, stem), mut g) in groups {
         g.parts.sort();
         let complete = g.parts.len() == g.total_parts as usize
@@ -228,6 +235,7 @@ pub fn analyze(repo_id: &str, files: &[RepoFile], params_total: u64) -> RepoFile
         if params_total > 0 && !BPW_RANGE.contains(&bpw) {
             tracing::debug!(dir, stem, bpw, "bits par poids incohérents, fichier ignoré");
             rejected += 1;
+            rejected_bytes += size_bytes;
             continue;
         }
         if variants.iter().any(|v| v.label == g.label) {
@@ -259,6 +267,7 @@ pub fn analyze(repo_id: &str, files: &[RepoFile], params_total: u64) -> RepoFile
         variants,
         mmproj,
         rejected,
+        rejected_bytes,
     }
 }
 
@@ -495,6 +504,40 @@ mod tests {
         ];
         let r = analyze(REPO, &files, 1_863_907_840);
         assert_eq!(r.variants.len(), 1);
+        assert!(r.params_suspect());
+        // Cas réel (huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF, 748 G
+        // paramètres) : Hugging Face en annonce 1,68 G, lus sur la première partie d'un modèle
+        // découpé dont le nom ne le dit pas. Les vraies quantifications, découpées et
+        // complètes, sont écartées ; des fichiers annexes (correctifs, cette première partie)
+        // tombent dans la plage plausible et sont plus nombreux : seuls les octets trahissent
+        // le nombre de paramètres.
+        let mut files = Vec::new();
+        for quant in ["UD-IQ1_S", "UD-IQ1_M"] {
+            for (i, size) in [
+                5_780_896,
+                49e9 as u64,
+                49e9 as u64,
+                30e9 as u64,
+                110e9 as u64,
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                files.push(f(
+                    &format!("{quant}/DS-{quant}-{:05}-of-00005.gguf", i + 1),
+                    size,
+                ));
+            }
+        }
+        for quant in ["UD-IQ1_S", "UD-IQ1_M", "UD-IQ2_XXS", "UD-IQ3_S"] {
+            files.push(f(
+                &format!("patch-{quant}/DS-{quant}-patch.gguf"),
+                700_000_000,
+            ));
+        }
+        files.push(f("Maya/DS-Maya-XS-IQ1_S.gguf", 1_788_364_288));
+        let r = analyze(REPO, &files, 1_677_721_600);
+        assert_eq!((r.variants.len(), r.rejected), (5, 2), "{:?}", labels(&r));
         assert!(r.params_suspect());
         // Paramètres inconnus : pas de contrôle des bits par poids.
         let r = analyze(REPO, &[f("x-Q4_K_M.gguf", 10)], 0);
