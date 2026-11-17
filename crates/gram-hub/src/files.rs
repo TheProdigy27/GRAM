@@ -58,9 +58,11 @@ const AUX_PREFIXES: &[&str] = &[
     "imatrix",
 ];
 
-/// Mots qui désignent un modèle de brouillon (décodage spéculatif) où qu'ils soient dans le nom
-/// (« Ternary-Bonsai-2-9B-DFlash2-Q8_0.gguf »).
-const AUX_TOKENS: &[&str] = &["dflash", "dspine", "draft", "eagle3"];
+/// Mots qui désignent, où qu'ils soient dans le nom, un modèle de brouillon pour le décodage
+/// spéculatif (« Ternary-Bonsai-2-9B-DFlash2-Q8_0.gguf ») ou un correctif à appliquer par un
+/// script à un autre fichier (« patch-unsloth/…/Huihui-Qwen3.8-27B-abliterated-patch-all-0.gguf »,
+/// « DeepSeek-V4.1-Flash-1017-UD-IQ1_M-patch.gguf ») : ni l'un ni l'autre ne se lance seul.
+const AUX_TOKENS: &[&str] = &["dflash", "dspine", "draft", "eagle3", "patch"];
 
 fn is_auxiliary(basename_lower: &str) -> bool {
     AUX_PREFIXES.iter().any(|p| basename_lower.starts_with(p))
@@ -339,6 +341,15 @@ mod tests {
         assert!(!is_auxiliary("qwen3.5-9b-max-mtp-q4_k_m.gguf"));
         // Mot qui commence seulement par « draft ».
         assert!(!is_auxiliary("drafting-assistant-q4_k_m.gguf"));
+        // Correctifs de huihui-ai, à appliquer par un script.
+        assert!(is_auxiliary(
+            "huihui-qwen3.8-27b-abliterated-patch-all-0.gguf"
+        ));
+        assert!(is_auxiliary("deepseek-v4.1-flash-1017-ud-iq1_m-patch.gguf"));
+        assert!(is_auxiliary(
+            "huihui-deepseek-v4.1-flash-1017-patch-q2-2-0.gguf"
+        ));
+        assert!(!is_auxiliary("mistral-7b-patched-q4_k_m.gguf"));
     }
 
     #[test]
@@ -508,9 +519,8 @@ mod tests {
         // Cas réel (huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF, 748 G
         // paramètres) : Hugging Face en annonce 1,68 G, lus sur la première partie d'un modèle
         // découpé dont le nom ne le dit pas. Les vraies quantifications, découpées et
-        // complètes, sont écartées ; des fichiers annexes (correctifs, cette première partie)
-        // tombent dans la plage plausible et sont plus nombreux : seuls les octets trahissent
-        // le nombre de paramètres.
+        // complètes, sont écartées ; les correctifs aussi, comme fichiers auxiliaires ; seule
+        // reste cette première partie, qui tombe dans la plage plausible.
         let mut files = Vec::new();
         for quant in ["UD-IQ1_S", "UD-IQ1_M"] {
             for (i, size) in [
@@ -537,7 +547,19 @@ mod tests {
         }
         files.push(f("Maya/DS-Maya-XS-IQ1_S.gguf", 1_788_364_288));
         let r = analyze(REPO, &files, 1_677_721_600);
-        assert_eq!((r.variants.len(), r.rejected), (5, 2), "{:?}", labels(&r));
+        assert_eq!(labels(&r), vec!["IQ1_S"]);
+        assert_eq!(r.rejected, 2);
+        assert!(r.params_suspect());
+        // Fichiers annexes plausibles plus nombreux que les vraies quantifications écartées :
+        // seuls les octets trahissent le nombre de paramètres.
+        let mut files: Vec<RepoFile> = ["Q2_K", "Q3_K_M", "Q4_K_M"]
+            .iter()
+            .map(|q| f(&format!("DS-annexe-{q}.gguf"), 700_000_000))
+            .collect();
+        files.push(f("DS-UD-IQ1_S.gguf", 240e9 as u64));
+        files.push(f("DS-UD-IQ1_M.gguf", 250e9 as u64));
+        let r = analyze(REPO, &files, 1_677_721_600);
+        assert_eq!((r.variants.len(), r.rejected), (3, 2), "{:?}", labels(&r));
         assert!(r.params_suspect());
         // Paramètres inconnus : pas de contrôle des bits par poids.
         let r = analyze(REPO, &[f("x-Q4_K_M.gguf", 10)], 0);
