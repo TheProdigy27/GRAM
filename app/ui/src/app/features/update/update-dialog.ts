@@ -1,4 +1,5 @@
 import { DialogRef } from '@angular/cdk/dialog';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject } from '@angular/core';
 import { errorMessage } from '../../core/errors';
 import { UpdateApi } from '../../core/update-api';
@@ -29,7 +30,7 @@ export function releaseDate(iso: string | null): string | null {
  */
 @Component({
   selector: 'app-update-dialog',
-  imports: [Button, Callout, GDialog, Icon, Progress, Spinner],
+  imports: [Button, Callout, GDialog, Icon, NgTemplateOutlet, Progress, Spinner],
   templateUrl: './update-dialog.html',
   styleUrl: './update-dialog.scss',
 })

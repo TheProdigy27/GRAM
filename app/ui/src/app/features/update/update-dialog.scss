@@ -76,6 +76,21 @@
     margin: 4px 0;
   }
 
+  strong {
+    font-weight: 600;
+  }
+
+  // Noms de fichiers et commandes : coupés au besoin plutôt que de déborder.
+  code {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: var(--g-track);
+    color: var(--g-fg);
+    overflow-wrap: anywhere;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
   .item {
     position: relative;
     padding-left: 16px;

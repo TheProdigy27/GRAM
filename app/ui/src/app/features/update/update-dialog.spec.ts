@@ -5,14 +5,15 @@ import { clearMocks } from '@tauri-apps/api/mocks';
 import { type Handler, argsOf, mockBackend } from '../../../testing/backend';
 import { text } from '../../../testing/dom';
 import type { UpdateCheck } from '../../core/generated/UpdateCheck';
-import { RELEASES_URL, UpdateStore, noteBlocks } from '../../state/update.store';
+import { RELEASES_URL, UpdateStore, noteBlocks, noteSpans } from '../../state/update.store';
 import { UpdateDialog, releaseDate } from './update-dialog';
 
 const AVAILABLE: UpdateCheck = {
   currentVersion: '0.1.0',
   update: {
     version: '0.2.0',
-    notes: '## Nouveautés\n\n- Mises à jour automatiques\n- Export plus rapide\n\nMerci !',
+    notes:
+      '## Nouveautés\n\n- **Mises à jour** automatiques\n- Export `CSV` plus rapide\n\nMerci !',
     date: '2026-11-11T12:00:00Z',
   },
 };
@@ -44,15 +45,53 @@ describe('UpdateDialog', () => {
   afterEach(() => clearMocks());
 
   it('notes de version et date', () => {
+    const plain = (text: string) => [{ style: 'text', text }];
     expect(noteBlocks(AVAILABLE.update!.notes!)).toEqual([
-      { kind: 'heading', text: 'Nouveautés' },
-      { kind: 'item', text: 'Mises à jour automatiques' },
-      { kind: 'item', text: 'Export plus rapide' },
-      { kind: 'text', text: 'Merci !' },
+      { kind: 'heading', spans: plain('Nouveautés') },
+      {
+        kind: 'item',
+        spans: [
+          { style: 'strong', text: 'Mises à jour' },
+          { style: 'text', text: ' automatiques' },
+        ],
+      },
+      {
+        kind: 'item',
+        spans: [
+          { style: 'text', text: 'Export ' },
+          { style: 'code', text: 'CSV' },
+          { style: 'text', text: ' plus rapide' },
+        ],
+      },
+      { kind: 'text', spans: plain('Merci !') },
     ]);
     expect(noteBlocks('* <b>pas du HTML</b>')).toEqual([
-      { kind: 'item', text: '<b>pas du HTML</b>' },
+      { kind: 'item', spans: plain('<b>pas du HTML</b>') },
     ]);
+    // Une ligne sans ligne vide avant continue le paragraphe ou l'élément.
+    expect(noteBlocks('Un paragraphe\ncoupé.\n- Un élément\nsur deux lignes\n\nFin')).toEqual([
+      { kind: 'text', spans: plain('Un paragraphe coupé.') },
+      { kind: 'item', spans: plain('Un élément sur deux lignes') },
+      { kind: 'text', spans: plain('Fin') },
+    ]);
+
+    expect(noteSpans('**Windows** : `GRAM_0.3.1_x64-setup.exe`, *Exécuter quand même*.')).toEqual([
+      { style: 'strong', text: 'Windows' },
+      { style: 'text', text: ' : ' },
+      { style: 'code', text: 'GRAM_0.3.1_x64-setup.exe' },
+      { style: 'text', text: ', ' },
+      { style: 'em', text: 'Exécuter quand même' },
+      { style: 'text', text: '.' },
+    ]);
+    // Le code est pris tel quel ; un lien garde son texte ; un caractère échappé reste du texte.
+    expect(noteSpans('`*.app.tar.gz` avec [Ollama](https://ollama.com/download) \\*')).toEqual([
+      { style: 'code', text: '*.app.tar.gz' },
+      { style: 'text', text: ' avec Ollama *' },
+    ]);
+    // Marqueurs sans fermeture, ou entourés d'espaces : du texte.
+    expect(noteSpans('2 * 3 * 4, **ouvert, `ouvert')).toEqual(
+      plain('2 * 3 * 4, **ouvert, `ouvert'),
+    );
     expect(releaseDate('2026-11-11T12:00:00Z')).toBe('11 novembre 2026');
     expect(releaseDate('pas une date')).toBeNull();
     expect(releaseDate(null)).toBeNull();
@@ -88,8 +127,12 @@ describe('UpdateDialog', () => {
     expect(text(notes.querySelector('h3'))).toBe('Nouveautés');
     expect([...notes.querySelectorAll('.item')].map(text)).toEqual([
       'Mises à jour automatiques',
-      'Export plus rapide',
+      'Export CSV plus rapide',
     ]);
+    // Styles Markdown appliqués, sans marqueurs à l'écran.
+    expect(text(notes.querySelector('.item strong'))).toBe('Mises à jour');
+    expect(text(notes.querySelector('.item code'))).toBe('CSV');
+    expect(notes.textContent).not.toMatch(/[*`]/);
 
     await click('update-install');
     expect(argsOf(calls, 'install_update')).toHaveLength(1);

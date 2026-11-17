@@ -31,13 +31,25 @@
               @for (block of notes(); track $index) {
                 @switch (block.kind) {
                   @case ('heading') {
-                    <h3>{{ block.text }}</h3>
+                    <h3>
+                      <ng-container
+                        *ngTemplateOutlet="inline; context: { $implicit: block.spans }"
+                      />
+                    </h3>
                   }
                   @case ('item') {
-                    <p class="item">{{ block.text }}</p>
+                    <p class="item">
+                      <ng-container
+                        *ngTemplateOutlet="inline; context: { $implicit: block.spans }"
+                      />
+                    </p>
                   }
                   @default {
-                    <p>{{ block.text }}</p>
+                    <p>
+                      <ng-container
+                        *ngTemplateOutlet="inline; context: { $implicit: block.spans }"
+                      />
+                    </p>
                   }
                 }
               }
@@ -115,3 +127,23 @@
     }
   </div>
 </g-dialog>
+
+<!-- Styles d'un bloc des notes : chaque morceau dans son élément, sans espace ajoutée entre eux. -->
+<ng-template #inline let-spans>
+  @for (span of spans; track $index) {
+    @switch (span.style) {
+      @case ('strong') {
+        <strong>{{ span.text }}</strong>
+      }
+      @case ('em') {
+        <em>{{ span.text }}</em>
+      }
+      @case ('code') {
+        <code>{{ span.text }}</code>
+      }
+      @default {
+        <span>{{ span.text }}</span>
+      }
+    }
+  }
+</ng-template>

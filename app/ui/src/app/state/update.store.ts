@@ -101,27 +101,72 @@ export class UpdateStore {
   }
 }
 
-/** Bloc des notes de version : titre, élément de liste ou paragraphe. */
-export interface NoteBlock {
-  kind: 'heading' | 'item' | 'text';
+/** Morceau de texte des notes de version : texte simple, gras, italique ou code. */
+export interface NoteSpan {
+  style: 'text' | 'strong' | 'em' | 'code';
   text: string;
 }
 
+/** Bloc des notes de version : titre, élément de liste ou paragraphe. */
+export interface NoteBlock {
+  kind: 'heading' | 'item' | 'text';
+  spans: NoteSpan[];
+}
+
 /**
- * Notes de version (Markdown simple) en blocs affichés comme du texte : titres `#`, listes `-`
- * ou `*`, paragraphes. Le reste de la syntaxe est laissé tel quel (rien n'est interprété comme
- * du HTML).
+ * Notes de version (Markdown simple) en blocs : titres `#`, listes `-` ou `*`, paragraphes. Une
+ * ligne qui suit sans ligne vide continue le paragraphe ou l'élément précédent. Dans chaque bloc,
+ * les styles de `noteSpans` ; rien n'est interprété comme du HTML.
  */
 export function noteBlocks(markdown: string): NoteBlock[] {
-  const blocks: NoteBlock[] = [];
+  const blocks: { kind: NoteBlock['kind']; text: string }[] = [];
+  /** Le dernier bloc (paragraphe ou élément) continue sur la ligne suivante. */
+  let open = false;
   for (const raw of markdown.split(/\r?\n/)) {
     const line = raw.trim();
-    if (!line) continue;
     const heading = /^#{1,6}\s+(.*)$/.exec(line);
     const item = /^[-*]\s+(.*)$/.exec(line);
-    if (heading) blocks.push({ kind: 'heading', text: heading[1] });
-    else if (item) blocks.push({ kind: 'item', text: item[1] });
-    else blocks.push({ kind: 'text', text: line });
+    if (!line || heading) {
+      if (heading) blocks.push({ kind: 'heading', text: heading[1] });
+      open = false;
+    } else if (item) {
+      blocks.push({ kind: 'item', text: item[1] });
+      open = true;
+    } else if (open) {
+      blocks[blocks.length - 1].text += ` ${line}`;
+    } else {
+      blocks.push({ kind: 'text', text: line });
+      open = true;
+    }
   }
-  return blocks;
+  return blocks.map(({ kind, text }) => ({ kind, spans: noteSpans(text) }));
+}
+
+/**
+ * `code` (pris tel quel), **gras**, *italique*, [lien](https://…) réduit à son texte (GRAM
+ * n'ouvre que Hugging Face et GitHub) et caractère échappé (`\*`).
+ */
+const INLINE =
+  /`([^`]+)`|\*\*([^*\s](?:.*?\S)?)\*\*|\*([^*\s](?:.*?\S)?)\*|\[([^\]]+)\]\([^)\s]*\)|\\([\\`*_[\]()#+\-.!])/g;
+
+/** Styles d'une ligne des notes de version ; un marqueur sans fermeture reste du texte. */
+export function noteSpans(line: string): NoteSpan[] {
+  const spans: NoteSpan[] = [];
+  const push = (style: NoteSpan['style'], text: string) => {
+    const last = spans.at(-1);
+    if (style === 'text' && last?.style === 'text') last.text += text;
+    else if (text) spans.push({ style, text });
+  };
+  let at = 0;
+  for (const m of line.matchAll(INLINE)) {
+    push('text', line.slice(at, m.index));
+    const [, code, strong, em, link, escaped] = m;
+    if (code !== undefined) push('code', code);
+    else if (strong !== undefined) push('strong', strong);
+    else if (em !== undefined) push('em', em);
+    else push('text', link ?? escaped ?? '');
+    at = m.index + m[0].length;
+  }
+  push('text', line.slice(at));
+  return spans;
 }
