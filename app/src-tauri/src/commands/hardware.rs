@@ -2,6 +2,7 @@
 
 use crate::error::CmdResult;
 use crate::state::AppState;
+use gram_core::runtime::link_catalog;
 use gram_core::{HardwareProfile, Overrides, RuntimesStatus};
 use gram_hw::GpuSpecs;
 use serde::Serialize;
@@ -102,10 +103,18 @@ pub async fn hardware_options<R: Runtime>(
     })
 }
 
-/// Ollama, LM Studio et llama.cpp : installés, en cours d'exécution.
+/// Ollama, LM Studio et llama.cpp : installés, en cours d'exécution. Les modèles d'Ollama sont
+/// rapprochés du catalogue : « Modèles installés » ouvre leur fiche.
 #[tauri::command]
 pub async fn detect_runtimes(state: State<'_, AppState>) -> CmdResult<RuntimesStatus> {
-    state.detect_runtimes().await
+    let mut status = state.detect_runtimes().await?;
+    // Sans catalogue lisible, les modèles restent sans fiche.
+    if !status.ollama_models.is_empty()
+        && let Ok(catalog) = state.catalog().await
+    {
+        link_catalog(&mut status.ollama_models, &catalog.models);
+    }
+    Ok(status)
 }
 
 #[cfg(test)]

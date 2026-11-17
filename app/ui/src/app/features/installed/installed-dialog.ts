@@ -1,3 +1,4 @@
+import { DialogRef } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   Component,
@@ -18,6 +19,7 @@ import { DialogService, GDialog } from '../../shared/ui/dialog/dialog';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { Icon } from '../../shared/ui/icon/icon';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
+import { DetailStore } from '../../state/detail.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { HarnessStore } from '../../state/harness.store';
 import type { RemoveChoice } from '../model-detail/harness-remove-dialog';
@@ -31,6 +33,7 @@ type ListState = 'loading' | 'absent' | 'stopped' | 'empty' | 'list';
  * « Retirer » et son dialogue habituel (la base peut partir avec, si GRAM l'a téléchargée) ;
  * puis les autres, avec « Supprimer » après confirmation. Une suppression à la fois ; la ligne
  * disparaît dès qu'Ollama a répondu, et le focus passe au bouton de la ligne suivante.
+ * Un clic sur une ligne ouvre la fiche du modèle, quand il est dans le catalogue.
  */
 @Component({
   selector: 'app-installed-dialog',
@@ -41,7 +44,10 @@ type ListState = 'loading' | 'absent' | 'stopped' | 'empty' | 'list';
 export class InstalledDialog {
   protected readonly store = inject(HarnessStore);
   private readonly hardware = inject(HardwareStore);
+  private readonly detail = inject(DetailStore);
   private readonly dialogs = inject(DialogService);
+  /** Absent quand le composant est créé seul (tests). */
+  private readonly ref = inject(DialogRef, { optional: true });
   private readonly pendingTasks = inject(PendingTasks);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -100,6 +106,15 @@ export class InstalledDialog {
     } finally {
       this.refreshing.set(false);
     }
+  }
+
+  /**
+   * Clic sur une ligne : la fiche du modèle, sur la quantification installée. Le dialogue se
+   * ferme d'abord (comme la palette) : la fiche s'ouvre à côté du classement.
+   */
+  protected openDetail(repoId: string, quant: string | null): void {
+    this.ref?.close();
+    this.detail.open(repoId, quant);
   }
 
   /** « Retirer » : le dialogue de la fiche, qui propose la base quand c'est permis. */

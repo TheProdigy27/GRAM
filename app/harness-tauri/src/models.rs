@@ -134,6 +134,7 @@ fn model(t: &TaggedModel, show: Option<&ModelShow>, entry: Option<&SharedModel>)
         repo_id,
         quant,
         size,
+        ..
     } = &t.model;
     // L'étiquette d'un modèle de Hugging Face est sa quantification ; celle d'un modèle de la
     // bibliothèque d'Ollama, une taille (`qwen3:8b`).

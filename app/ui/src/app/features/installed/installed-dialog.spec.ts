@@ -13,6 +13,7 @@ import {
 } from '../../../testing/fixtures';
 import type { HarnessStatus } from '../../core/generated/HarnessStatus';
 import type { RuntimesStatus } from '../../core/generated/RuntimesStatus';
+import { DetailStore } from '../../state/detail.store';
 import { HarnessStore } from '../../state/harness.store';
 import { FILTER_DEBOUNCE_MS } from '../../state/ranking.store';
 import { InstalledDialog } from './installed-dialog';
@@ -110,6 +111,28 @@ describe('InstalledDialog (Modèles installés)', () => {
     expect(text(library.querySelector('.row__title'))).toBe('qwen3:8b');
     expect(text(library.querySelector('.row__facts'))).toBe('Q4_K_M');
     expect(text(library.querySelector('.row__size'))).toBe('5,2 Go');
+  });
+
+  it('un clic sur une ligne ouvre la fiche, sur la quantification installée', async () => {
+    const { fixture, el } = await open();
+    const detail = TestBed.inject(DetailStore);
+    const added = byTestId('installed-open', row(el, 'gram/qwen3-8b:q4_k_m'));
+    expect(added.getAttribute('aria-label')).toBe('Ouvrir la fiche de Qwen3-8B Q4_K_M');
+    expect(byTestId('installed-open', row(el, QWEN_1_7)).getAttribute('aria-label')).toBe(
+      'Ouvrir la fiche de Qwen3-1.7B Q4_K_M',
+    );
+    // Hors du catalogue (dépôt inconnu, bibliothèque d'Ollama) : pas de fiche.
+    expect(queryTestId('installed-open', row(el, HUIHUI))).toBeNull();
+    expect(queryTestId('installed-open', row(el, 'qwen3:8b'))).toBeNull();
+
+    await click(fixture, added);
+    await settle(fixture);
+    expect(detail.repoId()).toBe('Qwen/Qwen3-8B-GGUF');
+    // La meilleure quantification de la fiche est Q8_0 : c'est bien celle installée qui est choisie.
+    expect(detail.selectedLabel()).toBe('Q4_K_M');
+
+    await click(fixture, byTestId('installed-open', row(el, QWEN_1_7)));
+    expect(detail.repoId()).toBe('Qwen/Qwen3-1.7B-GGUF');
   });
 
   it('supprimer : confirmation, puis la ligne disparaît et le focus passe à la suivante', async () => {

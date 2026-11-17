@@ -19,6 +19,7 @@ import {
   HARDWARE,
   INSTALL_PROGRESS,
   RANKING,
+  RUNTIMES,
   SYNC_SUMMARY,
   makeItem,
   makePick,
@@ -252,6 +253,32 @@ describe('App', () => {
     expect(dialogs()).toHaveLength(1);
     await press(fixture, document.body, 'Escape');
     expect(dialogs()).toHaveLength(0);
+  });
+
+  it('modèles installés : un clic sur une ligne ferme le dialogue et ouvre la fiche', async () => {
+    mockBackend({
+      detect_runtimes: () => ({
+        ...RUNTIMES,
+        ollamaModels: [
+          {
+            name: 'hf.co/bartowski/Qwen_Qwen3-8B-GGUF:q4_k_m',
+            repoId: 'bartowski/Qwen_Qwen3-8B-GGUF',
+            quant: 'q4_k_m',
+            size: 4.7 * GIB,
+            catalogRepoId: 'Qwen/Qwen3-8B-GGUF',
+          },
+        ],
+      }),
+    });
+    const fixture = await start();
+    const el = fixture.nativeElement as HTMLElement;
+
+    await press(fixture, document.body, 'i');
+    await click(fixture, byTestId('installed-open', dialogs().at(-1)!));
+    expect(dialogs()).toHaveLength(0);
+    expect(text(byTestId('detail-title', el))).toBe('Qwen3-8B');
+    // Étiquette en minuscules dans Ollama : la quantification de la fiche (la meilleure est Q8_0).
+    expect(TestBed.inject(DetailStore).selectedLabel()).toBe('Q4_K_M');
   });
 
   it('ouvre la fiche détail au clic sur une ligne', async () => {

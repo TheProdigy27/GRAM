@@ -573,6 +573,17 @@ fn modeles_installes_dans_ollama() {
     assert_eq!(models[0]["name"], "hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M");
     assert_eq!(models[0]["repoId"], QWEN);
     assert_eq!(models[2]["repoId"], Value::Null);
+    // Rapprochés du catalogue (fiche ouverte depuis « Modèles installés ») : le MoE est installé
+    // depuis une alternative de son dépôt canonique.
+    let linked: Vec<&Value> = models.iter().map(|m| &m["catalogRepoId"]).collect();
+    assert_eq!(
+        linked,
+        [
+            &json!(QWEN),
+            &json!("Qwen/Qwen3-30B-A3B-GGUF"),
+            &Value::Null
+        ]
+    );
 
     // Classement : quantifications installées depuis un des dépôts du modèle.
     let r = h.ok("rank", json!({ "request": { "showTooBig": true } }));

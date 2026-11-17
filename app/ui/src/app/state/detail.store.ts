@@ -26,6 +26,14 @@ export interface RecentModel {
 /** Modèles récents gardés, le plus récent d'abord. */
 export const MAX_RECENT = 4;
 
+/** Libellé d'une quantification de la fiche, sans tenir compte de la casse (`q4_k_m` d'Ollama). */
+function variantLabel(d: ModelDetail, label: string | null | undefined): string | undefined {
+  const wanted = label?.toLowerCase();
+  return wanted
+    ? d.variants.find((v) => v.variant.label.toLowerCase() === wanted)?.variant.label
+    : undefined;
+}
+
 /**
  * Fiche détail du modèle sélectionné, avec les filtres du classement (cas d'usage, contexte,
  * runtime, taille maximale), et la quantification choisie dans son tableau.
@@ -119,8 +127,9 @@ export class DetailStore {
       const kept = previous?.value ?? undefined;
       const sameModel = previous?.source?.model.repoId === d.model.repoId;
       if (sameModel && has(kept)) return kept!;
-      const wanted = this.wanted?.repoId === d.model.repoId ? this.wanted.label : undefined;
-      if (has(wanted)) return wanted!;
+      const wanted =
+        this.wanted?.repoId === d.model.repoId ? variantLabel(d, this.wanted.label) : undefined;
+      if (wanted) return wanted;
       const best = d.best ?? 0;
       return d.variants[best]?.variant.label ?? null;
     },
@@ -149,9 +158,8 @@ export class DetailStore {
     this.repoId.set(repoId);
     // Fiche déjà affichée pour ce modèle : la sélection ne se recalcule pas d'elle-même.
     const d = this.detail();
-    if (label && d?.model.repoId === repoId && d.variants.some((v) => v.variant.label === label)) {
-      this.selectedLabel.set(label);
-    }
+    const shown = d?.model.repoId === repoId ? variantLabel(d, label) : undefined;
+    if (shown) this.selectedLabel.set(shown);
   }
 
   close(): void {

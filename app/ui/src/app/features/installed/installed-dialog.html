@@ -78,6 +78,13 @@
               @for (row of installed().harness; track row.entry.model.ollamaName) {
                 @let m = row.entry.model;
                 <li class="row" data-testid="installed-row" [attr.data-name]="m.ollamaName">
+                  <button
+                    type="button"
+                    class="row__open"
+                    data-testid="installed-open"
+                    [attr.aria-label]="'Ouvrir la fiche de ' + m.displayName + ' ' + m.quant"
+                    (click)="openDetail(m.repoId, m.quant)"
+                  ></button>
                   <div class="row__main">
                     <strong class="row__title">{{ m.displayName }} {{ m.quant }}</strong>
                     <span class="row__facts">
@@ -119,6 +126,15 @@
             <ul class="rows" data-testid="installed-others">
               @for (row of installed().others; track row.model.name) {
                 <li class="row" data-testid="installed-row" [attr.data-name]="row.model.name">
+                  @if (row.model.catalogRepoId; as repoId) {
+                    <button
+                      type="button"
+                      class="row__open"
+                      data-testid="installed-open"
+                      [attr.aria-label]="'Ouvrir la fiche de ' + row.title"
+                      (click)="openDetail(repoId, row.model.quant)"
+                    ></button>
+                  }
                   <div class="row__main">
                     <strong class="row__title" [class.mono]="row.title === row.model.name">{{
                       row.title

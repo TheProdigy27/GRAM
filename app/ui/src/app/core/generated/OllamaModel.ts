@@ -20,4 +20,9 @@ quant: string | null,
 /**
  * Taille sur le disque, en octets.
  */
-size: number, };
+size: number, 
+/**
+ * Modèle du catalogue de GRAM installé sous ce nom (son dépôt canonique, pour ouvrir sa
+ * fiche) : renseigné par `link_catalog`, absent hors du catalogue ou avant le rapprochement.
+ */
+catalogRepoId?: string | null, };

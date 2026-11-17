@@ -32,6 +32,11 @@ pub struct OllamaModel {
     pub quant: Option<String>,
     /// Taille sur le disque, en octets.
     pub size: u64,
+    /// Modèle du catalogue de GRAM installé sous ce nom (son dépôt canonique, pour ouvrir sa
+    /// fiche) : renseigné par `link_catalog`, absent hors du catalogue ou avant le rapprochement.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub catalog_repo_id: Option<String>,
 }
 
 /// Préfixes des modèles installés depuis Hugging Face (`ollama pull hf.co/{dépôt}:{quant}`).
@@ -54,6 +59,7 @@ impl OllamaModel {
             quant,
             name,
             size,
+            catalog_repo_id: None,
         }
     }
 
@@ -123,6 +129,27 @@ pub fn installed_variant<'a>(
         return Some(first);
     }
     Some(candidates.find(same_repo).unwrap_or(first))
+}
+
+/// Modèle du catalogue installé sous `om` : celui dont c'est le dépôt canonique, sinon le
+/// premier dont c'est un dépôt alternatif ou celui d'une quantification (comme `installed_for`).
+pub fn catalog_model<'a>(models: &'a [ModelEntry], om: &OllamaModel) -> Option<&'a ModelEntry> {
+    let repo = om.repo_id.as_deref()?;
+    models
+        .iter()
+        .find(|m| m.repo_id.eq_ignore_ascii_case(repo))
+        .or_else(|| {
+            models
+                .iter()
+                .find(|m| installed_for(std::slice::from_ref(om), m).next().is_some())
+        })
+}
+
+/// Renseigne `catalog_repo_id` de chaque modèle installé.
+pub fn link_catalog(installed: &mut [OllamaModel], models: &[ModelEntry]) {
+    for om in installed {
+        om.catalog_repo_id = catalog_model(models, om).map(|m| m.repo_id.clone());
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
@@ -257,5 +284,46 @@ mod tests {
         );
         assert_eq!(name("Qwen/Qwen3-8B-GGUF", "Q8_0"), None);
         assert_eq!(installed_for(&installed[3..], &m).count(), 0);
+    }
+
+    #[test]
+    fn modele_du_catalogue() {
+        let mut installed = [
+            OllamaModel::new("hf.co/unsloth/qwen3-8b-gguf:Q4_K_M", 1, None),
+            OllamaModel::new("hf.co/bartowski/Qwen_Qwen3-8B-GGUF:IQ4_XS", 1, None),
+            OllamaModel::new("hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M", 1, None),
+            OllamaModel::new("hf.co/Qwen/Qwen3-14B-GGUF:Q4_K_M", 1, None),
+            OllamaModel::new("qwen3:8b", 1, Some("Q4_K_M")),
+        ];
+        // Un fine-tune qui cite le dépôt de Qwen3-8B parmi ses alternatives, placé avant lui :
+        // le dépôt canonique l'emporte.
+        let mut fine_tune = entry();
+        fine_tune.repo_id = "acme/Qwen3-8B-Tuned-GGUF".into();
+        fine_tune.variants.clear();
+        fine_tune.alternatives[0].repo_id = "Qwen/Qwen3-8B-GGUF".into();
+        let models = [fine_tune, entry()];
+        link_catalog(&mut installed, &models);
+        let linked: Vec<_> = installed
+            .iter()
+            .map(|om| om.catalog_repo_id.as_deref())
+            .collect();
+        assert_eq!(
+            linked,
+            [
+                Some("Qwen/Qwen3-8B-GGUF"),
+                Some("Qwen/Qwen3-8B-GGUF"),
+                Some("Qwen/Qwen3-8B-GGUF"),
+                None,
+                None
+            ]
+        );
+        let json = serde_json::to_value(&installed[0]).unwrap();
+        assert_eq!(json["catalogRepoId"], "Qwen/Qwen3-8B-GGUF");
+        // Ancien format (sans `catalogRepoId`) toujours lisible.
+        let old: OllamaModel = serde_json::from_str(
+            r#"{ "name": "qwen3:8b", "repoId": null, "quant": "8b", "size": 1 }"#,
+        )
+        .unwrap();
+        assert_eq!(old.catalog_repo_id, None);
     }
 }

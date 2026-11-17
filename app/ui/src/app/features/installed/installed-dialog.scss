@@ -42,6 +42,7 @@
 }
 
 .row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -75,8 +76,27 @@
   color: var(--g-fg-2);
 }
 
-// « Retirer » et « Supprimer » de même largeur : les tailles restent en colonne.
+// Bouton posé sur toute la ligne : un clic ouvre la fiche du modèle. Son anneau de focus
+// entoure la ligne.
+.row__open {
+  position: absolute;
+  inset: -1px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--g-radius-card);
+  background: transparent;
+  cursor: pointer;
+
+  // Voile : le texte de la ligne reste lisible à travers.
+  &:hover {
+    background: var(--g-hover-overlay);
+  }
+}
+
+// « Retirer » et « Supprimer » de même largeur : les tailles restent en colonne. Positionnés
+// après le bouton de la ligne, ils restent au-dessus de lui.
 [data-row-action] {
+  position: relative;
   flex: none;
   min-width: 92px;
 }

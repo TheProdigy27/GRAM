@@ -626,7 +626,8 @@ export const SHARED_MODEL: SharedModel = {
 
 /**
  * Ollama avec `SHARED_MODEL` (modèle dérivé et base) et trois modèles installés sans GRAM
- * Harness, dont une bibliothèque d'Ollama ; dans le désordre.
+ * Harness, dont une bibliothèque d'Ollama ; dans le désordre. Rapprochés du catalogue comme le
+ * fait `detect_runtimes` (ni huihui-ai ni la bibliothèque d'Ollama n'y sont).
  */
 export const INSTALLED_MODELS: OllamaModel[] = [
   { name: 'qwen3:8b', repoId: null, quant: 'Q4_K_M', size: 5.2 * GIB },
@@ -636,12 +637,14 @@ export const INSTALLED_MODELS: OllamaModel[] = [
     repoId: 'unsloth/Qwen3-1.7B-GGUF',
     quant: 'Q4_K_M',
     size: 1.1 * GIB,
+    catalogRepoId: 'Qwen/Qwen3-1.7B-GGUF',
   },
   {
     name: 'hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M',
     repoId: 'Qwen/Qwen3-8B-GGUF',
     quant: 'Q4_K_M',
     size: 4.7 * GIB,
+    catalogRepoId: 'Qwen/Qwen3-8B-GGUF',
   },
   {
     name: 'hf.co/huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF:IQ1_S',

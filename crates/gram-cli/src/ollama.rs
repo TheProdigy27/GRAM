@@ -7,10 +7,8 @@ use anyhow::{Context, Result, bail};
 use gram_core::calibration::{Calibration, Measurement, calibrate, measurement};
 use gram_core::estimate::{candidate_variants, estimate};
 use gram_core::fmt::{gb, num, thousands, tok_s};
-use gram_core::runtime::{installed_for, installed_variant};
-use gram_core::{
-    EstimateParams, MemoryBudget, ModelEntry, OllamaModel, QuantTable, RunMode, Workload,
-};
+use gram_core::runtime::{installed_for, installed_variant, link_catalog};
+use gram_core::{EstimateParams, MemoryBudget, OllamaModel, QuantTable, RunMode, Workload};
 use gram_ollama::OllamaClient;
 use serde::Serialize;
 use std::fmt::Write as _;
@@ -26,15 +24,6 @@ pub struct OllamaArgs {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Installed<'a> {
-    #[serde(flatten)]
-    model: &'a OllamaModel,
-    /// Modèle du catalogue correspondant.
-    catalog_repo_id: Option<&'a str>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 struct MeasureReport {
     measurement: Measurement,
     calibration: Calibration,
@@ -44,23 +33,17 @@ pub fn run(args: OllamaArgs) -> Result<()> {
     let client = OllamaClient::from_env()
         .context("adresse de l'API d'Ollama inutilisable (variable OLLAMA_HOST)")?;
     let rt = runtime()?;
-    let installed = rt.block_on(client.tags())?;
+    let mut installed = rt.block_on(client.tags())?;
     let cache = cache(args.cache_dir)?;
     let (catalog, _) = gram_hub::load_offline(&cache)
         .context("aucun catalogue disponible : lancer `gram-cli sync`")?;
 
     let Some(query) = args.measure else {
-        let rows: Vec<Installed> = installed
-            .iter()
-            .map(|om| Installed {
-                model: om,
-                catalog_repo_id: catalog_match(&catalog.models, om).map(|m| m.repo_id.as_str()),
-            })
-            .collect();
+        link_catalog(&mut installed, &catalog.models);
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&rows)?);
+            println!("{}", serde_json::to_string_pretty(&installed)?);
         } else {
-            print!("{}", render_list(client.base_url(), &rows));
+            print!("{}", render_list(client.base_url(), &installed));
         }
         return Ok(());
     };
@@ -126,14 +109,7 @@ pub fn run(args: OllamaArgs) -> Result<()> {
     Ok(())
 }
 
-/// Modèle du catalogue installé sous ce nom (dépôt canonique, alternatif ou d'une variante).
-fn catalog_match<'a>(models: &'a [ModelEntry], om: &OllamaModel) -> Option<&'a ModelEntry> {
-    models
-        .iter()
-        .find(|m| installed_for(std::slice::from_ref(om), m).next().is_some())
-}
-
-fn render_list(base: &str, rows: &[Installed]) -> String {
+fn render_list(base: &str, rows: &[OllamaModel]) -> String {
     let mut out = String::new();
     let _ = writeln!(
         out,
@@ -141,17 +117,17 @@ fn render_list(base: &str, rows: &[Installed]) -> String {
         rows.len()
     );
     for r in rows {
-        let catalog = match r.catalog_repo_id {
+        let catalog = match &r.catalog_repo_id {
             Some(repo) => format!("catalogue : {repo}"),
-            None if r.model.repo_id.is_some() => "absent du catalogue".into(),
+            None if r.repo_id.is_some() => "absent du catalogue".into(),
             None => "bibliothèque d'Ollama (non rapprochée)".into(),
         };
         let _ = writeln!(
             out,
             "  {:<52} {:>9}  {:<10} {catalog}",
-            r.model.name,
-            gb(r.model.size),
-            r.model.quant.as_deref().unwrap_or("—"),
+            r.name,
+            gb(r.size),
+            r.quant.as_deref().unwrap_or("—"),
         );
     }
     out
