@@ -10,6 +10,6 @@ export type UpdateCheck = {
  */
 currentVersion: string, 
 /**
- * Mise à jour proposée par la dernière release ; `None` si GRAM est à jour.
+ * Mise à jour proposée par la dernière release ; `None` si l'application est à jour.
  */
 update: UpdateInfo | null, };

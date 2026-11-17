@@ -2,12 +2,12 @@
 //! arguments en camelCase (comme les envoie le WebView), sérialisation des réponses et des
 //! erreurs, événements. Sans réseau, sans détection réelle et sans toucher au trousseau.
 
-use crate::commands::update::UpdateState;
 use crate::state::{AppState, Config};
 use crate::token::MemoryStore;
 use gram_core::{RuntimeStatus, RuntimesStatus};
 use gram_ollama::OllamaClient;
 use gram_ollama::testing::FakeOllama;
+use gram_update::UpdateState;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -110,7 +110,7 @@ impl Harness {
             json!({ "pubkey": TEST_PUBKEY, "endpoints": [endpoint], "requireSignedVersion": true }),
         );
         let builder = mock_builder()
-            .plugin(tauri_plugin_updater::Builder::new().build())
+            .plugin(gram_update::init())
             .manage(state_in(&dir.0, None))
             .manage(UpdateState::new(can_install));
         Self::build(dir, builder, context)
@@ -1383,7 +1383,7 @@ fn paquet_modifie_refuse() {
     let github = fake_github(Some(("99.0.0", true)));
     let dir = TempDir::new("maj-modifiee");
     let h = Harness::with_updater(&dir, &manifest_url(&github), true);
-    let progress = h.record(crate::events::UPDATE_PROGRESS);
+    let progress = h.record(gram_update::UPDATE_PROGRESS);
     h.ok("check_update", json!({}));
     assert_eq!(
         h.invoke("install_update", json!({})).unwrap_err(),
@@ -1424,7 +1424,7 @@ fn pas_d_installation_en_developpement() {
 /// autre version que celle signée est refusé (pas de retour forcé à une ancienne release).
 #[test]
 fn signature_liee_a_la_version() {
-    use tauri_plugin_updater::UpdaterExt;
+    use gram_update::UpdaterExt;
     let dir = TempDir::new("maj-signature");
     let download = |version: &str| {
         let github = fake_github(Some((version, false)));

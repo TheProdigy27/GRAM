@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Release de GRAM construite sur tes machines : la clé de signature des mises à jour ne quitte
-// pas ~/.tauri. La même commande sur le Mac puis sur le PC Windows (ou l'inverse) :
+// Release de GRAM et de GRAM Harness (même version, même tag, même release GitHub), construite
+// sur tes machines : la clé de signature des mises à jour ne quitte pas ~/.tauri. La même
+// commande sur le Mac puis sur le PC Windows (ou l'inverse) :
 //
 //   node scripts/release.mjs 0.2.0 [--notes-file notes.md] [--dry-run]
 //
@@ -8,14 +9,16 @@
 //   app/ui/package.json, commit « Version 0.2.0 », tag annoté dont le message sert de notes de
 //   version (par défaut, les commits depuis le tag précédent), push de main et du tag, brouillon
 //   de release GitHub.
-// - Chaque machine : build de son système (macOS universel, ou Windows x64 NSIS et MSI), paquets de
-//   mise à jour signés avec ~/.tauri/gram.key, envoyés dans la release avec le manifeste
-//   latest.json complété (scripts/latest-json.mjs).
+// - Chaque machine : build des deux applications pour son système (macOS universel, ou Windows
+//   x64 NSIS et MSI), paquets de mise à jour signés avec ~/.tauri/gram.key, envoyés dans la
+//   release avec les manifestes complétés (scripts/latest-json.mjs) : latest.json pour GRAM,
+//   latest-harness.json pour GRAM Harness.
 // - Quand macOS et Windows y sont, la release est publiée : les applications installées la
 //   proposent d'elles-mêmes.
 //
 // Seconde machine : `git pull` avant (main doit être sur le tag). `--dry-run` : build et paquets
-// dans target/release-assets/vX.Y.Z, sans commit, tag, push ni GitHub (version actuelle seulement).
+// dans target/release-assets/vX.Y.Z, sans commit, tag, push ni GitHub (version actuelle
+// seulement, sur n'importe quelle branche).
 //
 // Prérequis sur chaque machine : Node et npm, Rust, gh (GitHub CLI, `gh auth login`), et la clé :
 // ~/.tauri/gram.key et ~/.tauri/gram.key.password (sous Windows, %USERPROFILE%\.tauri\), copiées
@@ -39,6 +42,24 @@ import { parseArgs } from 'node:util';
 import { ManifestError, buildManifest, missingKeys, platformEntries, toJson } from './latest-json.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/**
+ * Applications de la release. `name` : productName de tauri.conf.json, qui nomme les paquets
+ * construits ; `file` : leur nom dans la release (GitHub remplacerait l'espace par un point) ;
+ * `manifest` : manifeste de mise à jour, lu à …/releases/latest/download/<manifest> ;
+ * `scheme` : schéma du lien profond, que les installeurs doivent enregistrer.
+ */
+const APPS = [
+  { name: 'GRAM', file: 'GRAM', tauri: 'src-tauri', cli: [], manifest: 'latest.json' },
+  {
+    name: 'GRAM Harness',
+    file: 'GRAM-Harness',
+    tauri: 'harness-tauri',
+    cli: ['--harness'],
+    manifest: 'latest-harness.json',
+    scheme: 'gram-harness',
+  },
+];
 
 const { values: opts, positionals } = parseArgs({
   allowPositionals: true,
@@ -180,7 +201,11 @@ function releaseBody(notes) {
 - **Windows** : \`GRAM_${version}_x64-setup.exe\` (installation pour l'utilisateur courant, sans droits administrateur). \`GRAM_${version}_x64_fr-FR.msi\` installe pour toute la machine (droits administrateur, déploiement par GPO ou Intune). Au premier lancement, SmartScreen peut afficher « Windows a protégé votre ordinateur » : *Informations complémentaires* → *Exécuter quand même*.
 - **macOS** (10.15 ou plus récent, Apple Silicon et Intel) : \`GRAM_${version}_universal.dmg\`, puis glisser GRAM dans Applications. L'application n'est pas notarisée par Apple : au premier lancement, *Réglages Système* → *Confidentialité et sécurité* → *Ouvrir quand même* (ou, dans le Terminal : \`xattr -dr com.apple.quarantine /Applications/GRAM.app\`).
 
-Une fois installé, GRAM se met à jour tout seul : il cherche une nouvelle version au lancement, et le bouton de mise à jour de la barre d'outils lance la recherche à la demande. \`GRAM_${version}_universal.app.tar.gz\` et \`latest.json\` servent à ces mises à jour automatiques.
+### GRAM Harness
+
+L'application de discussion pour les modèles ajoutés depuis GRAM (bouton « Ajouter à GRAM Harness » de la fiche d'un modèle), avec [Ollama](https://ollama.com/download) : \`GRAM-Harness_${version}_x64-setup.exe\` ou \`GRAM-Harness_${version}_x64_fr-FR.msi\` sous Windows, \`GRAM-Harness_${version}_universal.dmg\` sous macOS, avec les mêmes remarques (sous macOS : \`xattr -dr com.apple.quarantine "/Applications/GRAM Harness.app"\`). Une fois installé, « Ouvrir dans GRAM Harness » passe de la fiche du modèle à la discussion.
+
+Une fois installés, GRAM et GRAM Harness se mettent à jour tout seuls : ils cherchent une nouvelle version au lancement, et le bouton de mise à jour lance la recherche à la demande. Les fichiers \`*.app.tar.gz\`, \`latest.json\` et \`latest-harness.json\` servent à ces mises à jour automatiques.
 `;
 }
 
@@ -235,7 +260,8 @@ if (!git('tag', '-l', tag)) {
   // Seconde machine, ou nouvel essai : on construit exactement le tag.
   if (opts['notes-file']) console.log(`\x1b[33m--notes-file ignoré : les notes sont celles du tag ${tag}\x1b[0m`);
   if (git('rev-parse', 'HEAD') !== git('rev-list', '-n', '1', tag)) {
-    fail(`le dépôt n'est pas sur ${tag} : lancer \`git pull\` (main doit être sur le tag), ou \`git checkout ${tag}\``);
+    if (dryRun) console.log(`\x1b[33mLe dépôt n'est pas sur ${tag} (ignoré avec --dry-run : build de l'état actuel)\x1b[0m`);
+    else fail(`le dépôt n'est pas sur ${tag} : lancer \`git pull\` (main doit être sur le tag), ou \`git checkout ${tag}\``);
   }
   requireClean();
   notes = git('tag', '-l', '--format=%(contents)', tag).replace(/-----BEGIN PGP SIGNATURE-----[\s\S]*$/, '');
@@ -248,60 +274,89 @@ if (!git('tag', '-l', tag)) {
 
 // ── Build ────────────────────────────────────────────────────────────────────────────────────
 
-step(`Build ${os === 'macos' ? 'macOS (universel : Apple Silicon et Intel)' : 'Windows (x64)'}`);
-
 const ui = join(root, 'app/ui');
 if (!existsSync(join(ui, 'node_modules'))) {
   // npm est un script .cmd sous Windows : il passe par le shell.
   execFileSync('npm', ['ci'], { cwd: ui, stdio: 'inherit', shell: process.platform === 'win32' });
 }
-const tauriArgs = ['build', '--config', '../src-tauri/tauri.updater.conf.json'];
 if (os === 'macos') {
   const installed = run('rustup', ['target', 'list', '--installed']).split('\n');
   const missing = ['aarch64-apple-darwin', 'x86_64-apple-darwin'].filter((t) => !installed.includes(t));
   if (missing.length) execFileSync('rustup', ['target', 'add', ...missing], { stdio: 'inherit' });
-  tauriArgs.push('--target', 'universal-apple-darwin');
-}
-const started = Date.now();
-try {
-  // node directement (pas npm run) : les options passent telles quelles à la CLI Tauri.
-  execFileSync(process.execPath, ['scripts/tauri.mjs', ...tauriArgs], {
-    cwd: ui,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      // macOS : le .dmg est créé sans piloter le Finder.
-      CI: 'true',
-      TAURI_SIGNING_PRIVATE_KEY: signingKey,
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
-    },
-  });
-} catch {
-  fail('le build a échoué (voir ci-dessus)');
 }
 
-// Paquets sous leur nom dans la release ; ceux d'un build précédent sont refusés.
-const bundle = join(root, os === 'macos' ? 'target/universal-apple-darwin/release/bundle' : 'target/release/bundle');
-const packages =
-  os === 'macos'
+/** Paquets d'une application : [dossier du bundle, nom construit, nom dans la release]. */
+function packagesOf({ name, file }) {
+  return os === 'macos'
     ? [
-        ['dmg', `GRAM_${version}_universal.dmg`, `GRAM_${version}_universal.dmg`],
-        ['macos', 'GRAM.app.tar.gz', `GRAM_${version}_universal.app.tar.gz`],
-        ['macos', 'GRAM.app.tar.gz.sig', `GRAM_${version}_universal.app.tar.gz.sig`],
+        ['dmg', `${name}_${version}_universal.dmg`, `${file}_${version}_universal.dmg`],
+        ['macos', `${name}.app.tar.gz`, `${file}_${version}_universal.app.tar.gz`],
+        ['macos', `${name}.app.tar.gz.sig`, `${file}_${version}_universal.app.tar.gz.sig`],
       ]
     : [
-        ['nsis', `GRAM_${version}_x64-setup.exe`],
-        ['nsis', `GRAM_${version}_x64-setup.exe.sig`],
-        ['msi', `GRAM_${version}_x64_fr-FR.msi`],
-        ['msi', `GRAM_${version}_x64_fr-FR.msi.sig`],
+        ['nsis', `${name}_${version}_x64-setup.exe`, `${file}_${version}_x64-setup.exe`],
+        ['nsis', `${name}_${version}_x64-setup.exe.sig`, `${file}_${version}_x64-setup.exe.sig`],
+        ['msi', `${name}_${version}_x64_fr-FR.msi`, `${file}_${version}_x64_fr-FR.msi`],
+        ['msi', `${name}_${version}_x64_fr-FR.msi.sig`, `${file}_${version}_x64_fr-FR.msi.sig`],
       ];
+}
+
+// Les deux applications partagent le dossier target du workspace.
+const bundle = join(root, os === 'macos' ? 'target/universal-apple-darwin/release/bundle' : 'target/release/bundle');
 const out = join(root, 'target', 'release-assets', tag, os);
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
-for (const [dir, name, published = name] of packages) {
-  const src = join(bundle, dir, name);
-  if (!existsSync(src) || statSync(src).mtimeMs < started - 1000) fail(`paquet introuvable ou ancien : ${src}`);
-  copyFileSync(src, join(out, published));
+
+for (const app of APPS) {
+  step(`Build de ${app.name} : ${os === 'macos' ? 'macOS (universel : Apple Silicon et Intel)' : 'Windows (x64)'}`);
+  const tauriArgs = [...app.cli, 'build', '--config', `../${app.tauri}/tauri.updater.conf.json`];
+  if (os === 'macos') tauriArgs.push('--target', 'universal-apple-darwin');
+  const started = Date.now();
+  try {
+    // node directement (pas npm run) : les options passent telles quelles à la CLI Tauri.
+    execFileSync(process.execPath, ['scripts/tauri.mjs', ...tauriArgs], {
+      cwd: ui,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        // macOS : le .dmg est créé sans piloter le Finder.
+        CI: 'true',
+        TAURI_SIGNING_PRIVATE_KEY: signingKey,
+        TAURI_SIGNING_PRIVATE_KEY_PASSWORD: signingPassword,
+      },
+    });
+  } catch {
+    fail(`le build de ${app.name} a échoué (voir ci-dessus)`);
+  }
+
+  // Paquets sous leur nom dans la release ; ceux d'un build précédent sont refusés.
+  for (const [dir, name, published] of packagesOf(app)) {
+    const src = join(bundle, dir, name);
+    if (!existsSync(src) || statSync(src).mtimeMs < started - 1000) fail(`paquet introuvable ou ancien : ${src}`);
+    copyFileSync(src, join(out, published));
+  }
+  if (app.scheme) checkScheme(app);
+}
+
+/**
+ * Le schéma du lien profond (`plugins.deep-link` de tauri.conf.json) est déclaré par la CLI
+ * Tauri dans ce qu'elle génère : Info.plist de l'application (macOS), scripts NSIS et WiX
+ * (Windows : clé `Software\Classes\<schéma>`).
+ */
+function checkScheme({ name, scheme }) {
+  const sources =
+    os === 'macos'
+      ? [[join(bundle, 'macos', `${name}.app`, 'Contents', 'Info.plist'), `<string>${scheme}</string>`]]
+      : [
+          [join(root, 'target/release/nsis/x64/installer.nsi'), `Software\\Classes\\${scheme}`],
+          [join(root, 'target/release/wix/x64/main.wxs'), `Software\\Classes\\${scheme}`],
+        ];
+  for (const [file, expected] of sources) {
+    if (!existsSync(file) || !readFileSync(file, 'utf8').includes(expected)) {
+      fail(`schéma ${scheme} non déclaré dans ${file} : vérifier plugins.deep-link dans tauri.conf.json`);
+    }
+  }
+  console.log(`Schéma ${scheme} déclaré par les installeurs de ${name}`);
 }
 
 // ── Release GitHub ───────────────────────────────────────────────────────────────────────────
@@ -309,30 +364,36 @@ for (const [dir, name, published = name] of packages) {
 step('Release GitHub');
 
 const existing = dryRun ? null : release();
-let previous;
-if (existing?.assets.some((a) => a.name === 'latest.json')) {
+/** Manifeste déjà envoyé par l'autre machine, complété par les paquets de celle-ci. */
+function previousManifest(name) {
+  if (!existing?.assets.some((a) => a.name === name)) return undefined;
   const dir = mkdtempSync(join(tmpdir(), 'gram-release-'));
   try {
-    run('gh', ['release', 'download', tag, '--pattern', 'latest.json', '--dir', dir, '--clobber']);
-    previous = JSON.parse(readFileSync(join(dir, 'latest.json'), 'utf8'));
+    run('gh', ['release', 'download', tag, '--pattern', name, '--dir', dir, '--clobber']);
+    return JSON.parse(readFileSync(join(dir, name), 'utf8'));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 }
 
-let manifest;
-try {
-  manifest = buildManifest({
-    version,
-    notes,
-    platforms: platformEntries(out, `https://github.com/${repo}/releases/download/${tag}`),
-    previous,
-  });
-} catch (e) {
-  if (e instanceof ManifestError) fail(e.message);
-  throw e;
+const missing = [];
+for (const app of APPS) {
+  let manifest;
+  try {
+    manifest = buildManifest({
+      version,
+      notes,
+      appName: app.name,
+      platforms: platformEntries(out, `https://github.com/${repo}/releases/download/${tag}`, `${app.file}_`),
+      previous: previousManifest(app.manifest),
+    });
+  } catch (e) {
+    if (e instanceof ManifestError) fail(`${app.manifest} : ${e.message}`);
+    throw e;
+  }
+  writeFileSync(join(out, app.manifest), toJson(manifest));
+  missing.push(...missingKeys(manifest));
 }
-writeFileSync(join(out, 'latest.json'), toJson(manifest));
 
 const uploads = readdirSync(out)
   .filter((f) => !f.endsWith('.sig'))
@@ -340,7 +401,6 @@ const uploads = readdirSync(out)
 act('gh', ['release', 'upload', tag, ...uploads, '--clobber']);
 console.log(`Envoyés : ${uploads.map((f) => f.slice(out.length + 1)).join(', ')}`);
 
-const missing = missingKeys(manifest);
 if (missing.length) {
   console.log(`\n\x1b[33mPaquets ${osName} en place. Il manque ${otherName} : sur l'autre machine, \`git pull\` puis la même commande (node scripts/release.mjs ${version}).\x1b[0m`);
 } else if (dryRun || existing?.isDraft) {
@@ -349,4 +409,4 @@ if (missing.length) {
 } else {
   console.log(`\n\x1b[32mPaquets ${osName} remplacés dans la release ${tag}, déjà publiée.\x1b[0m`);
 }
-if (dryRun) console.log(`\n--dry-run : paquets et latest.json dans ${out}`);
+if (dryRun) console.log(`\n--dry-run : paquets et manifestes dans ${out}`);

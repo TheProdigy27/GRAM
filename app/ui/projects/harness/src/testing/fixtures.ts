@@ -4,6 +4,7 @@ import type { ChatMessage } from '@gram/types/ChatMessage';
 import type { Conversation } from '@gram/types/Conversation';
 import type { HarnessModel } from '@gram/types/HarnessModel';
 import type { ModelList } from '@gram/types/ModelList';
+import type { UpdateCheck } from '@gram/types/UpdateCheck';
 
 /** Ajouté depuis GRAM, mesuré : réflexion et outils. */
 export const GRAM_MODEL: HarnessModel = {
@@ -207,4 +208,17 @@ export const CONVERSATION_VISION: Conversation = {
       },
     },
   ],
+};
+
+/** `check_update` : à jour. */
+export const UP_TO_DATE: UpdateCheck = { currentVersion: '0.2.0', update: null };
+
+/** `check_update` : une nouvelle version dans la dernière release (`latest-harness.json`). */
+export const UPDATE_AVAILABLE: UpdateCheck = {
+  currentVersion: '0.2.0',
+  update: {
+    version: '0.3.0',
+    notes: '## Nouveautés\n\n- GRAM Harness se met à jour tout seul.',
+    date: '2026-11-20T10:00:00Z',
+  },
 };

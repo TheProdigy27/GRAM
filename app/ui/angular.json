@@ -109,12 +109,8 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               {
-                "glob": "favicon.ico",
-                "input": "public"
-              },
-              {
-                "glob": "logo.svg",
-                "input": "public"
+                "glob": "**/*",
+                "input": "projects/harness/public"
               }
             ],
             "styles": [

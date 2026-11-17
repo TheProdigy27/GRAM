@@ -17,7 +17,7 @@ mod token;
 #[cfg(test)]
 mod tests;
 
-use commands::update::UpdateState;
+use gram_update::UpdateState;
 use state::AppState;
 use tracing_subscriber::EnvFilter;
 
@@ -34,7 +34,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(gram_update::init())
         .manage(AppState::production())
         .manage(UpdateState::production())
         .setup(|app| {

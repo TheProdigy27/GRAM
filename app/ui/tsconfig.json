@@ -21,6 +21,8 @@
       "@gram/theme": ["./src/app/core/theme.ts"],
       "@gram/shortcuts": ["./src/app/core/shortcuts.service.ts"],
       "@gram/scrollbars": ["./src/app/core/scrollbars.service.ts"],
+      "@gram/updates": ["./src/app/state/update.store.ts"],
+      "@gram/update-dialog": ["./src/app/features/update/update-dialog.ts"],
       "@gram/testing/dom": ["./src/testing/dom.ts"]
     }
   },

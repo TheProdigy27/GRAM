@@ -107,6 +107,11 @@ export class HarnessApi {
     return this.call('take_opened_model');
   }
 
+  /** Version de GRAM Harness (celle du workspace Cargo, la même que GRAM). */
+  appVersion(): Promise<string> {
+    return this.call('plugin:app|version');
+  }
+
   /** Prévient à chaque lien reçu ; le modèle est pris par `takeOpenedModel`. */
   onOpenModel(handler: () => void): Promise<UnlistenFn> {
     return listen(OPEN_MODEL_EVENT, () => handler()).catch(rethrow);

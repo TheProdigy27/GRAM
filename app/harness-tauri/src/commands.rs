@@ -11,6 +11,7 @@ use crate::images;
 use crate::models::{self, ModelList, OllamaState};
 use crate::state::HarnessState;
 use gram_ollama::OllamaError;
+use gram_update::{UpdateCheck, UpdateState};
 use tauri::ipc::{Channel, Invoke};
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_opener::OpenerExt;
@@ -33,6 +34,8 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         delete_conversation,
         get_image,
         take_opened_model,
+        check_update,
+        install_update,
     ]
 }
 
@@ -201,4 +204,25 @@ pub async fn get_image(
 #[tauri::command]
 pub fn take_opened_model(state: State<'_, HarnessState>) -> Option<String> {
     state.open_requests().take()
+}
+
+/// Lit le manifeste de la dernière release (`latest-harness.json`, adresse et clé publique dans
+/// `tauri.conf.json`).
+#[tauri::command]
+pub async fn check_update<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, UpdateState>,
+) -> CmdResult<UpdateCheck> {
+    Ok(gram_update::check(&app, &state).await?)
+}
+
+/// Télécharge la mise à jour trouvée par `check_update` (ou cherchée à nouveau), vérifie sa
+/// signature (événements `update-progress`), l'installe et relance l'application. Ne revient
+/// qu'en cas d'erreur.
+#[tauri::command]
+pub async fn install_update<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, UpdateState>,
+) -> CmdResult<()> {
+    Ok(gram_update::install(&app, &state).await?)
 }

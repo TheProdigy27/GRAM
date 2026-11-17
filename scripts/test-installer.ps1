@@ -1,15 +1,19 @@
 ﻿<#
 .SYNOPSIS
-  Teste l'installeur NSIS sur une Windows vierge, avec Windows Sandbox (critère de la phase 6).
+  Teste les installeurs NSIS de GRAM et de GRAM Harness sur une Windows vierge, avec Windows
+  Sandbox.
 
 .DESCRIPTION
   Lance Windows Sandbox avec target/release/bundle en lecture seule. Dans la sandbox,
-  scripts/sandbox/install-test.ps1 installe GRAM en silencieux, le lance, vérifie qu'il
-  tourne encore après 25 s et prend une capture d'écran. Le résultat arrive dans
+  scripts/sandbox/install-test.ps1 installe les deux applications en silencieux, vérifie que
+  l'installeur de GRAM Harness enregistre le schéma gram-harness, lance GRAM, vérifie qu'il
+  tourne encore après 25 s, ouvre GRAM Harness par un lien gram-harness:// (une seule instance,
+  présence écrite pour GRAM) et prend une capture d'écran. Le résultat arrive dans
   target/sandbox-results (resultat.txt, capture.png). Fermer la sandbox efface tout.
 
-  Prérequis : `npm run tauri build`, et Windows Sandbox activé (Windows Pro ou Entreprise),
-  une seule fois, dans un PowerShell administrateur, puis redémarrer :
+  Prérequis : les installeurs (`npm run tauri build` et `npm run harness build` depuis app/ui,
+  ou `node scripts/release.mjs X.Y.Z --dry-run`), et Windows Sandbox activé (Windows Pro ou
+  Entreprise), une seule fois, dans un PowerShell administrateur, puis redémarrer :
     Enable-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM
 
 .EXAMPLE
@@ -26,10 +30,14 @@ if (-not (Get-Command WindowsSandbox.exe -ErrorAction SilentlyContinue)) {
     Write-Host 'puis redémarrer, et relancer ce script.'
     exit 1
 }
-if (-not (Test-Path (Join-Path $bundle 'nsis\*-setup.exe'))) {
-    Write-Host "Aucun installeur dans $bundle\nsis : lancer d'abord « npm run tauri build » (app/ui)." -ForegroundColor Yellow
-    exit 1
+$missing = @(
+    @{ Name = 'GRAM'; Pattern = 'GRAM_*-setup.exe'; Build = 'npm run tauri build' },
+    @{ Name = 'GRAM Harness'; Pattern = 'GRAM Harness_*-setup.exe'; Build = 'npm run harness build' }
+) | Where-Object { -not (Test-Path (Join-Path $bundle "nsis\$($_.Pattern)")) }
+foreach ($app in $missing) {
+    Write-Host "Pas d'installeur de $($app.Name) dans $bundle\nsis : lancer d'abord « $($app.Build) » (app/ui)." -ForegroundColor Yellow
 }
+if ($missing) { exit 1 }
 
 Remove-Item $results -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $results | Out-Null
@@ -59,7 +67,7 @@ $wsb = Join-Path $results 'gram.wsb'
 </Configuration>
 "@ | Set-Content -Path $wsb -Encoding utf8
 
-Write-Host 'Démarrage de Windows Sandbox (environ 1 à 3 minutes)…' -ForegroundColor Cyan
+Write-Host 'Démarrage de Windows Sandbox (environ 2 à 4 minutes)…' -ForegroundColor Cyan
 Start-Process $wsb
 $log = Join-Path $results 'resultat.txt'
 $deadline = (Get-Date).AddMinutes(10)

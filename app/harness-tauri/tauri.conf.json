@@ -42,19 +42,47 @@
       "desktop": {
         "schemes": ["gram-harness"]
       }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcwMDU0OEQyRERDMjgxRkQKUldUOWdjTGQwa2dGY0tUVUxVM0NoWWZDSkg3dnZpcDNaRHBORTIycWQxdy8zbFIyWTRJM3hDUmsK",
+      "endpoints": [
+        "https://github.com/TheProdigy27/GRAM/releases/latest/download/latest-harness.json"
+      ],
+      "requireSignedVersion": true,
+      "windows": { "installMode": "passive" }
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "targets": ["nsis", "msi", "app", "dmg"],
     "publisher": "GRAM",
-    "category": "Utility",
+    "category": "Productivity",
     "shortDescription": "Discuter en local avec les modèles ajoutés depuis GRAM",
+    "longDescription": "GRAM Harness est une application de discussion pour les modèles installés dans Ollama, en premier ceux que GRAM y a ajoutés, réglés pour la machine. Les conversations restent sur l'ordinateur.",
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["French"],
+        "displayLanguageSelector": false
+      },
+      "wix": { "language": "fr-FR" }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "-",
+      "dmg": {
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 }
+      }
+    },
     "icon": [
-      "../src-tauri/icons/32x32.png",
-      "../src-tauri/icons/128x128.png",
-      "../src-tauri/icons/128x128@2x.png",
-      "../src-tauri/icons/icon.icns",
-      "../src-tauri/icons/icon.ico"
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
     ]
   }
 }

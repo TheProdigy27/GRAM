@@ -1,10 +1,10 @@
-<g-dialog heading="Mise à jour de GRAM" [closable]="!installing()">
+<g-dialog [heading]="'Mise à jour de ' + app.name" [closable]="!installing()">
   <div class="content" data-testid="update-content">
     @switch (store.status()) {
       @case ('upToDate') {
         <p class="state" data-testid="update-uptodate">
           <span class="state__icon state__icon--ok"><g-icon name="check" /></span>
-          <span>GRAM {{ store.currentVersion() }} est à jour.</span>
+          <span>{{ app.name }} {{ store.currentVersion() }} est à jour.</span>
         </p>
       }
       @case ('available') {
@@ -13,7 +13,7 @@
             <span class="state__icon state__icon--accent"><g-icon name="update" /></span>
             <span class="state__text">
               <span
-                ><strong>GRAM {{ u.version }}</strong> est disponible
+                ><strong>{{ app.name }} {{ u.version }}</strong> est disponible
                 <span class="muted">(version actuelle : {{ store.currentVersion() }})</span></span
               >
               @if (date(); as d) {
@@ -45,8 +45,8 @@
           }
           <p class="muted hint">
             Le paquet est téléchargé depuis GitHub et sa signature vérifiée avant l’installation.
-            GRAM se ferme puis redémarre avec la nouvelle version ; vos paramètres, corrections et
-            mesures sont conservés.
+            {{ app.name }} se ferme puis redémarre avec la nouvelle version ; {{ app.kept }} sont
+            conservés.
           </p>
         }
       }
@@ -54,9 +54,9 @@
         <div class="progress" data-testid="update-progress">
           <span>
             @if (store.downloaded()) {
-              Installation… GRAM va redémarrer.
+              Installation… {{ app.name }} va redémarrer.
             } @else {
-              Téléchargement de GRAM {{ store.available()?.version }}
+              Téléchargement de {{ app.name }} {{ store.available()?.version }}
               @if (received(); as r) {
                 : {{ r }}
               }

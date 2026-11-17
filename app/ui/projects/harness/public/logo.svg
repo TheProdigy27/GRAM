@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Logo de GRAM Harness : la puce mémoire du logo de GRAM devenue bulle de discussion.
+       Source unique des icônes : `npm run harness icon projects/harness/public/logo.svg`
+       (depuis app/ui), puis copier icons/icon.ico dans projects/harness/public/favicon.ico. -->
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1fae7f"/>
+      <stop offset="1" stop-color="#0a5240"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#fond)"/>
+  <g fill="#a6f0d2">
+    <rect x="360" y="168" width="48" height="96" rx="16"/>
+    <rect x="488" y="168" width="48" height="96" rx="16"/>
+    <rect x="616" y="168" width="48" height="96" rx="16"/>
+    <rect x="488" y="760" width="48" height="96" rx="16"/>
+    <rect x="616" y="760" width="48" height="96" rx="16"/>
+    <rect x="168" y="360" width="96" height="48" rx="16"/>
+    <rect x="168" y="488" width="96" height="48" rx="16"/>
+    <rect x="760" y="360" width="96" height="48" rx="16"/>
+    <rect x="760" y="488" width="96" height="48" rx="16"/>
+    <rect x="760" y="616" width="96" height="48" rx="16"/>
+  </g>
+  <path d="M336 256H688A80 80 0 0 1 768 336V688A80 80 0 0 1 688 768H420L232 856L256 660V336A80 80 0 0 1 336 256Z"
+        fill="#0d6b52" stroke="#ffffff" stroke-width="48" stroke-linejoin="round"/>
+  <circle cx="384" cy="512" r="56" fill="#ffffff"/>
+  <circle cx="512" cy="512" r="56" fill="#ffffff"/>
+  <circle cx="640" cy="512" r="56" fill="#a8c6ff"/>
+</svg>

@@ -6,7 +6,8 @@
 //! vitesses). Aucune commande système n'est lancée : tout passe par l'API d'Ollama.
 //!
 //! GRAM ouvre un modèle par le lien profond `gram-harness://open?model=…` ([`link`]) ; à chaque
-//! démarrage, GRAM Harness lui dit qu'il est installé (`harness.json`).
+//! démarrage, GRAM Harness lui dit qu'il est installé (`harness.json`). Les mises à jour
+//! viennent des releases GitHub de GRAM (`latest-harness.json`, crate `gram-update`).
 
 pub mod chat;
 mod commands;
@@ -20,6 +21,7 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+use gram_update::UpdateState;
 use state::HarnessState;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_deep_link::DeepLinkExt;
@@ -41,10 +43,12 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         // Presse-papiers (permission d'écriture seule dans capabilities/default.json) ; page de
         // téléchargement d'Ollama ouverte depuis Rust, liens des réponses depuis la WebView
-        // (http et https seulement).
+        // (http et https seulement) ; mises à jour (depuis Rust seulement).
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(gram_update::init())
         .manage(HarnessState::production())
+        .manage(UpdateState::production())
         .setup(|app| {
             setup(app.handle());
             Ok(())

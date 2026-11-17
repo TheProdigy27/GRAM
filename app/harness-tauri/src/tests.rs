@@ -8,6 +8,7 @@ use crate::state::{Config, HarnessState};
 use gram_link::{MANIFEST_FILE, SharedManifest, SharedModel};
 use gram_ollama::OllamaClient;
 use gram_ollama::testing::{CHAT_NO_THINK_CONTENT, FakeOllama, tags_json};
+use gram_update::UpdateState;
 use serde_json::{Value, json};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -36,10 +37,33 @@ impl Harness {
 
     fn with_config(config: Config, installed: bool) -> Self {
         let state = HarnessState::new(config, Arc::new(move || installed));
-        let app = mock_builder()
-            .manage(state)
+        Self::build(mock_builder().manage(state), mock_context(noop_assets()))
+    }
+
+    /// Avec le plugin updater : manifeste lu à `endpoint`, paquets vérifiés avec la clé de test
+    /// (`tests/fixtures/update/test.key.pub`). `can_install` vaut `false` en développement.
+    fn with_updater(endpoint: &str, can_install: bool) -> Self {
+        let mut context = mock_context(noop_assets());
+        context.config_mut().plugins.0.insert(
+            "updater".into(),
+            json!({ "pubkey": TEST_PUBKEY, "endpoints": [endpoint], "requireSignedVersion": true }),
+        );
+        let config = Config {
+            ollama: None,
+            shared_dir: None,
+            conversations_dir: None,
+        };
+        let builder = mock_builder()
+            .plugin(gram_update::init())
+            .manage(HarnessState::new(config, Arc::new(|| false)))
+            .manage(UpdateState::new(can_install));
+        Self::build(builder, context)
+    }
+
+    fn build(builder: tauri::Builder<MockRuntime>, context: tauri::Context<MockRuntime>) -> Self {
+        let app = builder
             .invoke_handler(crate::commands::handler())
-            .build(mock_context(noop_assets()))
+            .build(context)
             .unwrap();
         let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
@@ -432,5 +456,94 @@ fn configuration() {
     assert_eq!(
         conf["build"]["frontendDist"],
         format!("../ui/{output}/browser")
+    );
+}
+
+/// Clé publique de test : elle a signé la release fictive 99.0.0 de `tests/fixtures/update/`.
+const TEST_PUBKEY: &str = include_str!("../../../tests/fixtures/update/test.key.pub");
+
+/// Installeurs : mêmes cibles et mêmes réglages que GRAM, avec les icônes du harness ; mises à
+/// jour : manifeste `latest-harness.json` de la même release que celui de GRAM, même clé.
+#[test]
+fn installeurs_et_mises_a_jour() {
+    let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    let gram: Value =
+        serde_json::from_str(include_str!("../../src-tauri/tauri.conf.json")).unwrap();
+    let (bundle, gram_bundle) = (&conf["bundle"], &gram["bundle"]);
+    for key in ["active", "targets", "publisher", "windows", "macOS"] {
+        assert_eq!(bundle[key], gram_bundle[key], "bundle.{key}");
+    }
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    for icon in bundle["icon"].as_array().unwrap() {
+        let icon = icon.as_str().unwrap();
+        assert!(icon.starts_with("icons/"), "icône du harness : {icon}");
+        assert!(dir.join(icon).is_file(), "{icon} absente");
+    }
+
+    let (updater, gram_updater) = (&conf["plugins"]["updater"], &gram["plugins"]["updater"]);
+    assert_eq!(
+        updater["endpoints"],
+        json!([
+            "https://github.com/TheProdigy27/GRAM/releases/latest/download/latest-harness.json"
+        ])
+    );
+    for key in ["pubkey", "requireSignedVersion", "windows"] {
+        assert_eq!(updater[key], gram_updater[key], "plugins.updater.{key}");
+    }
+    assert_eq!(bundle["createUpdaterArtifacts"], Value::Null);
+    let ci: Value = serde_json::from_str(include_str!("../tauri.updater.conf.json")).unwrap();
+    assert_eq!(ci["bundle"]["createUpdaterArtifacts"], true);
+}
+
+/// Faux GitHub : `latest-harness.json` annonce la release fictive sous la version `version`
+/// (les paquets de `tests/fixtures/update/` suffisent : le plugin ne lit que le manifeste et les
+/// signatures).
+fn fake_github(version: &str) -> FakeOllama {
+    let manifest = include_str!("../../../tests/fixtures/update/latest.json").replace(
+        r#""version": "99.0.0""#,
+        &format!(r#""version": "{version}""#),
+    );
+    FakeOllama::start(move |r| match r.path.as_str() {
+        "/latest-harness.json" => (200, manifest.clone()),
+        _ => (404, "Not Found".into()),
+    })
+}
+
+#[test]
+fn mises_a_jour() {
+    let github = fake_github("99.0.0");
+    let endpoint = format!("{}/latest-harness.json", github.url());
+    let h = Harness::with_updater(&endpoint, false);
+    let current = h.app.package_info().version.to_string();
+    assert_eq!(
+        h.invoke("check_update", json!({})).unwrap(),
+        json!({
+            "currentVersion": current,
+            "update": {
+                "version": "99.0.0",
+                "notes": "## Nouveautés\n\n- Release fictive pour les tests.",
+                "date": "2026-11-11T12:00:00Z",
+            },
+        })
+    );
+    // En développement, rien n'est téléchargé : le plugin remplacerait `target/debug`.
+    let e = h.invoke("install_update", json!({})).unwrap_err();
+    assert!(e.as_str().unwrap().contains("mode développement"), "{e}");
+    assert!(
+        github
+            .requests()
+            .iter()
+            .all(|r| r.path == "/latest-harness.json")
+    );
+
+    let github = fake_github(&current);
+    let h = Harness::with_updater(&format!("{}/latest-harness.json", github.url()), true);
+    assert_eq!(
+        h.invoke("check_update", json!({})).unwrap(),
+        json!({ "currentVersion": current, "update": null })
+    );
+    assert_eq!(
+        h.invoke("install_update", json!({})).unwrap_err(),
+        "aucune mise à jour disponible"
     );
 }

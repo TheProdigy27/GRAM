@@ -1,6 +1,7 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, effect, inject } from '@angular/core';
-import { TauriService, errorMessage } from '../../core/tauri.service';
+import { errorMessage } from '../../core/errors';
+import { UpdateApi } from '../../core/update-api';
 import { fileSize } from '../../shared/format';
 import { Button } from '../../shared/ui/button/button';
 import { Callout } from '../../shared/ui/callout/callout';
@@ -9,7 +10,7 @@ import { Icon } from '../../shared/ui/icon/icon';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Spinner } from '../../shared/ui/spinner/spinner';
 import { ToastService } from '../../shared/ui/toast/toast';
-import { RELEASES_URL, UpdateStore, noteBlocks } from '../../state/update.store';
+import { UPDATED_APP, UpdateStore, noteBlocks } from '../../state/update.store';
 
 const longDate = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' });
 
@@ -21,9 +22,10 @@ export function releaseDate(iso: string | null): string | null {
 }
 
 /**
- * Mise à jour de GRAM : vérification à l'ouverture (sauf si une mise à jour est déjà connue),
- * notes de la nouvelle version, puis téléchargement et installation. Le dialogue ne se ferme pas
- * pendant l'installation (ni Échap, ni voile, ni ✕) ; l'application redémarre à la fin.
+ * Mise à jour de l'application (GRAM, ou GRAM Harness qui l'importe par `@gram/update-dialog`) :
+ * vérification à l'ouverture (sauf si une mise à jour est déjà connue), notes de la nouvelle
+ * version, puis téléchargement et installation. Le dialogue ne se ferme pas pendant
+ * l'installation (ni Échap, ni voile, ni ✕) ; l'application redémarre à la fin.
  */
 @Component({
   selector: 'app-update-dialog',
@@ -33,7 +35,8 @@ export function releaseDate(iso: string | null): string | null {
 })
 export class UpdateDialog {
   protected readonly store = inject(UpdateStore);
-  private readonly tauri = inject(TauriService);
+  protected readonly app = inject(UPDATED_APP);
+  private readonly api = inject(UpdateApi);
   protected readonly dialogRef = inject(DialogRef);
   private readonly toast = inject(ToastService);
 
@@ -73,7 +76,7 @@ export class UpdateDialog {
   }
 
   protected openReleases(): void {
-    this.tauri.openUrl(RELEASES_URL).catch((e: unknown) => {
+    this.api.openReleases().catch((e: unknown) => {
       this.toast.show(`Ouverture impossible : ${errorMessage(e)}`, { kind: 'error' });
     });
   }

@@ -1,0 +1,30 @@
+[package]
+name = "gram-update"
+description = "Mises à jour de GRAM et de GRAM Harness depuis les releases GitHub (plugin updater de Tauri)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+tauri.workspace = true
+serde.workspace = true
+ts-rs.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+# Manifeste de la release (`latest.json`, `latest-harness.json`), paquets signés (clé publique
+# dans le tauri.conf.json de chaque application), appelé depuis Rust seulement (aucune permission
+# côté WebView). Sans `zip` : il ne sert qu'aux anciens paquets Windows zippés (Tauri 1), les
+# installeurs sont téléchargés tels quels.
+tauri-plugin-updater = { version = "2.14.1", default-features = false, features = [
+  "rustls-tls",
+  "system-proxy",
+] }
+# Le plugin active `reqwest/rustls-no-provider` : sans fournisseur de chiffrement, la création de
+# tout client reqwest du processus panique, celui d'Ollama compris (GRAM Harness n'a pas d'autre
+# client HTTPS). `rustls` apporte celui de reqwest (aws-lc-rs), comme `gram-hub` dans GRAM.
+reqwest = { workspace = true, features = ["rustls"] }
+
+[lints]
+workspace = true

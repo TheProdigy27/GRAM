@@ -13,8 +13,8 @@ pub const SYNC_PROGRESS: &str = "sync-progress";
 pub const SYNC_DONE: &str = "sync-done";
 /// Quota restant de l'API Hugging Face : `RateLimitInfo { remaining, resetS }`.
 pub const RATE_LIMIT: &str = "rate-limit";
-/// Téléchargement d'une mise à jour (`install_update`) : `UpdateProgress { downloaded, total }`.
-pub const UPDATE_PROGRESS: &str = "update-progress";
+// Téléchargement d'une mise à jour (`install_update`) : `update-progress`, émis par
+// `gram-update` (`UPDATE_PROGRESS`).
 /// Ajout à GRAM Harness en cours (`harness_add`), au plus toutes les 200 ms et à chaque
 /// changement d'étape : `InstallProgress`.
 pub const HARNESS_PROGRESS: &str = "harness-progress";

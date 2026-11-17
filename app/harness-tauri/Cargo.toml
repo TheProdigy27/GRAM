@@ -21,6 +21,9 @@ gram-core.workspace = true
 gram-hw.workspace = true
 gram-ollama.workspace = true
 gram-link.workspace = true
+# Mises à jour depuis les releases GitHub (commun avec GRAM) : manifeste `latest-harness.json`,
+# paquets signés (clé publique dans tauri.conf.json), appelé depuis Rust seulement.
+gram-update.workspace = true
 tauri.workspace = true
 serde.workspace = true
 serde_json.workspace = true

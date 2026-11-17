@@ -15,6 +15,7 @@ gram-hw = { path = "crates/gram-hw" }
 gram-hub = { path = "crates/gram-hub" }
 gram-ollama = { path = "crates/gram-ollama" }
 gram-link = { path = "crates/gram-link" }
+gram-update = { path = "crates/gram-update" }
 
 # Commun
 serde = { version = "1.0.229", features = ["derive"] }

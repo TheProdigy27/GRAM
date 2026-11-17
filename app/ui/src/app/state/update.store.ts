@@ -1,10 +1,22 @@
 import { DestroyRef, Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
+import { errorMessage } from '../core/errors';
 import type { UpdateInfo } from '../core/generated/UpdateInfo';
 import type { UpdateProgress } from '../core/generated/UpdateProgress';
-import { TauriService, errorMessage } from '../core/tauri.service';
+import { UpdateApi } from '../core/update-api';
 
-/** Page des releases : téléchargement manuel si la mise à jour automatique échoue. */
-export const RELEASES_URL = 'https://github.com/TheProdigy27/GRAM/releases/latest';
+export { RELEASES_URL } from '../core/update-api';
+
+/** Application qui se met à jour, dans les textes du dialogue (GRAM Harness fournit la sienne). */
+export interface UpdatedApp {
+  /** « GRAM », « GRAM Harness ». */
+  name: string;
+  /** Ce que la mise à jour garde : « vos paramètres… sont conservés ». */
+  kept: string;
+}
+
+export const UPDATED_APP = new InjectionToken<UpdatedApp>('UPDATED_APP', {
+  factory: () => ({ name: 'GRAM', kept: 'vos paramètres, corrections et mesures' }),
+});
 
 /** Délai de la vérification automatique au lancement : le premier classement passe d'abord. */
 export const UPDATE_CHECK_DELAY_MS = new InjectionToken<number>('UPDATE_CHECK_DELAY_MS', {
@@ -16,11 +28,11 @@ export type UpdateStatus = 'idle' | 'checking' | 'upToDate' | 'available' | 'ins
 /**
  * Mises à jour depuis les releases GitHub : vérification (automatique au lancement, ou depuis le
  * dialogue), puis téléchargement, vérification de la signature, installation et redémarrage, le
- * tout côté Rust (`commands/update.rs`).
+ * tout côté Rust (crate `gram-update`). Partagé avec GRAM Harness (alias `@gram/updates`).
  */
 @Injectable({ providedIn: 'root' })
 export class UpdateStore {
-  private readonly tauri = inject(TauriService);
+  private readonly api = inject(UpdateApi);
 
   readonly status = signal<UpdateStatus>('idle');
   /** Version en cours, connue après la première vérification réussie. */
@@ -42,7 +54,7 @@ export class UpdateStore {
   });
 
   constructor() {
-    const progress = this.tauri.listen('update-progress', (p) => this.progress.set(p));
+    const progress = this.api.onProgress((p) => this.progress.set(p));
     inject(DestroyRef).onDestroy(() => {
       void progress.then((f) => f()).catch(() => undefined);
     });
@@ -58,7 +70,7 @@ export class UpdateStore {
     this.status.set('checking');
     this.error.set(null);
     try {
-      const { currentVersion, update } = await this.tauri.checkUpdate();
+      const { currentVersion, update } = await this.api.check();
       this.currentVersion.set(currentVersion);
       this.available.set(update);
       this.status.set(update ? 'available' : 'upToDate');
@@ -81,7 +93,7 @@ export class UpdateStore {
     this.progress.set(null);
     this.error.set(null);
     try {
-      await this.tauri.installUpdate();
+      await this.api.install();
     } catch (e) {
       this.error.set(errorMessage(e));
       this.status.set('error');

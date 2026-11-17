@@ -1,14 +1,19 @@
 import { DialogRef } from '@angular/cdk/dialog';
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import type { ThemePref } from '@gram/theme';
 import type { KeepAlive } from '@gram/types/KeepAlive';
 import { Button } from '@gram/ui/button/button';
 import { GDialog } from '@gram/ui/dialog/dialog';
 import { FIELD } from '@gram/ui/field/field';
+import { Icon } from '@gram/ui/icon/icon';
+import { Spinner } from '@gram/ui/spinner/spinner';
+import { Tag } from '@gram/ui/tag/tag';
 import { type ToggleOption, ToggleGroup } from '@gram/ui/toggle-group/toggle-group';
+import { HarnessApi } from '../../core/harness-api.service';
 import { ThemeService } from '../../core/theme.service';
 import { INSTRUCTIONS_MAX } from '../../shared/conversations';
 import { PrefsStore } from '../../state/prefs.store';
+import { Updates } from '../../state/updates';
 
 const THEMES: readonly ToggleOption<ThemePref>[] = [
   { value: 'light', label: 'Clair', icon: 'sun' },
@@ -27,13 +32,13 @@ const KEEP_ALIVES: readonly ToggleOption<KeepAlive>[] = [
 ];
 
 /**
- * Paramètres de GRAM Harness : thème, instructions des nouvelles conversations, et durée
- * pendant laquelle Ollama garde le modèle en mémoire après une réponse. Tout s'applique
- * aussitôt.
+ * Paramètres de GRAM Harness : thème, instructions des nouvelles conversations, durée pendant
+ * laquelle Ollama garde le modèle en mémoire après une réponse, version et mises à jour. Tout
+ * s'applique aussitôt.
  */
 @Component({
   selector: 'app-settings-dialog',
-  imports: [Button, GDialog, FIELD, ToggleGroup],
+  imports: [Button, GDialog, FIELD, Icon, Spinner, Tag, ToggleGroup],
   template: `
     <g-dialog heading="Paramètres" width="560px">
       <section class="row" aria-labelledby="settings-theme">
@@ -79,6 +84,53 @@ const KEEP_ALIVES: readonly ToggleOption<KeepAlive>[] = [
           (input)="prefs.setInstructions($any($event.target).value)"
         ></textarea>
       </g-field>
+      <section class="row version" aria-labelledby="settings-version">
+        <h3 id="settings-version" class="label">Version</h3>
+        <p class="line">
+          <span class="mono" data-testid="app-version">GRAM Harness {{ version() ?? '…' }}</span>
+          <span class="update" role="status" data-testid="update-state">
+            @switch (updates.status()) {
+              @case ('checking') {
+                <g-spinner [size]="14" />
+                Recherche…
+              }
+              @case ('upToDate') {
+                <g-icon name="check" class="ok" />
+                À jour.
+              }
+              @case ('available') {
+                <g-tag tone="accent" icon="update"
+                  >GRAM Harness {{ updates.available()?.version }} disponible</g-tag
+                >
+              }
+              @case ('installing') {
+                Installation en cours…
+              }
+              @case ('error') {
+                <g-icon name="error" class="err" />
+                {{ updates.error() }}
+              }
+            }
+          </span>
+        </p>
+        @if (updates.status() === 'available') {
+          <button gButton data-testid="update-open" (click)="openUpdate()">
+            <g-icon name="download" />
+            Voir et installer
+          </button>
+        } @else {
+          <button
+            gButton
+            data-testid="update-check"
+            [busy]="updates.status() === 'checking'"
+            [disabled]="updates.status() === 'installing'"
+            (click)="checkUpdate()"
+          >
+            <g-icon name="refresh" />
+            Rechercher une mise à jour
+          </button>
+        }
+      </section>
       <div gDialogActions>
         <button gButton variant="primary" data-testid="settings-close" (click)="ref.close()">
           Fermer
@@ -110,6 +162,29 @@ const KEEP_ALIVES: readonly ToggleOption<KeepAlive>[] = [
       min-height: 96px;
       resize: vertical;
     }
+    .version {
+      margin: 18px 0 0;
+    }
+    .line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 12px;
+      margin: 0;
+      font-size: 13px;
+    }
+    .update {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--g-fg-2);
+    }
+    .ok {
+      color: var(--g-ok);
+    }
+    .err {
+      color: var(--g-error);
+    }
   `,
 })
 export class SettingsDialog {
@@ -119,6 +194,27 @@ export class SettingsDialog {
   protected readonly themes = THEMES;
   protected readonly keepAlives = KEEP_ALIVES;
   protected readonly max = INSTRUCTIONS_MAX;
+  private readonly updater = inject(Updates);
+  protected readonly updates = this.updater.store;
+  private readonly appVersion = signal<string | null>(null);
+  /** Celle de la dernière vérification, sinon celle de l'application. */
+  protected readonly version = computed(() => this.updates.currentVersion() ?? this.appVersion());
+
+  constructor() {
+    inject(HarnessApi)
+      .appVersion()
+      .then((v) => this.appVersion.set(v))
+      .catch(() => undefined);
+  }
+
+  protected checkUpdate(): void {
+    void this.updates.check();
+  }
+
+  /** Dialogue « Mise à jour » par-dessus les paramètres (notes, installation). */
+  protected openUpdate(): void {
+    this.updater.open();
+  }
 
   protected setTheme(value: ThemePref | null): void {
     if (value) this.theme.set(value);

@@ -1841,6 +1841,7 @@ dependencies = [
  "gram-hw",
  "gram-link",
  "gram-ollama",
+ "gram-update",
  "keyring",
  "serde",
  "serde_json",
@@ -1849,7 +1850,6 @@ dependencies = [
  "tauri-plugin-clipboard-manager",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
- "tauri-plugin-updater",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -1897,6 +1897,7 @@ dependencies = [
  "gram-hw",
  "gram-link",
  "gram-ollama",
+ "gram-update",
  "serde",
  "serde_json",
  "tauri",
@@ -1973,6 +1974,20 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "gram-update"
+version = "0.2.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "tauri",
+ "tauri-plugin-updater",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "ts-rs",
 ]
 
 [[package]]

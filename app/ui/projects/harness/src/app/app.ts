@@ -15,6 +15,7 @@ import { Sidebar } from './features/sidebar/sidebar';
 import { ChatStore } from './state/chat.store';
 import { ModelsStore } from './state/models.store';
 import { OpenLinks } from './state/open-links';
+import { Updates } from './state/updates';
 
 /** Délai minimal entre deux relectures déclenchées par le focus de la fenêtre. */
 export const FOCUS_REFRESH_MS = 2000;
@@ -36,8 +37,9 @@ const THEMES: readonly ThemeChoice[] = [
  * de contexte, « Actualiser », thème, paramètres) et discussion. La liste des modèles est lue
  * au lancement, par « Actualiser » (R) et quand la fenêtre reprend le focus ; celle des
  * conversations au lancement. Les liens « Ouvrir dans GRAM Harness » sont suivis dès le
- * lancement (`OpenLinks`). Raccourcis : Ctrl N, Ctrl , (paramètres), Échap (arrêter la
- * réponse), ? (aide), R.
+ * lancement (`OpenLinks`). Une mise à jour trouvée peu après le lancement (`Updates`) est
+ * signalée par un toast et par un bouton de l'en-tête. Raccourcis : Ctrl N, Ctrl , (paramètres),
+ * Échap (arrêter la réponse), ? (aide), R.
  */
 @Component({
   selector: 'app-root',
@@ -63,6 +65,7 @@ export class App {
     () => THEMES.find((t) => t.value === this.theme.preference())?.icon ?? 'monitor',
   );
   protected readonly modComma = inject(ShortcutsService).modShortcut(',');
+  protected readonly updates = inject(Updates);
   private lastFocusRefresh = 0;
 
   constructor() {
@@ -70,6 +73,7 @@ export class App {
     void this.chat.load();
     const destroyRef = inject(DestroyRef);
     destroyRef.onDestroy(inject(OpenLinks).start());
+    destroyRef.onDestroy(this.updates.start());
     destroyRef.onDestroy(
       inject(ShortcutsService).register([
         { key: 'r', run: () => this.refresh() },

@@ -5,7 +5,7 @@
 import type { InvokeArgs } from '@tauri-apps/api/core';
 import { mockIPC } from '@tauri-apps/api/mocks';
 import { FakeChat } from './chat';
-import { MODELS } from './fixtures';
+import { MODELS, UP_TO_DATE } from './fixtures';
 
 export interface IpcCall {
   cmd: string;
@@ -18,6 +18,9 @@ const DEFAULTS: Record<string, Handler> = {
   list_models: () => MODELS,
   open_ollama_download: () => null,
   take_opened_model: () => null,
+  check_update: () => UP_TO_DATE,
+  install_update: () => null,
+  'plugin:app|version': () => UP_TO_DATE.currentVersion,
   'plugin:window|set_theme': () => null,
   'plugin:clipboard-manager|write_text': () => null,
   'plugin:opener|open_url': () => null,

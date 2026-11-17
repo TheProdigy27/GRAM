@@ -3,6 +3,7 @@ import { invoke, type InvokeArgs } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { rethrow } from './errors';
 import type { CacheInfo } from './generated/CacheInfo';
 import type { Calibration } from './generated/Calibration';
 import type { DetailRequest } from './generated/DetailRequest';
@@ -28,8 +29,6 @@ import type { RuntimesStatus } from './generated/RuntimesStatus';
 import type { Settings } from './generated/Settings';
 import type { SyncProgress } from './generated/SyncProgress';
 import type { SyncSummary } from './generated/SyncSummary';
-import type { UpdateCheck } from './generated/UpdateCheck';
-import type { UpdateProgress } from './generated/UpdateProgress';
 
 /** Événements émis par le backend (`app/src-tauri/src/events.rs`) et leur charge utile. */
 export interface GramEvents {
@@ -37,17 +36,11 @@ export interface GramEvents {
   'sync-progress': SyncProgress;
   'sync-done': SyncSummary;
   'rate-limit': RateLimitInfo;
-  'update-progress': UpdateProgress;
   'harness-progress': InstallProgress;
   'harness-done': InstallDone;
 }
 
-/** Message lisible d'une erreur : le backend rejette `invoke` avec une chaîne en français. */
-export function errorMessage(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (typeof e === 'string') return e;
-  return String(e);
-}
+export { errorMessage } from './errors';
 
 /**
  * Seul point d'accès à l'IPC Tauri (`invoke`, `listen`) et aux plugins (presse-papiers,
@@ -217,20 +210,7 @@ export class TauriService {
     return this.call('has_hf_token');
   }
 
-  // ── Mises à jour (releases GitHub) ───────────────────────────────────────────────────────
-
-  /** Version en cours et mise à jour proposée par la dernière release (`update: null` si à jour). */
-  checkUpdate(): Promise<UpdateCheck> {
-    return this.call('check_update');
-  }
-
-  /**
-   * Télécharge la mise à jour (événements `update-progress`), vérifie sa signature, l'installe
-   * et relance l'application : la promesse ne se résout pas, sauf erreur.
-   */
-  installUpdate(): Promise<void> {
-    return this.call('install_update');
-  }
+  // Mises à jour (releases GitHub) : `UpdateApi` (core/update-api.ts), commun avec GRAM Harness.
 
   // ── Plugins ──────────────────────────────────────────────────────────────────────────────
 
@@ -270,8 +250,4 @@ export class TauriService {
   private call<T>(cmd: string, args?: InvokeArgs): Promise<T> {
     return invoke<T>(cmd, args).catch(rethrow);
   }
-}
-
-function rethrow(e: unknown): never {
-  throw e instanceof Error ? e : new Error(errorMessage(e));
 }

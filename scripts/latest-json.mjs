@@ -1,14 +1,17 @@
 #!/usr/bin/env node
-// Manifeste de mise à jour `latest.json` d'une release GitHub, lu par le plugin updater de Tauri
-// (app/src-tauri/src/commands/update.rs). Utilisé par scripts/release.mjs, et en ligne de commande
-// pour les fixtures des tests :
+// Manifeste de mise à jour d'une release GitHub, lu par le plugin updater de Tauri
+// (crates/gram-update) : `latest.json` pour GRAM, `latest-harness.json` pour GRAM Harness.
+// Utilisé par scripts/release.mjs, et en ligne de commande pour les fixtures des tests :
 //
 //   node scripts/latest-json.mjs --dir <paquets> --version 0.2.0 \
 //     --base-url https://github.com/<owner>/<repo>/releases/download/v0.2.0 \
+//     [--prefix GRAM-Harness_] [--app-name "GRAM Harness"] \
 //     [--merge latest.json] [--notes-file notes.md] [--pub-date 2026-11-11T12:00:00Z] [--out latest.json]
 //
 // `--dir` contient des paquets de mise à jour, sous le nom qu'ils ont dans la release, et leur
-// signature (`.sig`, produite par `tauri build` avec `createUpdaterArtifacts`) :
+// signature (`.sig`, produite par `tauri build` avec `createUpdaterArtifacts`). Quand il contient
+// les paquets des deux applications, `--prefix` ne garde que ceux de l'une (`GRAM_`,
+// `GRAM-Harness_`) :
 //
 //   *.app.tar.gz   macOS, binaire universel (Apple Silicon et Intel)
 //   *-setup.exe    Windows, installeur NSIS
@@ -39,11 +42,11 @@ export const ALL_KEYS = Object.values(PACKAGES).flatMap((list) => list.flatMap((
 export class ManifestError extends Error {}
 
 /**
- * Entrées du manifeste pour les paquets présents dans `dir` (un seul par type, avec sa
- * signature). Erreur si aucun paquet n'y est.
+ * Entrées du manifeste pour les paquets présents dans `dir` dont le nom commence par `prefix`
+ * (un seul par type, avec sa signature). Erreur si aucun paquet n'y est.
  */
-export function platformEntries(dir, baseUrl) {
-  const files = readdirSync(dir);
+export function platformEntries(dir, baseUrl, prefix = '') {
+  const files = readdirSync(dir).filter((f) => f.startsWith(prefix));
   const base = baseUrl.replace(/\/+$/, '');
   const platforms = {};
   for (const pkg of Object.values(PACKAGES).flat()) {
@@ -58,15 +61,17 @@ export function platformEntries(dir, baseUrl) {
     };
     for (const key of pkg.keys) platforms[key] = entry;
   }
-  if (Object.keys(platforms).length === 0) throw new ManifestError(`aucun paquet de mise à jour dans ${dir}`);
+  if (Object.keys(platforms).length === 0) {
+    throw new ManifestError(`aucun paquet de mise à jour${prefix ? ` ${prefix}*` : ''} dans ${dir}`);
+  }
   return platforms;
 }
 
 /**
- * Manifeste de la version `version` : plateformes de `previous` (s'il porte la même version),
- * complétées ou remplacées par `platforms`.
+ * Manifeste de la version `version` de l'application `appName` : plateformes de `previous` (s'il
+ * porte la même version), complétées ou remplacées par `platforms`.
  */
-export function buildManifest({ version, notes, pubDate, platforms, previous }) {
+export function buildManifest({ version, notes, pubDate, platforms, previous, appName = 'GRAM' }) {
   if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
     throw new ManifestError(`version invalide : ${version} (attendu : X.Y.Z)`);
   }
@@ -76,7 +81,7 @@ export function buildManifest({ version, notes, pubDate, platforms, previous }) 
   const merged = { ...previous?.platforms, ...platforms };
   return {
     version,
-    notes: notes?.trim() || `GRAM ${version}`,
+    notes: notes?.trim() || `${appName} ${version}`,
     pub_date: pubDate ?? new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
     // Ordre fixe : le fichier reste lisible et stable d'une fusion à l'autre.
     platforms: Object.fromEntries(ALL_KEYS.filter((k) => merged[k]).map((k) => [k, merged[k]])),
@@ -100,6 +105,8 @@ function main() {
       dir: { type: 'string' },
       version: { type: 'string' },
       'base-url': { type: 'string' },
+      prefix: { type: 'string', default: '' },
+      'app-name': { type: 'string', default: 'GRAM' },
       merge: { type: 'string' },
       'notes-file': { type: 'string' },
       'pub-date': { type: 'string' },
@@ -113,7 +120,8 @@ function main() {
     version: args.version,
     notes: args['notes-file'] ? readFileSync(args['notes-file'], 'utf8') : undefined,
     pubDate: args['pub-date'],
-    platforms: platformEntries(args.dir, args['base-url']),
+    appName: args['app-name'],
+    platforms: platformEntries(args.dir, args['base-url'], args.prefix),
     previous: args.merge ? JSON.parse(readFileSync(args.merge, 'utf8')) : undefined,
   });
   if (args.out) writeFileSync(args.out, toJson(manifest));

@@ -10,6 +10,8 @@ pub enum CommandError {
     Ollama(#[from] gram_ollama::OllamaError),
     #[error(transparent)]
     Store(#[from] crate::conversations::StoreError),
+    #[error(transparent)]
+    Update(#[from] gram_update::UpdateError),
 }
 
 impl CommandError {

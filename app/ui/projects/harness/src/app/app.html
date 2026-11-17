@@ -5,6 +5,18 @@
     <app-model-picker class="picker" />
     <app-context-gauge />
     <div class="actions">
+      @if (updates.store.available(); as u) {
+        <button
+          gButton
+          variant="primary"
+          data-testid="open-update"
+          [gTooltip]="'Installer GRAM Harness ' + u.version"
+          (click)="updates.open()"
+        >
+          <g-icon name="update" />
+          Mise à jour {{ u.version }}
+        </button>
+      }
       <button
         gButton
         variant="ghost"
