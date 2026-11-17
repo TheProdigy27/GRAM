@@ -7,6 +7,7 @@ import {
   ADD_OUTCOME,
   HARNESS_STATUS_ADDED,
   HARNESS_STATUS_EMPTY,
+  HARNESS_STATUS_INSTALLED,
   INSTALL_PROGRESS,
   PREFLIGHT,
   PREFLIGHT_DOWNLOAD,
@@ -20,6 +21,7 @@ import type { SharedModel } from '../../core/generated/SharedModel';
 import { DetailStore } from '../../state/detail.store';
 import { HardwareStore } from '../../state/hardware.store';
 import { FILTER_DEBOUNCE_MS } from '../../state/ranking.store';
+import { RELEASES_URL } from '../../state/update.store';
 import { ModelDetailPanel } from './model-detail';
 
 /** Q8_0 ajouté à GRAM Harness, base téléchargée par GRAM. */
@@ -309,6 +311,83 @@ describe('HarnessPanel (Discuter avec)', () => {
     expect(toast()).toBe(
       'Qwen3-8B Q4_K_M retiré de GRAM Harness. hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M est supprimé d’Ollama (4,7 Go libérés).',
     );
+  });
+
+  it('GRAM Harness installé : « Ouvrir dans GRAM Harness » à la place de la commande', async () => {
+    const { calls, fixture, el, detail } = await open({
+      harness_status: () => HARNESS_STATUS_INSTALLED,
+    });
+    detail.select('Q4_K_M');
+    await fixture.whenStable();
+
+    const button = byTestId<HTMLButtonElement>('harness-open', el);
+    expect(text(button)).toBe('Ouvrir dans GRAM Harness');
+    expect(button.dataset['variant']).toBe('primary');
+    expect(queryTestId('harness-command', el)).toBeNull();
+    expect(queryTestId('harness-missing', el)).toBeNull();
+    expect(queryTestId('harness-download', el)).toBeNull();
+    await click(fixture, 'harness-open');
+    await settle(fixture);
+    expect(argsOf(calls, 'harness_open')).toEqual([{ ollamaName: 'gram/qwen3-8b:q4_k_m' }]);
+    expect(document.querySelector('.g-toast__message')).toBeNull();
+  });
+
+  it('GRAM Harness absent : « Télécharger GRAM Harness », et la commande reste', async () => {
+    const { calls, fixture, el, detail } = await open({
+      harness_status: () => HARNESS_STATUS_ADDED,
+    });
+    detail.select('Q4_K_M');
+    await fixture.whenStable();
+
+    expect(queryTestId('harness-open', el)).toBeNull();
+    expect(text(byTestId('harness-missing', el))).toContain(
+      'GRAM Harness, l’application de discussion, n’est pas installé sur cet ordinateur.',
+    );
+    expect(text(byTestId('harness-command', el))).toBe('ollama run gram/qwen3-8b:q4_k_m');
+    await click(fixture, 'harness-download');
+    expect(argsOf(calls, 'plugin:opener|open_url')[0]['url']).toBe(RELEASES_URL);
+  });
+
+  it('GRAM Harness installé entre-temps : le retour dans la fenêtre relit l’état', async () => {
+    let status: HarnessStatus = HARNESS_STATUS_ADDED;
+    const { calls, fixture, el, detail } = await open({ harness_status: () => status });
+    detail.select('Q4_K_M');
+    await fixture.whenStable();
+    expect(queryTestId('harness-download', el)).not.toBeNull();
+
+    status = HARNESS_STATUS_INSTALLED;
+    const before = argsOf(calls, 'harness_status').length;
+    window.dispatchEvent(new Event('focus'));
+    await settle(fixture);
+    expect(argsOf(calls, 'harness_status')).toHaveLength(before + 1);
+    expect(queryTestId('harness-open', el)).not.toBeNull();
+    expect(queryTestId('harness-command', el)).toBeNull();
+
+    // Installé : le focus ne relit plus rien.
+    window.dispatchEvent(new Event('focus'));
+    await settle(fixture);
+    expect(argsOf(calls, 'harness_status')).toHaveLength(before + 1);
+  });
+
+  it('GRAM Harness désinstallé depuis : ouverture refusée, toast, état relu', async () => {
+    const message =
+      'GRAM Harness n’est pas installé sur cet ordinateur : le télécharger depuis la page des releases, puis le lancer une fois.';
+    let status: HarnessStatus = HARNESS_STATUS_INSTALLED;
+    const { fixture, el, detail } = await open({
+      harness_status: () => status,
+      harness_open: () => {
+        status = HARNESS_STATUS_ADDED;
+        throw message;
+      },
+    });
+    detail.select('Q4_K_M');
+    await fixture.whenStable();
+
+    await click(fixture, 'harness-open');
+    await settle(fixture);
+    expect(toast()).toBe(`Ouverture impossible : ${message}`);
+    expect(queryTestId('harness-open', el)).toBeNull();
+    expect(queryTestId('harness-download', el)).not.toBeNull();
   });
 
   it('Ollama arrêté : invite à le lancer, sans préflight', async () => {

@@ -29,9 +29,16 @@ export class ModelsStore {
     return models.find((m) => m.name === wanted) ?? models[0] ?? null;
   });
 
-  /** Relit la liste ; sans effet si une lecture est déjà en cours. */
-  async refresh(): Promise<void> {
-    if (this.loading()) return;
+  /** Lecture en cours, attendue par les appels suivants au lieu d'en lancer une autre. */
+  private reading: Promise<void> | null = null;
+
+  /** Relit la liste ; pendant une lecture, attend celle-ci. */
+  refresh(): Promise<void> {
+    this.reading ??= this.read().finally(() => (this.reading = null));
+    return this.reading;
+  }
+
+  private async read(): Promise<void> {
     this.loading.set(true);
     try {
       this.list.set(await this.api.listModels());

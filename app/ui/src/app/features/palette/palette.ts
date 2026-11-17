@@ -221,7 +221,20 @@ export class Palette {
         run: () => this.ranking.setSearch(''),
       });
     }
-    // Ajout à GRAM Harness de la quantification de la fiche, et annulation de l'ajout en cours.
+    // Quantification de la fiche : ouverture dans GRAM Harness ou ajout ; annulation de l'ajout
+    // en cours.
+    const openable = this.harness.openable();
+    if (openable) {
+      list.push({
+        id: 'harness-open',
+        label: 'Ouvrir dans GRAM Harness',
+        hint: `${openable.displayName} ${openable.quant}`,
+        icon: 'external',
+        keys: [],
+        keywords: 'discuter conversation chat ollama',
+        run: () => void this.harness.open(openable),
+      });
+    }
     const addable = this.harness.addable();
     if (addable) {
       const { preflight: p, request } = addable;

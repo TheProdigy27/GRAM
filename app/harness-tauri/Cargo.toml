@@ -41,6 +41,13 @@ tauri-plugin-opener = "2.7.2"
 # Copier une réponse ou un bloc de code ; permission limitée à l'écriture dans
 # capabilities/default.json.
 tauri-plugin-clipboard-manager = "2.5.0"
+# Lien profond `gram-harness://open?model=…` (schéma dans tauri.conf.json), reçu au démarrage
+# ou pendant que l'application tourne ; traité depuis Rust seulement (aucune permission côté
+# WebView).
+tauri-plugin-deep-link = "2.6.3"
+# Une seule instance : un deuxième lancement (lien profond ouvert par Windows ou Linux) passe
+# son lien à la première et la ramène au premier plan.
+tauri-plugin-single-instance = { version = "2.5.5", features = ["deep-link"] }
 
 [lints]
 workspace = true

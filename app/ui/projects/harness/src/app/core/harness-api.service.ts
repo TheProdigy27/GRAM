@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { type Channel, invoke, type InvokeArgs } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Theme } from '@gram/theme';
@@ -16,13 +17,17 @@ export function errorMessage(e: unknown): string {
   return String(e);
 }
 
+/** Émis par le backend à chaque lien `gram-harness://open?model=…` valide. */
+export const OPEN_MODEL_EVENT = 'open-model';
+
 /** Adresse qu'un lien d'une réponse peut ouvrir : http et https seulement. */
 export function isWebLink(href: string | null | undefined): href is string {
   return !!href && /^https?:\/\/[^\s]+$/i.test(href);
 }
 
 /**
- * Seul point d'accès à l'IPC Tauri de GRAM Harness (`app/harness-tauri/src/commands.rs`). Les
+ * Seul point d'accès à l'IPC Tauri de GRAM Harness (`app/harness-tauri/src/commands.rs`) et à
+ * ses événements. Les
  * types viennent des types générés de GRAM. Toutes les promesses rejetées le sont avec une
  * `Error` dont le message est en français.
  */
@@ -92,6 +97,19 @@ export class HarnessApi {
   /** Image jointe à un message, en adresse `data:` (seule forme que la CSP autorise). */
   getImage(conversationId: string, name: string): Promise<string> {
     return this.call('get_image', { conversationId, name });
+  }
+
+  /**
+   * Modèle demandé par le dernier lien « Ouvrir dans GRAM Harness » (au lancement ou depuis),
+   * une seule fois ; `null` s'il n'y en a pas.
+   */
+  takeOpenedModel(): Promise<string | null> {
+    return this.call('take_opened_model');
+  }
+
+  /** Prévient à chaque lien reçu ; le modèle est pris par `takeOpenedModel`. */
+  onOpenModel(handler: () => void): Promise<UnlistenFn> {
+    return listen(OPEN_MODEL_EVENT, () => handler()).catch(rethrow);
   }
 
   /** Copie un texte dans le presse-papiers. */

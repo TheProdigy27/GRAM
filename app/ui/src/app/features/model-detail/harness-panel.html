@@ -71,13 +71,16 @@
               <span class="mono name" data-testid="harness-name">{{ e.model.ollamaName }}</span
               ><span class="muted"> · {{ addedFacts() }}</span>
             </p>
-            <p class="muted">
-              Pour discuter avec le modèle dans un terminal, en attendant GRAM Harness :
-            </p>
-            <app-command-block
-              testId="harness-command"
-              [command]="'ollama run ' + e.model.ollamaName"
-            />
+            @if (!store.presence()) {
+              <p class="muted" data-testid="harness-missing">
+                GRAM Harness, l’application de discussion, n’est pas installé sur cet ordinateur. En
+                attendant, pour discuter avec le modèle dans un terminal :
+              </p>
+              <app-command-block
+                testId="harness-command"
+                [command]="'ollama run ' + e.model.ollamaName"
+              />
+            }
           </div>
           @for (w of addedWarnings(); track $index) {
             <g-callout kind="warn">{{ w }}</g-callout>
@@ -102,6 +105,23 @@
             </g-callout>
           }
           <div class="actions">
+            @if (store.presence()) {
+              <button
+                gButton
+                variant="primary"
+                size="sm"
+                data-testid="harness-open"
+                (click)="open(e)"
+              >
+                <g-icon name="external" />
+                Ouvrir dans GRAM Harness
+              </button>
+            } @else {
+              <button gButton size="sm" data-testid="harness-download" (click)="download()">
+                <g-icon name="download" />
+                Télécharger GRAM Harness
+              </button>
+            }
             <button
               #removeButton
               gButton

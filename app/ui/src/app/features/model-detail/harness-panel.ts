@@ -14,6 +14,7 @@ import type { HarnessAddRequest } from '../../core/generated/HarnessAddRequest';
 import type { HarnessEntry } from '../../core/generated/HarnessEntry';
 import type { ModelDetail } from '../../core/generated/ModelDetail';
 import type { VariantDetail } from '../../core/generated/VariantDetail';
+import { TauriService, errorMessage } from '../../core/tauri.service';
 import { ctxK, decimal, fileSize, int, roundSize, tokS } from '../../shared/format';
 import { installPercent, installStep, sameVariant } from '../../shared/harness';
 import { CtxPipe } from '../../shared/pipes';
@@ -24,8 +25,10 @@ import { Icon } from '../../shared/ui/icon/icon';
 import { Progress } from '../../shared/ui/progress/progress';
 import { Skeleton } from '../../shared/ui/skeleton/skeleton';
 import { Tag } from '../../shared/ui/tag/tag';
+import { ToastService } from '../../shared/ui/toast/toast';
 import { HardwareStore } from '../../state/hardware.store';
 import { HarnessStore } from '../../state/harness.store';
+import { RELEASES_URL } from '../../state/update.store';
 import { CommandBlock } from './command-block';
 import type { RemoveChoice } from './harness-remove-dialog';
 
@@ -35,7 +38,9 @@ type PanelState = 'absent' | 'stopped' | 'new' | 'installing' | 'added';
 /**
  * « Discuter avec » : ajout de la quantification choisie à GRAM Harness, c'est-à-dire à Ollama
  * (téléchargée si besoin), réglée au contexte calculé par GRAM. Progression et annulation,
- * puis modèle dérivé `gram/…`, réglage d'un autre contexte et retrait.
+ * puis modèle dérivé `gram/…`, « Ouvrir dans GRAM Harness » (ou, s'il n'est pas installé,
+ * « Télécharger GRAM Harness » et la commande `ollama run`), réglage d'un autre contexte et
+ * retrait.
  */
 @Component({
   selector: 'app-harness-panel',
@@ -49,6 +54,8 @@ export class HarnessPanel {
 
   protected readonly store = inject(HarnessStore);
   protected readonly hardware = inject(HardwareStore);
+  private readonly tauri = inject(TauriService);
+  private readonly toast = inject(ToastService);
   private readonly dialogs = inject(DialogService);
   private readonly pendingTasks = inject(PendingTasks);
   private readonly injector = inject(Injector);
@@ -177,6 +184,20 @@ export class HarnessPanel {
 
   protected cancel(): void {
     void this.store.cancel();
+  }
+
+  /** GRAM Harness choisit le modèle dans une nouvelle conversation et passe au premier plan. */
+  protected open(entry: HarnessEntry): void {
+    void this.store.open(entry.model);
+  }
+
+  /** Page des releases (GRAM Harness n'est pas installé). */
+  protected download(): void {
+    this.tauri.openUrl(RELEASES_URL).catch((e: unknown) => {
+      this.toast.show(`Navigateur non ouvert (${errorMessage(e)}) : aller sur ${RELEASES_URL}`, {
+        kind: 'error',
+      });
+    });
   }
 
   /** « Retirer » : confirmation, avec la suppression de la base quand elle est permise. */

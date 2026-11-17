@@ -6,6 +6,10 @@
 //! Un seul ajout à la fois. Il continue si l'interface est rechargée : `harness_status` donne
 //! sa progression, et `harness-done` son issue. Tout passe par l'API locale d'Ollama, aucune
 //! commande système n'est lancée.
+//!
+//! « Ouvrir dans GRAM Harness » (`harness_open`) passe par le lien profond
+//! `gram-harness://open?model=…`, ouvert depuis Rust, seulement si GRAM Harness s'est déclaré
+//! installé (`harness.json`, qu'il écrit à chaque démarrage).
 
 use crate::error::{CmdResult, CommandError};
 use crate::events::{self, HARNESS_DONE, HARNESS_PROGRESS};
@@ -16,12 +20,16 @@ use gram_core::harness::{
     ALIAS_PREFIX, PreflightInput, ProgressThrottle, added_warnings, preflight,
 };
 use gram_core::{HarnessAddRequest, InstallProgress, OllamaModel, Preflight, UseCase};
-use gram_link::{HarnessPresence, SharedModel, read_manifest, same_model, update_manifest};
+use gram_link::{
+    DeepLink, HarnessPresence, SharedModel, read_manifest, read_presence, same_model,
+    update_manifest,
+};
 use gram_ollama::{Capability, OllamaClient};
 use serde::Serialize;
 use std::path::Path;
 use std::time::Instant;
 use tauri::{AppHandle, Runtime, State};
+use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
 use ts_rs::TS;
 
@@ -56,7 +64,7 @@ pub struct HarnessStatus {
     pub models: Vec<HarnessEntry>,
     /// Ajout en cours.
     pub install: Option<InstallProgress>,
-    /// GRAM Harness, s'il est installé (phase 7 : toujours absent pour l'instant).
+    /// GRAM Harness, s'il est installé : `harness.json` lisible et son exécutable toujours là.
     pub presence: Option<HarnessPresence>,
 }
 
@@ -307,8 +315,9 @@ pub async fn harness_remove(
     })
 }
 
-/// Modèles ajoutés à GRAM Harness et ajout en cours. Quand Ollama répond, les modèles dérivés
-/// qui en ont disparu (supprimés avec `ollama rm`…) sont retirés du manifeste.
+/// Modèles ajoutés à GRAM Harness, ajout en cours et présence de GRAM Harness. Quand Ollama
+/// répond, les modèles dérivés qui en ont disparu (supprimés avec `ollama rm`…) sont retirés du
+/// manifeste.
 #[tauri::command]
 pub async fn harness_status(state: State<'_, AppState>) -> CmdResult<HarnessStatus> {
     let dir = state.shared_dir();
@@ -341,8 +350,40 @@ pub async fn harness_status(state: State<'_, AppState>) -> CmdResult<HarnessStat
     Ok(HarnessStatus {
         models,
         install: state.install_progress(),
-        presence: None,
+        presence: read_presence(dir),
     })
+}
+
+/// Ouvre un modèle dans GRAM Harness : lien profond `gram-harness://open?model=…`, ouvert
+/// depuis Rust (la WebView n'a aucune permission pour ce schéma). GRAM Harness choisit le
+/// modèle s'il est dans Ollama. Refusé si GRAM Harness n'est pas installé : sous Windows, un
+/// schéma inconnu afficherait « Choisir une application » au lieu d'échouer.
+#[tauri::command]
+pub fn harness_open<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    ollama_name: String,
+) -> CmdResult<()> {
+    let link = DeepLink::new(ollama_name.trim()).map_err(|e| {
+        CommandError::msg(format!(
+            "{ollama_name} ne peut pas être ouvert dans GRAM Harness : {e}"
+        ))
+    })?;
+    if read_presence(state.shared_dir()).is_none() {
+        return Err(CommandError::msg(
+            "GRAM Harness n'est pas installé sur cet ordinateur : le télécharger depuis la page \
+             des releases, puis le lancer une fois.",
+        ));
+    }
+    tracing::info!(model = %link.model, "ouverture dans GRAM Harness");
+    app.opener()
+        .open_url(link.to_url(), None::<&str>)
+        .map_err(|e| {
+            CommandError::msg(format!(
+                "GRAM Harness ne s'est pas ouvert ({e}) : le lancer, puis choisir {}.",
+                link.model
+            ))
+        })
 }
 
 async fn resolve_request<R: Runtime>(

@@ -16,6 +16,6 @@ models: Array<HarnessEntry>,
  */
 install: InstallProgress | null, 
 /**
- * GRAM Harness, s'il est installé (phase 7 : toujours absent pour l'instant).
+ * GRAM Harness, s'il est installé : `harness.json` lisible et son exécutable toujours là.
  */
 presence: HarnessPresence | null, };

@@ -37,6 +37,13 @@
       "dangerousDisableAssetCspModification": ["style-src"]
     }
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["gram-harness"]
+      }
+    }
+  },
   "bundle": {
     "active": false,
     "publisher": "GRAM",

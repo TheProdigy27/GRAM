@@ -4,12 +4,19 @@ import { TestBed } from '@angular/core/testing';
 import { clearMocks } from '@tauri-apps/api/mocks';
 import { type Handler, argsOf, mockBackend } from '../../../testing/backend';
 import { allByTestId, byTestId, click, press, text, typeInto } from '../../../testing/dom';
-import { MODEL, RUNTIMES, makeDetail } from '../../../testing/fixtures';
+import {
+  HARNESS_STATUS_ADDED,
+  HARNESS_STATUS_INSTALLED,
+  MODEL,
+  RUNTIMES,
+  makeDetail,
+} from '../../../testing/fixtures';
 import type { DetailRequest } from '../../core/generated/DetailRequest';
 import type { RankRequest } from '../../core/generated/RankRequest';
 import { ThemeService } from '../../core/theme.service';
 import { DetailStore } from '../../state/detail.store';
 import { HardwareStore } from '../../state/hardware.store';
+import { HarnessStore } from '../../state/harness.store';
 import { FILTER_DEBOUNCE_MS, RankingStore } from '../../state/ranking.store';
 import { Palette } from './palette';
 
@@ -308,6 +315,31 @@ describe('Palette', () => {
     expect(argsOf(p.calls, 'harness_cancel')).toHaveLength(1);
     expect(command('harness-cancel')).toBeUndefined();
     finish(null);
+  });
+
+  it('GRAM Harness : ouvrir la quantification de la fiche, s’il est installé', async () => {
+    let status = HARNESS_STATUS_ADDED;
+    const p = await open({ harness_status: () => status }, async ({ detail }) => {
+      TestBed.inject(HardwareStore).runtimes.set(RUNTIMES);
+      detail.open('Qwen/Qwen3-8B-GGUF');
+      await TestBed.inject(ApplicationRef).whenStable();
+      detail.select('Q4_K_M');
+      await TestBed.inject(ApplicationRef).whenStable();
+    });
+    const command = (id: string) => p.options().find((o) => o.dataset['key'] === `command:${id}`);
+    // Ajoutée, mais GRAM Harness n'est pas installé.
+    expect(command('harness-open')).toBeUndefined();
+    expect(command('harness-add')).toBeUndefined();
+
+    status = HARNESS_STATUS_INSTALLED;
+    await TestBed.inject(HarnessStore).refresh();
+    await p.fixture.whenStable();
+    const openCommand = command('harness-open')!;
+    expect(text(openCommand.querySelector('.opt__label'))).toBe('Ouvrir dans GRAM Harness');
+    expect(text(openCommand.querySelector('.opt__hint'))).toBe('Qwen3-8B Q4_K_M');
+    await click(p.fixture, openCommand);
+    expect(p.closed()).toBe(1);
+    expect(argsOf(p.calls, 'harness_open')).toEqual([{ ollamaName: 'gram/qwen3-8b:q4_k_m' }]);
   });
 
   it('signale une recherche impossible', async () => {

@@ -33,11 +33,17 @@ export interface HarnessError extends VariantRef {
 /** Durée des toasts qui portent un message à lire (échec, avertissements). */
 const LONG_TOAST_MS = 10_000;
 
+/** Délai minimal entre deux relectures déclenchées par le focus de la fenêtre. */
+export const FOCUS_REFRESH_MS = 2000;
+
 /**
  * Ajout à GRAM Harness (phase 2 côté Rust) : modèles ajoutés, ajout en cours (événements
  * `harness-progress` et `harness-done`), préflight de la quantification affichée dans la
- * fiche, et actions. Un seul ajout à la fois ; il continue fiche fermée, et après un
- * rechargement de l'interface (`harness_status` donne sa progression).
+ * fiche, présence de GRAM Harness et actions. Un seul ajout à la fois ; il continue fiche
+ * fermée, et après un rechargement de l'interface (`harness_status` donne sa progression).
+ *
+ * Tant que GRAM Harness n'est pas installé, le retour dans la fenêtre relit l'état : installé
+ * entre-temps (« Télécharger GRAM Harness »), la fiche propose « Ouvrir dans GRAM Harness ».
  *
  * Toasts de fin d'ajout : depuis la promesse pour un ajout lancé ici, depuis `harness-done`
  * pour un ajout lancé avant un rechargement, jamais les deux.
@@ -60,6 +66,8 @@ export class HarnessStore {
   readonly addedWarnings = signal<Readonly<Record<string, readonly string[]>>>({});
 
   readonly entries = computed<readonly HarnessEntry[]>(() => this.status()?.models ?? []);
+  /** GRAM Harness, s'il est installé (il a écrit `harness.json` et son exécutable est là). */
+  readonly presence = computed(() => this.status()?.presence ?? null);
   readonly ollamaRunning = computed(() => !!this.hardware.runtimes()?.ollama.running);
 
   /** Ajout lancé ici, en attente de sa réponse. */
@@ -68,6 +76,7 @@ export class HarnessStore {
   private finished: VariantRef | null = null;
   /** Seule la réponse du dernier `harness_status` demandé compte. */
   private refreshSeq = 0;
+  private lastFocusRefresh = 0;
 
   // ── Préflight de la quantification affichée ───────────────────────────────────────────────
 
@@ -119,13 +128,26 @@ export class HarnessStore {
     return this.entryFor(request) ? null : { request, preflight };
   });
 
+  /**
+   * Modèle de la quantification de la fiche quand « Ouvrir dans GRAM Harness » est possible
+   * (palette) : ajoutée, et GRAM Harness installé.
+   */
+  readonly openable = computed<SharedModel | null>(() => {
+    const request = this.request();
+    if (!request || !this.presence()) return null;
+    return this.entryFor(request)?.model ?? null;
+  });
+
   constructor() {
     const listeners = [
       this.tauri.listen('harness-progress', (p) => this.onProgress(p)),
       this.tauri.listen('harness-done', (d) => void this.onDone(d)),
     ];
+    const onFocus = () => this.onWindowFocus();
+    window.addEventListener('focus', onFocus);
     inject(DestroyRef).onDestroy(() => {
       for (const l of listeners) void l.then((f) => f()).catch(() => undefined);
+      window.removeEventListener('focus', onFocus);
     });
     // Au démarrage, puis à chaque détection des runtimes (« Actualiser » d'Ollama…).
     effect(() => {
@@ -221,6 +243,24 @@ export class HarnessStore {
     }
   }
 
+  /**
+   * Ouvre un modèle dans GRAM Harness, qui le choisit dans une nouvelle conversation. Ne rejette
+   * pas : un échec est annoncé par un toast, et l'état relu (GRAM Harness désinstallé…).
+   */
+  async open(model: SharedModel): Promise<boolean> {
+    try {
+      await this.tauri.harnessOpen(model.ollamaName);
+      return true;
+    } catch (e) {
+      this.toast.show(`Ouverture impossible : ${errorMessage(e)}`, {
+        kind: 'error',
+        duration: LONG_TOAST_MS,
+      });
+      void this.refresh();
+      return false;
+    }
+  }
+
   /** Retire un modèle de GRAM Harness (et sa base, si demandé et permis). */
   async remove(model: SharedModel, removeBase: boolean): Promise<RemoveOutcome | null> {
     if (this.removing()) return null;
@@ -252,6 +292,15 @@ export class HarnessStore {
   }
 
   // ── Événements ────────────────────────────────────────────────────────────────────────────
+
+  /** De retour dans la fenêtre : GRAM Harness a peut-être été installé entre-temps. */
+  private onWindowFocus(): void {
+    if (this.presence()) return;
+    const now = Date.now();
+    if (now - this.lastFocusRefresh < FOCUS_REFRESH_MS) return;
+    this.lastFocusRefresh = now;
+    void this.refresh();
+  }
 
   private onProgress(p: InstallProgress): void {
     if (!sameVariant(p, this.finished)) this.install.set(p);

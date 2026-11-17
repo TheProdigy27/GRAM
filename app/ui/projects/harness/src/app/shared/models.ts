@@ -24,6 +24,11 @@ const CAPABILITIES: readonly Capability[] = [
   { key: 'tools', label: 'Outils', icon: 'settings', description: 'Sait appeler des outils' },
 ];
 
+/** Même modèle pour Ollama, qui ne tient pas compte de la casse des noms. */
+export function sameModelName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
 /** Capacités du modèle, dans un ordre fixe. */
 export function capabilities(m: HarnessModel): Capability[] {
   return CAPABILITIES.filter((c) => m[c.key]);

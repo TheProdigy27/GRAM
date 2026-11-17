@@ -147,7 +147,7 @@ export class TauriService {
 
   // ── Ajout à GRAM Harness ─────────────────────────────────────────────────────────────────
 
-  /** Modèles ajoutés (d'après le manifeste) et ajout en cours. */
+  /** Modèles ajoutés (d'après le manifeste), ajout en cours et présence de GRAM Harness. */
   harnessStatus(): Promise<HarnessStatus> {
     return this.call('harness_status');
   }
@@ -180,6 +180,14 @@ export class TauriService {
    */
   harnessRemove(ollamaName: string, removeBase: boolean): Promise<RemoveOutcome> {
     return this.call('harness_remove', { ollamaName, removeBase });
+  }
+
+  /**
+   * Ouvre un modèle dans GRAM Harness (lien profond ouvert depuis Rust). Rejetée si GRAM Harness
+   * n'est pas installé (plus de `harness.json`, ou son exécutable a disparu).
+   */
+  harnessOpen(ollamaName: string): Promise<void> {
+    return this.call('harness_open', { ollamaName });
   }
 
   // ── Paramètres et token ──────────────────────────────────────────────────────────────────

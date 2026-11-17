@@ -9,6 +9,7 @@ import type { Estimate } from '../app/core/generated/Estimate';
 import type { HardwareOptions } from '../app/core/generated/HardwareOptions';
 import type { HardwareProfile } from '../app/core/generated/HardwareProfile';
 import type { HarnessAddRequest } from '../app/core/generated/HarnessAddRequest';
+import type { HarnessPresence } from '../app/core/generated/HarnessPresence';
 import type { HarnessStatus } from '../app/core/generated/HarnessStatus';
 import type { InstallProgress } from '../app/core/generated/InstallProgress';
 import type { LaunchPlan } from '../app/core/generated/LaunchPlan';
@@ -628,6 +629,20 @@ export const HARNESS_STATUS_ADDED: HarnessStatus = {
   models: [{ model: SHARED_MODEL, baseRemovable: false }],
   install: null,
   presence: null,
+};
+
+/** GRAM Harness installé (il a écrit `harness.json`). */
+export const HARNESS_PRESENCE: HarnessPresence = {
+  version: 1,
+  appVersion: '0.2.0',
+  exePath: 'C:\\Users\\gram\\AppData\\Local\\GRAM Harness\\gram-harness.exe',
+  updatedAt: '2026-11-17T09:00:00Z',
+};
+
+/** Q4_K_M ajouté, GRAM Harness installé : « Ouvrir dans GRAM Harness ». */
+export const HARNESS_STATUS_INSTALLED: HarnessStatus = {
+  ...HARNESS_STATUS_ADDED,
+  presence: HARNESS_PRESENCE,
 };
 
 /** Téléchargement de Q8_0 en cours (événement `harness-progress`). */

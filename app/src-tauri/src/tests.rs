@@ -1219,6 +1219,53 @@ fn ajouts_refuses() {
     assert_eq!(h.ok("harness_status", json!({}))["models"], json!([]));
 }
 
+#[test]
+fn presence_et_ouverture_dans_gram_harness() {
+    let dir = TempDir::new("harness-presence");
+    let h = Harness::new(&dir);
+    let open = |name: &str| h.invoke("harness_open", json!({ "ollamaName": name }));
+    let not_installed = |r: Result<Value, Value>| {
+        let e = r.unwrap_err();
+        assert!(
+            e.as_str()
+                .unwrap()
+                .starts_with("GRAM Harness n'est pas installé sur cet ordinateur"),
+            "{e}"
+        );
+    };
+
+    // Jamais lancé : aucune présence, ouverture refusée sans rien ouvrir.
+    assert_eq!(h.ok("harness_status", json!({}))["presence"], Value::Null);
+    not_installed(open(ALIAS));
+
+    // Présence écrite par GRAM Harness, mais son exécutable a disparu (désinstallé).
+    let exe = dir.0.join("gram-harness.exe");
+    let presence = gram_link::HarnessPresence::new("0.2.0", exe.clone(), chrono::Utc::now());
+    gram_link::write_presence(&dir.0.join("shared"), &presence).unwrap();
+    assert_eq!(h.ok("harness_status", json!({}))["presence"], Value::Null);
+    not_installed(open(ALIAS));
+
+    // Exécutable présent : installé.
+    std::fs::write(&exe, b"").unwrap();
+    let status = h.ok("harness_status", json!({}));
+    assert_eq!(status["presence"]["version"], 1);
+    assert_eq!(status["presence"]["appVersion"], "0.2.0");
+    assert!(
+        status["presence"]["exePath"]
+            .as_str()
+            .unwrap()
+            .ends_with("gram-harness.exe")
+    );
+    // Un nom que le lien refuserait n'est jamais ouvert.
+    let e = open("gram/../x y").unwrap_err();
+    assert!(
+        e.as_str()
+            .unwrap()
+            .contains("ne peut pas être ouvert dans GRAM Harness"),
+        "{e}"
+    );
+}
+
 // ── Mises à jour ─────────────────────────────────────────────────────────────────────────────
 
 /// Clé publique de test : elle a signé la release fictive 99.0.0 de `tests/fixtures/update/`.

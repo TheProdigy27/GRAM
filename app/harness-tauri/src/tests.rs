@@ -3,6 +3,7 @@
 
 use crate::chat::ChatSend;
 use crate::conversations::tests::TempDir;
+use crate::link::{self, OPEN_MODEL_EVENT};
 use crate::state::{Config, HarnessState};
 use gram_link::{MANIFEST_FILE, SharedManifest, SharedModel};
 use gram_ollama::OllamaClient;
@@ -13,11 +14,11 @@ use std::sync::{Arc, Mutex};
 use tauri::ipc::{CallbackFn, Channel, InvokeBody, InvokeResponseBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
-use tauri::{App, Manager, WebviewWindow, WebviewWindowBuilder};
+use tauri::{App, Listener, Manager, WebviewWindow, WebviewWindowBuilder};
 
 /// Application simulée.
 struct Harness {
-    _app: App<MockRuntime>,
+    app: App<MockRuntime>,
     webview: WebviewWindow<MockRuntime>,
 }
 
@@ -43,7 +44,7 @@ impl Harness {
         let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
             .build()
             .unwrap();
-        Self { _app: app, webview }
+        Self { app, webview }
     }
 
     /// `invoke(cmd, args)` tel que l'appelle l'interface.
@@ -171,6 +172,42 @@ fn erreurs_en_francais() {
     let h = Harness::new(Some(OllamaClient::new(fake.url()).unwrap()), None, true);
     let err = h.invoke("list_models", json!({})).unwrap_err();
     assert!(err.as_str().unwrap().contains("/api/tags"), "{err}");
+}
+
+/// Lien profond reçu (au démarrage ou pendant que l'application tourne), sans le plugin : le
+/// modèle est mis de côté, l'interface prévenue, et `take_opened_model` le donne une fois.
+#[test]
+fn lien_profond_recu() {
+    let h = Harness::new(None, None, true);
+    let app = h.app.handle();
+    let events = Arc::new(Mutex::new(0));
+    let sink = Arc::clone(&events);
+    app.listen(OPEN_MODEL_EVENT, move |_| *sink.lock().unwrap() += 1);
+    let state = app.state::<HarnessState>();
+    let take = || h.invoke("take_opened_model", json!({})).unwrap();
+    assert_eq!(take(), Value::Null);
+
+    // Lien refusé : ignoré, rien n'est émis.
+    let refused = ["gram-harness://open?model=qwen3&pull=1"];
+    assert_eq!(link::receive(app, state.open_requests(), refused), None);
+    assert_eq!(*events.lock().unwrap(), 0);
+    assert_eq!(take(), Value::Null);
+
+    // Deux liens avant que l'interface ne prenne : le dernier compte, une seule fois.
+    link::receive(
+        app,
+        state.open_requests(),
+        ["gram-harness://open?model=qwen3"],
+    );
+    let model = link::receive(
+        app,
+        state.open_requests(),
+        ["gram-harness://open/?model=gram%2Fqwen3-8b%3Aq4_k_m"],
+    );
+    assert_eq!(model.as_deref(), Some("gram/qwen3-8b:q4_k_m"));
+    assert_eq!(*events.lock().unwrap(), 2);
+    assert_eq!(take(), "gram/qwen3-8b:q4_k_m");
+    assert_eq!(take(), Value::Null);
 }
 
 /// Réponse transmise par le canal propre à la requête (`Channel`), au format que lit
@@ -381,6 +418,11 @@ fn configuration() {
     // HTML5 pour joindre des images.
     assert_eq!(conf["app"]["windows"][0]["dragDropEnabled"], false);
     assert_eq!(conf["app"]["security"], gram["app"]["security"]);
+    // Schéma du lien profond que GRAM construit.
+    assert_eq!(
+        conf["plugins"]["deep-link"]["desktop"]["schemes"],
+        json!([gram_link::deeplink::SCHEME])
+    );
 
     let angular: Value = serde_json::from_str(include_str!("../../ui/angular.json")).unwrap();
     let harness = &angular["projects"]["harness"]["architect"];

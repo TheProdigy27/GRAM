@@ -14,6 +14,7 @@ import { ModelPicker } from './features/model-picker/model-picker';
 import { Sidebar } from './features/sidebar/sidebar';
 import { ChatStore } from './state/chat.store';
 import { ModelsStore } from './state/models.store';
+import { OpenLinks } from './state/open-links';
 
 /** Délai minimal entre deux relectures déclenchées par le focus de la fenêtre. */
 export const FOCUS_REFRESH_MS = 2000;
@@ -34,7 +35,8 @@ const THEMES: readonly ThemeChoice[] = [
  * Coque de GRAM Harness : barre latérale (conversations), en-tête (sélecteur de modèle, jauge
  * de contexte, « Actualiser », thème, paramètres) et discussion. La liste des modèles est lue
  * au lancement, par « Actualiser » (R) et quand la fenêtre reprend le focus ; celle des
- * conversations au lancement. Raccourcis : Ctrl N, Ctrl , (paramètres), Échap (arrêter la
+ * conversations au lancement. Les liens « Ouvrir dans GRAM Harness » sont suivis dès le
+ * lancement (`OpenLinks`). Raccourcis : Ctrl N, Ctrl , (paramètres), Échap (arrêter la
  * réponse), ? (aide), R.
  */
 @Component({
@@ -66,7 +68,9 @@ export class App {
   constructor() {
     void this.store.refresh();
     void this.chat.load();
-    inject(DestroyRef).onDestroy(
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(inject(OpenLinks).start());
+    destroyRef.onDestroy(
       inject(ShortcutsService).register([
         { key: 'r', run: () => this.refresh() },
         { key: 'n', mod: true, inInputs: true, run: () => this.chat.newConversation() },

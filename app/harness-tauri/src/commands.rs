@@ -32,6 +32,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         set_think,
         delete_conversation,
         get_image,
+        take_opened_model,
     ]
 }
 
@@ -193,4 +194,11 @@ pub async fn get_image(
 ) -> CmdResult<String> {
     let image = state.conversations()?.read_image(&conversation_id, &name)?;
     Ok(images::data_url(image.kind, &image.bytes))
+}
+
+/// Modèle demandé par le dernier lien `gram-harness://open?model=…` (au lancement ou depuis,
+/// annoncé par l'événement `open-model`), une seule fois ; `null` s'il n'y en a pas.
+#[tauri::command]
+pub fn take_opened_model(state: State<'_, HarnessState>) -> Option<String> {
+    state.open_requests().take()
 }

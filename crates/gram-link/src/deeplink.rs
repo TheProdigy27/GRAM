@@ -60,7 +60,8 @@ impl DeepLink {
     /// Windows ajoute parfois la barre), un identifiant, un port ou une ancre, un paramètre
     /// autre que `model`, `model` absent, vide ou en double, et un nom de plus de 200
     /// caractères ou qui n'est pas fait de segments `[A-Za-z0-9._-]` séparés par `/`, avec une
-    /// étiquette `:` finale facultative.
+    /// étiquette `:` finale facultative (un segment fait seulement de points, comme `..`, est
+    /// refusé).
     pub fn parse(link: &str) -> Result<Self, DeepLinkError> {
         let url = Url::parse(link.trim()).map_err(|e| DeepLinkError::Url(e.to_string()))?;
         if url.scheme() != SCHEME {
@@ -98,9 +99,9 @@ fn check_name(name: &str) -> Result<(), DeepLinkError> {
         return Err(DeepLinkError::TooLong(len));
     }
     let part = |s: &str| {
-        !s.is_empty()
-            && s.bytes()
-                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+        s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+            && s.bytes().any(|b| b != b'.')
     };
     let (path, tag) = match name.rsplit_once(':') {
         Some((path, tag)) => (path, Some(tag)),
@@ -202,6 +203,10 @@ mod tests {
         // Caractères ou forme invalides.
         for bad in [
             "gram%2F..%2F..%5Cx",
+            "..%2F..%2Fx",
+            "gram%2F.%2Fx",
+            "qwen3:..",
+            "...",
             "a%20b",
             "a+b",
             "a%00",

@@ -1,14 +1,15 @@
 //! État de GRAM Harness (`tauri::State<HarnessState>`) : client de l'API d'Ollama, dossier
-//! partagé avec GRAM, capacités des modèles déjà lues, conversations et réponses en cours. La
-//! détection d'Ollama est injectable pour les tests.
+//! partagé avec GRAM, capacités des modèles déjà lues, conversations et réponses en cours,
+//! modèle demandé par un lien profond. La détection d'Ollama est injectable pour les tests.
 
 use crate::chat::Generations;
 use crate::conversations::ConversationStore;
 use crate::error::{CmdResult, CommandError};
+use crate::link::OpenRequests;
 use crate::models::ShowCache;
 use gram_link::{SharedManifest, read_manifest};
 use gram_ollama::{Capability, OllamaClient};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Ollama est-il installé ? Bloquant (≈ 100 ms) : appelé seulement quand son API ne répond pas.
@@ -35,6 +36,7 @@ pub struct HarnessState {
     shows: ShowCache,
     conversations: Option<ConversationStore>,
     generations: Generations,
+    open_requests: OpenRequests,
 }
 
 impl HarnessState {
@@ -45,6 +47,7 @@ impl HarnessState {
             detect_ollama,
             shows: ShowCache::default(),
             generations: Generations::default(),
+            open_requests: OpenRequests::default(),
         }
     }
 
@@ -81,6 +84,11 @@ impl HarnessState {
             .unwrap_or_default()
     }
 
+    /// Dossier partagé avec GRAM, s'il est connu.
+    pub fn shared_dir(&self) -> Option<&Path> {
+        self.config.shared_dir.as_deref()
+    }
+
     pub fn shows(&self) -> &ShowCache {
         &self.shows
     }
@@ -112,6 +120,11 @@ impl HarnessState {
 
     pub fn generations(&self) -> &Generations {
         &self.generations
+    }
+
+    /// Modèle demandé par le dernier lien profond, en attendant que l'interface le prenne.
+    pub fn open_requests(&self) -> &OpenRequests {
+        &self.open_requests
     }
 
     pub async fn ollama_installed(&self) -> bool {
