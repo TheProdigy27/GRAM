@@ -5,13 +5,13 @@
 //! dérivé, même manifeste partagé (`fr.gram.shared/models.json`).
 
 use crate::estimate::find;
-use crate::sync::{cache, runtime};
+use crate::sync::{cache, hub, runtime};
 use anyhow::{Context, Result, bail};
 use gram_core::estimate::{candidate_variants, estimate};
 use gram_core::fmt::{ctx_k, gb, num, thousands, tok_s};
 use gram_core::harness::{
-    ALIAS_PREFIX, InstallPhase, PreflightInput, ProgressThrottle, PullProgress, added_warnings,
-    preflight,
+    ALIAS_PREFIX, Availability, InstallPhase, PreflightInput, ProgressThrottle, PullProgress,
+    added_warnings, needs_availability, preflight,
 };
 use gram_core::{Measurement, MemoryBudget, Overrides, QuantTable, Settings, UseCase, Workload};
 use gram_link::json;
@@ -166,6 +166,13 @@ fn add(
     );
     let installed = rt.block_on(client.tags())?;
     let models_dir = gram_ollama::models_dir().map(|d| d.to_string_lossy().into_owned());
+    // Comme l'application : Hugging Face sert-il cette quantification à Ollama ?
+    let availability = if needs_availability(model, &variant, &installed) {
+        rt.block_on(gram_hub::ollama_availability(&hub()?, &variant))
+            .unwrap_or_else(|e| Availability::Unknown(e.to_string()))
+    } else {
+        Availability::Unchecked
+    };
     let plan = preflight(&PreflightInput {
         model,
         variant: &variant,
@@ -175,6 +182,7 @@ fn add(
         installed: &installed,
         disks: &hw.disks,
         models_dir: models_dir.as_deref(),
+        availability: &availability,
     });
 
     eprintln!(

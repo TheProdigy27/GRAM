@@ -5,7 +5,6 @@
 //! inconnus sont ignorés.
 
 use crate::error::{OllamaError, Result};
-use gram_core::harness::PullFailure;
 use gram_core::{LoadedModel, OllamaModel};
 use serde::{Deserialize, Serialize};
 
@@ -437,31 +436,6 @@ pub fn parse_pull_line(line: &[u8]) -> Result<PullEvent> {
     match line.error {
         Some(error) => Err(OllamaError::Interrupted(error)),
         None => Ok(line.event),
-    }
-}
-
-/// Reconnaît, dans le message d'erreur d'un téléchargement depuis Hugging Face, un échec que
-/// l'utilisateur peut corriger (textes d'Ollama 0.40.16, dans `pull-error-*.ndjson`) :
-///
-/// - `realm host "huggingface.co" does not match original host "hf.co"` (dépôt protégé ou
-///   inexistant depuis `hf.co/`) et `401: {"error":"Invalid username or password."}` (depuis
-///   `huggingface.co/`, clé d'Ollama non enregistrée) ;
-/// - `400: {"error":"The specified tag is not a valid quantization scheme…"}` ;
-/// - `400: {"error":"This repository only contains sharded GGUF files…"}` ;
-/// - `invalid split GGUF: split GGUF has 2 remaining shards, expected 5`, renvoyé par
-///   `/api/create` (HTTP 500) quand le fichier téléchargé n'est que la première partie d'un
-///   modèle découpé, sous un nom qui ne le dit pas (`create-error-split.json`).
-pub fn pull_failure(message: &str) -> Option<PullFailure> {
-    if message.contains("does not match original host") || message.contains("manifest: 401") {
-        Some(PullFailure::Unauthorized)
-    } else if message.contains("not a valid quantization scheme") {
-        Some(PullFailure::UnknownQuant)
-    } else if message.contains("sharded GGUF") {
-        Some(PullFailure::Sharded)
-    } else if message.contains("invalid split GGUF") {
-        Some(PullFailure::SplitPart)
-    } else {
-        None
     }
 }
 
@@ -952,6 +926,7 @@ mod tests {
 
     #[test]
     fn erreurs_de_telechargement() {
+        use gram_core::harness::PullFailure;
         let error = |text: &[u8]| {
             let lines = pull_lines(text);
             assert_eq!(lines.len(), 2);
@@ -979,10 +954,20 @@ mod tests {
             error(fixture!("pull-error-sharded.ndjson"))
                 .contains("This repository only contains sharded GGUF files")
         );
+        // Quantification valide, mais absente du dépôt (enregistré le 17 novembre 2026).
+        assert_eq!(
+            error(fixture!("pull-error-tag.ndjson")),
+            r#"pull model manifest: 400: {"error":"The specified tag is not available in the repository. Please use another tag or \"latest\""}"#
+        );
         // Échecs reconnus, pour un message qui dit quoi faire.
+        let pull_failure = PullFailure::recognize;
         let failure = |text: &[u8]| pull_failure(&error(text));
         assert_eq!(
             failure(fixture!("pull-error-quant.ndjson")),
+            Some(PullFailure::UnknownQuant)
+        );
+        assert_eq!(
+            failure(fixture!("pull-error-tag.ndjson")),
             Some(PullFailure::UnknownQuant)
         );
         assert_eq!(

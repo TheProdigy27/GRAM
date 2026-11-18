@@ -11,7 +11,7 @@ use tauri::{AppHandle, Runtime, State};
 use ts_rs::TS;
 
 /// Client Hugging Face qui relaie la progression et le quota au frontend.
-fn hub<R: Runtime>(
+pub(crate) fn hub<R: Runtime>(
     app: &AppHandle<R>,
     state: &AppState,
     progress: bool,

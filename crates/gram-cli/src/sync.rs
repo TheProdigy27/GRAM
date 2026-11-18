@@ -36,7 +36,7 @@ fn phase(p: SyncPhase) -> &'static str {
 }
 
 /// Client Hugging Face ; le token éventuel vient de la variable `HF_TOKEN` (jamais affiché).
-fn hub() -> Result<Hub<ReqwestTransport>> {
+pub(crate) fn hub() -> Result<Hub<ReqwestTransport>> {
     let token = std::env::var("HF_TOKEN").ok().and_then(HfToken::new);
     if token.is_some() {
         eprintln!("Token Hugging Face : configuré (HF_TOKEN)");

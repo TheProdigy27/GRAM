@@ -134,6 +134,13 @@ pub fn launch_plan(
             "Ne tient pas en mémoire sur cette machine : le lancement risque d'échouer.".into(),
         );
     }
+    if !variant.exact {
+        notes.push(format!(
+            "Taille estimée : aucun fichier {} n'est connu pour ce modèle, et le dépôt ne le \
+             propose peut-être pas (le téléchargement échouerait alors).",
+            variant.label
+        ));
+    }
 
     match runtime {
         Runtime::Ollama => {
@@ -458,6 +465,20 @@ mod tests {
         assert_eq!(p.notes.len(), 3, "{:?}", p.notes);
         assert!(p.notes[1].contains("3 fichiers"));
         assert!(p.notes[2].contains("protégé"));
+
+        // Taille estimée : le dépôt ne propose peut-être pas cette quantification.
+        let mut estimated = variant(0);
+        estimated.exact = false;
+        let p = launch_plan(
+            Runtime::Ollama,
+            &estimated,
+            &estimate(RunMode::Gpu),
+            false,
+            KvCacheType::F16,
+            Os::Windows,
+        );
+        assert_eq!(p.notes.len(), 1, "{:?}", p.notes);
+        assert!(p.notes[0].starts_with("Taille estimée : aucun fichier Q4_K_M"));
     }
 
     #[test]

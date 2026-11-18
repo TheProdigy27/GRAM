@@ -51,7 +51,15 @@ pub struct GgufMeta {
     pub full_attention_interval: Option<u32>,
     /// Couches récurrentes (sans cache KV), d'après `attention.recurrent_layers`.
     pub recurrent_layers: Option<u32>,
+    /// Nombre de tenseurs du fichier (début de l'en-tête).
+    pub tensor_count: Option<u64>,
+    /// Nombre de parties d'un modèle découpé par llama.cpp (`split.count`).
+    pub split_count: Option<u32>,
 }
+
+/// Tenseurs par couche, au moins, d'un modèle complet : normalisation, attention (ou son
+/// équivalent récurrent) et réseau feed-forward. Les modèles réels en ont de 11 à 18.
+const MIN_TENSORS_PER_BLOCK: u64 = 3;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Parsed {
@@ -226,12 +234,14 @@ pub fn parse(data: &[u8]) -> Result<Parsed, GgufError> {
     }
     let mut r = Reader { data, pos: 0 };
     let mut pairs: Vec<(String, Value)> = Vec::new();
-    let complete = match read_pairs(&mut r, &mut pairs) {
+    let mut tensors = None;
+    let complete = match read_pairs(&mut r, &mut tensors, &mut pairs) {
         Ok(()) => true,
         Err(Error::Truncated) => false,
         Err(Error::Gguf(e)) => return Err(e),
     };
-    let meta = extract(&pairs);
+    let mut meta = extract(&pairs);
+    meta.tensor_count = tensors;
     Ok(if complete {
         Parsed::Complete(meta)
     } else if meta.has_required() {
@@ -241,14 +251,18 @@ pub fn parse(data: &[u8]) -> Result<Parsed, GgufError> {
     })
 }
 
-fn read_pairs(r: &mut Reader<'_>, pairs: &mut Vec<(String, Value)>) -> Result<(), Error> {
+fn read_pairs(
+    r: &mut Reader<'_>,
+    tensors: &mut Option<u64>,
+    pairs: &mut Vec<(String, Value)>,
+) -> Result<(), Error> {
     r.take(4)?; // magic
     let version = r.u32()?;
     if !(2..=3).contains(&version) {
         // v1 (obsolète) ou fichier big-endian.
         return Err(GgufError::UnsupportedVersion(version).into());
     }
-    let _tensors = r.u64()?;
+    *tensors = Some(r.u64()?);
     let kv_count = r.u64()?;
     for _ in 0..kv_count {
         let key = r.string()?;
@@ -266,8 +280,12 @@ fn extract(pairs: &[(String, Value)]) -> GgufMeta {
         Value::Str(s) if k == "general.architecture" => Some(s.clone()),
         _ => None,
     });
+    let split_count = pairs
+        .iter()
+        .find_map(|(k, v)| (k == "split.count").then(|| v.as_u32())?);
     let mut m = GgufMeta {
         architecture,
+        split_count,
         ..GgufMeta::default()
     };
     let Some(arch) = m.architecture.clone() else {
@@ -312,6 +330,18 @@ fn extract(pairs: &[(String, Value)]) -> GgufMeta {
 }
 
 impl GgufMeta {
+    /// Le fichier n'est qu'une partie d'un modèle découpé, même si son nom ne le dit pas :
+    /// `split.count` le dit, ou il a trop peu de tenseurs pour ses couches (le fichier `Maya`
+    /// de DeepSeek V4.1 Flash : 40 tenseurs pour 40 couches, `split.count` étant plus loin que
+    /// les tableaux du tokenizer).
+    pub fn split_part(&self) -> bool {
+        self.split_count.is_some_and(|n| n > 1)
+            || matches!(
+                (self.tensor_count, self.block_count),
+                (Some(t), Some(b)) if t < MIN_TENSORS_PER_BLOCK * u64::from(b)
+            )
+    }
+
     /// Clés sans lesquelles le cache KV ne peut pas être calculé.
     fn has_required(&self) -> bool {
         self.architecture.is_some()
@@ -418,6 +448,38 @@ mod tests {
             }
         );
         assert_eq!(m.params_active(8_190_735_360), None);
+    }
+
+    #[test]
+    fn partie_d_un_modele_decoupe() {
+        // 24 Kio : le gabarit de discussion (tokenizer.chat_template) précède les clés
+        // d'architecture.
+        let m =
+            partial("huihui-ai--Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF--Maya-XS-IQ1_S");
+        assert_eq!(m.architecture.as_deref(), Some("deepseek41"));
+        assert_eq!((m.tensor_count, m.block_count), (Some(40), Some(40)));
+        assert!(m.split_part());
+        // Modèles complets : de 11 à 18 tenseurs par couche.
+        for name in [
+            "Qwen--Qwen3-8B-GGUF--Qwen3-8B-Q4_K_M",
+            "unsloth--Qwen3.5-9B-GGUF--Qwen3.5-9B-UD-IQ2_XXS",
+            "ggml-org--Qwen3.6-35B-A3B-GGUF--Qwen3.6-35B-A3B-Q4_K_M",
+            "ggml-org--gemma-3-4b-it-GGUF--gemma-3-4b-it-Q4_K_M",
+            "ibm-granite--granite-4.0-h-micro-GGUF--granite-4.0-h-micro-Q2_K",
+        ] {
+            assert!(!partial(name).split_part(), "{name}");
+        }
+        assert_eq!(
+            partial("Qwen--Qwen3-8B-GGUF--Qwen3-8B-Q4_K_M").tensor_count,
+            Some(399)
+        );
+        // `split.count`, quand il est lu.
+        let m = GgufMeta {
+            split_count: Some(5),
+            ..GgufMeta::default()
+        };
+        assert!(m.split_part());
+        assert!(!GgufMeta::default().split_part());
     }
 
     #[test]

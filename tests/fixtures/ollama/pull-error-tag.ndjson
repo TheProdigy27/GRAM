@@ -1,0 +1,2 @@
+{"status":"pulling manifest"}
+{"error":"pull model manifest: 400: {\"error\":\"The specified tag is not available in the repository. Please use another tag or \\\"latest\\\"\"}"}

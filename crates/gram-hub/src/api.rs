@@ -143,6 +143,18 @@ fn push_repo(url: &mut Url, repo: &str) {
     }
 }
 
+/// `GET /v2/{repo}/manifests/{tag}` : manifeste que Hugging Face sert à Ollama pour
+/// `hf.co/{repo}:{tag}` (voir [`crate::ollama`]).
+pub fn manifest_url(base: &str, repo: &str, tag: &str) -> String {
+    let mut url = base_url(base);
+    url.set_path("/v2");
+    push_repo(&mut url, repo);
+    if let Ok(mut seg) = url.path_segments_mut() {
+        seg.push("manifests").push(tag);
+    }
+    url.into()
+}
+
 /// `GET /api/models/{repo}?blobs=true` : détail d'un dépôt avec la taille de chaque fichier.
 pub fn detail_url(base: &str, repo: &str) -> String {
     let mut url = base_url(base);

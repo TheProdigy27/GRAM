@@ -424,6 +424,16 @@ impl<T: Transport> Hub<T> {
 
     /// Envoie la requête (avec nouvelles tentatives) ; renvoie une réponse 2xx ou une erreur.
     pub async fn get(&self, req: &Request) -> Result<Response> {
+        self.send(req, false).await
+    }
+
+    /// Comme [`get`](Self::get), mais une erreur du client (4xx, sauf 408 et 429) est renvoyée
+    /// comme une réponse : son corps dit pourquoi.
+    pub async fn get_or_client_error(&self, req: &Request) -> Result<Response> {
+        self.send(req, true).await
+    }
+
+    async fn send(&self, req: &Request, client_errors: bool) -> Result<Response> {
         let mut attempt = 0;
         loop {
             let result = {
@@ -436,6 +446,10 @@ impl<T: Transport> Hub<T> {
             };
             if let Ok(r) = &result {
                 self.track_rate_limit(r);
+                if client_errors && (400..500).contains(&r.status) && !matches!(r.status, 408 | 429)
+                {
+                    return result.map_err(|e| HubError::Network(e.0));
+                }
             }
             match decide(&result, &req.url, attempt, &self.policy) {
                 Decision::Done => return result.map_err(|e| HubError::Network(e.0)),

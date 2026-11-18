@@ -20,7 +20,8 @@ use crate::resolve::{Resolved, resolve};
 use crate::state::AppState;
 use chrono::Utc;
 use gram_core::harness::{
-    ALIAS_PREFIX, PreflightInput, ProgressThrottle, added_warnings, preflight,
+    ALIAS_PREFIX, Availability, PreflightInput, ProgressThrottle, added_warnings,
+    needs_availability, preflight,
 };
 use gram_core::{HarnessAddRequest, InstallProgress, OllamaModel, Preflight, UseCase};
 use gram_link::{
@@ -30,7 +31,7 @@ use gram_link::{
 use gram_ollama::{Capability, OllamaClient};
 use serde::Serialize;
 use std::path::Path;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::oneshot;
@@ -105,7 +106,8 @@ pub enum InstallResult {
 }
 
 /// Ce que fera l'ajout : taille à télécharger (0 si la base est déjà dans Ollama), place sur
-/// le disque, contexte réglé, précautions et refus éventuel. Ollama doit répondre.
+/// le disque, contexte réglé, précautions et refus éventuel (dont une quantification que
+/// Hugging Face ne sert pas à Ollama, demandé à Hugging Face). Ollama doit répondre.
 #[tauri::command]
 pub async fn harness_preflight<R: Runtime>(
     app: AppHandle<R>,
@@ -116,7 +118,14 @@ pub async fn harness_preflight<R: Runtime>(
     let installed = client.tags().await?;
     state.set_ollama_models(installed.clone()).await;
     let r = resolve_request(&app, &state, &request).await?;
-    Ok(check(&r, request.use_case, &installed, state.models_dir()))
+    let availability = availability(&app, &state, &r, &installed).await;
+    Ok(check(
+        &r,
+        request.use_case,
+        &installed,
+        state.models_dir(),
+        &availability,
+    ))
 }
 
 /// Ajoute une quantification à GRAM Harness : téléchargement de la base si elle manque
@@ -143,7 +152,14 @@ pub async fn harness_add<R: Runtime>(
     let installed = client.tags().await?;
     state.set_ollama_models(installed.clone()).await;
     let r = resolve_request(&app, &state, &request).await?;
-    let plan = check(&r, request.use_case, &installed, state.models_dir());
+    let availability = availability(&app, &state, &r, &installed).await;
+    let plan = check(
+        &r,
+        request.use_case,
+        &installed,
+        state.models_dir(),
+        &availability,
+    );
     if let Some(reason) = &plan.blocked {
         return Err(CommandError::msg(reason.clone()));
     }
@@ -431,12 +447,60 @@ async fn resolve_request<R: Runtime>(
     .await
 }
 
+/// Délai accordé à Hugging Face pour dire s'il sert la quantification : au-delà, l'ajout
+/// reste possible, avec un avertissement.
+const AVAILABILITY_TIMEOUT: Duration = Duration::from_secs(8);
+
+/// Demande à Hugging Face, quand il le faut ([`needs_availability`]), s'il sert la
+/// quantification à Ollama. Une réponse (servie ou refusée) est gardée jusqu'à la prochaine
+/// synchronisation du catalogue ; une absence de réponse ne l'est pas.
+async fn availability<R: Runtime>(
+    app: &AppHandle<R>,
+    state: &AppState,
+    r: &Resolved,
+    installed: &[OllamaModel],
+) -> Availability {
+    let (repo, label) = (r.variant.repo_id.as_str(), r.variant.label.as_str());
+    if !state.network() || !needs_availability(&r.model, &r.variant, installed) {
+        return Availability::Unchecked;
+    }
+    if let Some(a) = state.availability(repo, label) {
+        return a;
+    }
+    let hub = match crate::commands::catalog::hub(app, state, false) {
+        Ok(hub) => hub,
+        Err(e) => return Availability::Unknown(e.to_string()),
+    };
+    let a = match tokio::time::timeout(
+        AVAILABILITY_TIMEOUT,
+        gram_hub::ollama_availability(&hub, &r.variant),
+    )
+    .await
+    {
+        Ok(Ok(a)) => a,
+        Ok(Err(e)) => Availability::Unknown(e.to_string()),
+        Err(_) => Availability::Unknown(format!(
+            "pas de réponse en {} s",
+            AVAILABILITY_TIMEOUT.as_secs()
+        )),
+    };
+    match &a {
+        Availability::Unknown(why) => tracing::warn!(repo, label, "disponibilité : {why}"),
+        _ => {
+            tracing::info!(repo, label, "disponibilité : {a:?}");
+            state.set_availability(repo, label, a.clone());
+        }
+    }
+    a
+}
+
 /// Vérifications avant l'ajout, sur la machine réelle.
 fn check(
     r: &Resolved,
     use_case: UseCase,
     installed: &[OllamaModel],
     models_dir: Option<&Path>,
+    availability: &Availability,
 ) -> Preflight {
     let dir = models_dir.map(|d| d.to_string_lossy().into_owned());
     preflight(&PreflightInput {
@@ -448,6 +512,7 @@ fn check(
         installed,
         disks: &r.hardware.disks,
         models_dir: dir.as_deref(),
+        availability,
     })
 }
 

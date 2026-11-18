@@ -18,6 +18,7 @@ use crate::error::{CmdResult, CommandError};
 use crate::events::{self, HARDWARE_READY};
 use crate::store::{self, CORRECTIONS_FILE, MEASUREMENTS_FILE, SETTINGS_FILE};
 use crate::token::{KeyringStore, TokenStore};
+use gram_core::harness::Availability;
 use gram_core::{
     DataSource, HardwareProfile, InstallProgress, Measurement, ModelEntry, OllamaModel, Overrides,
     RankRequest, RuntimesStatus, Settings,
@@ -25,7 +26,7 @@ use gram_core::{
 use gram_hub::{Cache, HfToken};
 use gram_hw::RawHardware;
 use gram_ollama::OllamaClient;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -89,6 +90,9 @@ pub struct AppState {
     last_rank: Mutex<RankRequest>,
     /// Modèles déjà enrichis pendant cette session (pas de nouvel appel réseau).
     enriched: Mutex<HashSet<String>>,
+    /// Réponses de Hugging Face avant un ajout à GRAM Harness, par (dépôt, quantification) :
+    /// la vérification est refaite à chaque changement de la fiche (contexte, cas d'usage).
+    availability: Mutex<HashMap<(String, String), Availability>>,
     /// Une seule synchronisation à la fois.
     pub(crate) sync_lock: tokio::sync::Mutex<()>,
     /// Une seule mesure Ollama à la fois (elle occupe la mémoire du GPU).
@@ -130,6 +134,7 @@ impl AppState {
             settings: RwLock::new(settings.sanitized()),
             last_rank: Mutex::new(RankRequest::default()),
             enriched: Mutex::new(HashSet::new()),
+            availability: Mutex::new(HashMap::new()),
             sync_lock: tokio::sync::Mutex::new(()),
             measure_lock: tokio::sync::Mutex::new(()),
             measurements: Mutex::new(measurements),
@@ -347,6 +352,7 @@ impl AppState {
     pub async fn replace_catalog(&self, models: Vec<ModelEntry>, source: DataSource) {
         *self.catalog.lock().await = Some(Arc::new(Loaded { models, source }));
         self.enriched.lock().expect("verrou").clear();
+        self.availability.lock().expect("verrou").clear();
     }
 
     /// Reporte dans le catalogue une fiche enrichie (tailles réelles, architecture).
@@ -367,6 +373,23 @@ impl AppState {
 
     pub fn is_enriched(&self, repo_id: &str) -> bool {
         self.enriched.lock().expect("verrou").contains(repo_id)
+    }
+
+    /// Réponse de Hugging Face déjà reçue pour `label` de `repo_id` (oubliée à la
+    /// synchronisation du catalogue).
+    pub fn availability(&self, repo_id: &str, label: &str) -> Option<Availability> {
+        self.availability
+            .lock()
+            .expect("verrou")
+            .get(&(repo_id.to_owned(), label.to_owned()))
+            .cloned()
+    }
+
+    pub fn set_availability(&self, repo_id: &str, label: &str, a: Availability) {
+        self.availability
+            .lock()
+            .expect("verrou")
+            .insert((repo_id.to_owned(), label.to_owned()), a);
     }
 
     // ── Paramètres, token, dernier classement ───────────────────────────────────────────────

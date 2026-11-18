@@ -37,6 +37,7 @@ devient `C:\Users\gram`.
 | `pull-error-gated.ndjson` | Dépôt protégé depuis `hf.co/` : `realm host "huggingface.co" does not match original host "hf.co"`. Un dépôt **inexistant** donne exactement la même erreur |
 | `pull-error-gated-key.ndjson` | Même dépôt protégé depuis `huggingface.co/` : Ollama signe avec sa clé, Hugging Face répond 401 « Invalid username or password » (clé non enregistrée). Là encore, un dépôt inexistant donne la même erreur |
 | `pull-error-sharded.ndjson` | Quantification découpée en plusieurs fichiers : refusée par Hugging Face dès le manifeste |
+| `pull-error-tag.ndjson` | Enregistré le 17 novembre 2026, pour `hf.co/huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF:Q8_0` : quantification valide mais absente du dépôt (« The specified tag is not available in the repository »). Rien n'est téléchargé |
 | `create.json` | `POST /api/create` (`stream: false`) du modèle dérivé `gram/qwen3-1.7b:q4_k_m`, `num_ctx` 16384 |
 | `create-error-split.json` | `POST /api/create` (HTTP 500), enregistré le 17 novembre 2026, depuis `hf.co/huihui-ai/Huihui-DeepSeek-V4.1-Flash-1017-abliterated-GGUF:IQ1_S` : le seul fichier de cette quantification (`Maya/…-Maya-XS-IQ1_S.gguf`, 1,8 Go) est la première partie d'un modèle découpé en 5 (`split.count`), sous un nom qui ne le dit pas. Hugging Face le sert seul, `/api/pull` réussit, la création échoue |
 | `show-base.json` | `POST /api/show` de la base : des paramètres (`stop`, `temperature`…), pas de `num_ctx` |

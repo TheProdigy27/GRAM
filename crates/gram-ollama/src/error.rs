@@ -30,7 +30,7 @@ impl OllamaError {
     pub fn pull_failure(&self) -> Option<gram_core::harness::PullFailure> {
         match self {
             Self::Interrupted(message) | Self::Api { message, .. } => {
-                crate::api::pull_failure(message)
+                gram_core::harness::PullFailure::recognize(message)
             }
             _ => None,
         }

@@ -170,22 +170,93 @@ pub struct PreflightInput<'a> {
     pub disks: &'a [DiskInfo],
     /// Dossier des modèles d'Ollama ; inconnu : la place n'est pas vérifiée.
     pub models_dir: Option<&'a str>,
+    /// Réponse de Hugging Face pour la base à télécharger.
+    pub availability: &'a Availability,
 }
+
+/// Ce que Hugging Face répond, avant l'ajout, pour la quantification à télécharger : c'est la
+/// première requête d'Ollama (`GET /v2/{dépôt}/manifests/{quant}`), qui ne télécharge rien.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum Availability {
+    /// Pas demandé ([`needs_availability`]), ou hors ligne.
+    #[default]
+    Unchecked,
+    /// Servie à Ollama : taille du fichier du modèle, et du projecteur de vision qui
+    /// l'accompagne.
+    Served { model: u64, projector: Option<u64> },
+    /// Refusée : échec reconnu, sinon le message de Hugging Face.
+    Refused {
+        failure: Option<PullFailure>,
+        message: String,
+    },
+    /// Pas de réponse exploitable (réseau, quota, délai dépassé) : pourquoi.
+    Unknown(String),
+}
+
+/// La quantification est à demander à Hugging Face avant l'ajout : sa base n'est pas dans
+/// Ollama, ses fichiers sont connus (une taille estimée est refusée sans rien demander) et son
+/// dépôt n'est pas protégé (Ollama s'y authentifie avec sa propre clé, que GRAM n'a pas : la
+/// réponse faite à GRAM ne vaudrait pas pour lui).
+pub fn needs_availability(
+    model: &ModelEntry,
+    variant: &QuantVariant,
+    installed: &[OllamaModel],
+) -> bool {
+    variant.exact
+        && !model.repo_gated(&variant.repo_id)
+        && installed_variant(installed, model, &variant.repo_id, &variant.label).is_none()
+}
+
+/// Écart de taille, en pour cent, au-delà duquel le fichier servi par Hugging Face n'est pas
+/// celui que GRAM a évalué.
+const SERVED_SIZE_TOLERANCE_PCT: u64 = 2;
 
 /// Vérifie l'ajout d'une quantification : téléchargement nécessaire, place sur le disque,
 /// contexte réglé, précautions et refus.
+///
+/// Refusé avant tout le reste, quand la base est à télécharger : une quantification dont la
+/// taille n'est qu'estimée (aucun fichier connu), et une quantification que Hugging Face ne
+/// sert pas à Ollama ([`Availability::Refused`]).
 pub fn preflight(i: &PreflightInput) -> Preflight {
     let (model, variant, est) = (i.model, i.variant, i.estimate);
     let gated = model.repo_gated(&variant.repo_id);
     let installed = installed_variant(i.installed, model, &variant.repo_id, &variant.label);
     let base_installed = installed.is_some();
     let base_name = installed.map_or_else(|| ollama_name(variant, gated), |om| om.name.clone());
+    let served = match *i.availability {
+        Availability::Served { model, projector } if !base_installed => Some((model, projector)),
+        _ => None,
+    };
     let download = if base_installed {
         0
+    } else if let Some((bytes, projector)) = served {
+        bytes.saturating_add(projector.unwrap_or(0))
     } else {
         variant
             .size_bytes
             .saturating_add(model.mmproj_bytes.unwrap_or(0))
+    };
+    let unavailable = if base_installed {
+        None
+    } else if !variant.exact {
+        Some(format!(
+            "Taille de {} estimée : aucun fichier de cette quantification n'est connu, et Hugging \
+             Face ne la propose peut-être pas. Seule une quantification dont les fichiers ont été \
+             lus peut être ajoutée.",
+            variant.label
+        ))
+    } else if let Availability::Refused { failure, message } = i.availability {
+        Some(failure.map_or_else(
+            || {
+                format!(
+                    "Hugging Face refuse de servir {} de {} à Ollama : {message}",
+                    variant.label, variant.repo_id
+                )
+            },
+            |f| f.message(&variant.repo_id, &variant.label, gated),
+        ))
+    } else {
+        None
     };
     let disk = i
         .models_dir
@@ -200,12 +271,33 @@ pub fn preflight(i: &PreflightInput) -> Preflight {
                 .to_string(),
         );
     }
-    if !base_installed && variant.files.len() > 1 {
+    // Servie : Hugging Face a trouvé un fichier unique pour cette étiquette.
+    if !base_installed && variant.files.len() > 1 && served.is_none() {
         warnings.push(format!(
             "Modèle découpé en {} fichiers : Hugging Face ne sert pas ces modèles à Ollama, \
              l'ajout risque d'échouer. Préférer une quantification en un seul fichier, ou \
              llama.cpp.",
             variant.files.len()
+        ));
+    }
+    if let Some((bytes, _)) = served
+        && bytes.abs_diff(variant.size_bytes) * 100 > variant.size_bytes * SERVED_SIZE_TOLERANCE_PCT
+    {
+        warnings.push(format!(
+            "Hugging Face sert pour {} un fichier de {}, et non celui de {} que GRAM a évalué : \
+             l'estimation ne vaut pas pour lui.",
+            variant.label,
+            gb(bytes),
+            gb(variant.size_bytes)
+        ));
+    }
+    if let Availability::Unknown(why) = i.availability
+        && !base_installed
+    {
+        warnings.push(format!(
+            "Disponibilité de {} non vérifiée auprès de Hugging Face ({why}) : l'ajout peut \
+             échouer.",
+            variant.label
         ));
     }
     if i.kv_cache != KvCacheType::F16 {
@@ -224,7 +316,14 @@ pub fn preflight(i: &PreflightInput) -> Preflight {
         ));
     }
 
-    let blocked = if est.mode == RunMode::TooBig {
+    if unavailable.is_some() {
+        // Rien d'autre ne compte : la base ne peut pas être téléchargée.
+        warnings.clear();
+    }
+
+    let blocked = if unavailable.is_some() {
+        unavailable
+    } else if est.mode == RunMode::TooBig {
         Some(format!(
             "{} ne tient pas en mémoire sur cette machine : ajout refusé (le système risquerait \
              de saturer).",
@@ -303,6 +402,38 @@ pub enum PullFailure {
 }
 
 impl PullFailure {
+    /// Reconnaît un échec que l'utilisateur peut corriger, dans un message d'erreur d'Ollama
+    /// (textes d'Ollama 0.40.16, dans `tests/fixtures/ollama/pull-error-*.ndjson`) ou de
+    /// Hugging Face, qu'Ollama reprend (`tests/fixtures/hf/manifests/`) :
+    ///
+    /// - `realm host "huggingface.co" does not match original host "hf.co"` (dépôt protégé ou
+    ///   inexistant depuis `hf.co/`) et `401: {"error":"Invalid username or password."}`
+    ///   (depuis `huggingface.co/`, clé d'Ollama non enregistrée) ;
+    /// - `The specified tag is not a valid quantization scheme…` et `The specified tag is not
+    ///   available in the repository…` ;
+    /// - `This repository only contains sharded GGUF files…` et `This tag is a sharded GGUF…` ;
+    /// - `invalid split GGUF: split GGUF has 2 remaining shards, expected 5`, renvoyé par
+    ///   `/api/create` (HTTP 500) quand le fichier téléchargé n'est que la première partie d'un
+    ///   modèle découpé, sous un nom qui ne le dit pas (`create-error-split.json`).
+    pub fn recognize(message: &str) -> Option<Self> {
+        if message.contains("does not match original host")
+            || message.contains("manifest: 401")
+            || message.contains("Invalid username or password")
+        {
+            Some(Self::Unauthorized)
+        } else if message.contains("not a valid quantization scheme")
+            || message.contains("tag is not available")
+        {
+            Some(Self::UnknownQuant)
+        } else if message.contains("sharded GGUF") {
+            Some(Self::Sharded)
+        } else if message.contains("invalid split GGUF") {
+            Some(Self::SplitPart)
+        } else {
+            None
+        }
+    }
+
     /// Message pour l'utilisateur, avec ce qu'il peut faire.
     pub fn message(self, repo_id: &str, label: &str, gated: bool) -> String {
         match self {
@@ -723,6 +854,7 @@ mod tests {
             installed,
             disks,
             models_dir: Some("C:\\Users\\gram\\.ollama\\models"),
+            availability: &Availability::Unchecked,
         }
     }
 
@@ -843,6 +975,164 @@ mod tests {
                  télécharger, plus 10 % de marge)."
             )
         );
+    }
+
+    #[test]
+    fn preflight_selon_hugging_face() {
+        let mut m = model("Qwen3 8B");
+        m.mmproj_bytes = Some(GIB / 4);
+        let est = estimate(RunMode::Gpu, 40.0);
+        let disks = [disk("C:\\", 100 * GIB)];
+        let with = |v: &QuantVariant, a: &Availability| {
+            let mut i = input(&m, v, &est, &[], &disks);
+            i.availability = a;
+            preflight(&i)
+        };
+
+        // Servie : tailles de Hugging Face (fichier choisi et projecteur), sans avertissement
+        // de découpage (Hugging Face a trouvé un fichier unique pour cette étiquette).
+        let split = variant("Qwen/Qwen3-8B-GGUF", "Q4_K_M", 2);
+        let served = Availability::Served {
+            model: 5 * GIB,
+            projector: Some(GIB / 2),
+        };
+        let p = with(&split, &served);
+        assert_eq!(p.download, 5 * GIB + GIB / 2);
+        assert!(p.warnings.is_empty(), "{:?}", p.warnings);
+        assert_eq!(p.blocked, None);
+        // Pas vérifiée : avertissement de découpage, tailles du catalogue.
+        let p = with(&split, &Availability::Unchecked);
+        assert_eq!(p.download, 5 * GIB + GIB / 4);
+        assert!(p.warnings[0].starts_with("Modèle découpé en 2 fichiers"));
+
+        // Un autre fichier que celui évalué (au-delà de 2 %).
+        let single = variant("Qwen/Qwen3-8B-GGUF", "Q4_K_M", 1);
+        let other = Availability::Served {
+            model: 6 * GIB,
+            projector: None,
+        };
+        let p = with(&single, &other);
+        assert_eq!(p.download, 6 * GIB);
+        assert_eq!(
+            p.warnings,
+            vec![
+                "Hugging Face sert pour Q4_K_M un fichier de 6,0 Go, et non celui de 5,0 Go que \
+                 GRAM a évalué : l'estimation ne vaut pas pour lui."
+            ]
+        );
+
+        // Refusée : ajout refusé, sans autre avertissement.
+        let refused = Availability::Refused {
+            failure: Some(PullFailure::UnknownQuant),
+            message: "The specified tag is not available in the repository.".into(),
+        };
+        let p = with(&split, &refused);
+        assert_eq!(
+            p.blocked.as_deref(),
+            Some(
+                "Hugging Face ne propose pas Q4_K_M de Qwen/Qwen3-8B-GGUF à Ollama : choisir \
+                 une autre quantification."
+            )
+        );
+        assert!(p.warnings.is_empty(), "{:?}", p.warnings);
+        let p = with(
+            &single,
+            &Availability::Refused {
+                failure: None,
+                message: "Nope".into(),
+            },
+        );
+        assert_eq!(
+            p.blocked.as_deref(),
+            Some("Hugging Face refuse de servir Q4_K_M de Qwen/Qwen3-8B-GGUF à Ollama : Nope")
+        );
+        // Avant le manque de mémoire : la base ne peut même pas être téléchargée.
+        let too_big = estimate(RunMode::TooBig, 0.0);
+        let mut i = input(&m, &single, &too_big, &[], &disks);
+        i.availability = &refused;
+        assert!(
+            preflight(&i)
+                .blocked
+                .unwrap()
+                .starts_with("Hugging Face ne propose pas")
+        );
+
+        // Pas de réponse : avertissement, l'ajout reste possible.
+        let p = with(&single, &Availability::Unknown("délai dépassé".into()));
+        assert_eq!(p.blocked, None);
+        assert_eq!(
+            p.warnings,
+            vec![
+                "Disponibilité de Q4_K_M non vérifiée auprès de Hugging Face (délai dépassé) : \
+                 l'ajout peut échouer."
+            ]
+        );
+
+        // Taille estimée (aucun fichier connu) : refusée, sans rien demander.
+        let mut estimated = single.clone();
+        estimated.exact = false;
+        estimated.files.clear();
+        let p = with(&estimated, &Availability::Unchecked);
+        assert!(
+            p.blocked
+                .as_deref()
+                .unwrap()
+                .starts_with("Taille de Q4_K_M estimée : aucun fichier de cette quantification"),
+            "{:?}",
+            p.blocked
+        );
+
+        // Base déjà dans Ollama : rien à télécharger, la réponse ne compte pas.
+        let installed = [OllamaModel::new("hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M", 1, None)];
+        let mut i = input(&m, &estimated, &est, &installed, &disks);
+        i.availability = &refused;
+        let p = preflight(&i);
+        assert_eq!((p.blocked, p.download), (None, 0));
+    }
+
+    #[test]
+    fn disponibilite_a_demander() {
+        let m = model("Qwen3 8B");
+        let v = m.variants[0].clone();
+        assert!(needs_availability(&m, &v, &[]));
+        // Déjà dans Ollama.
+        let installed = [OllamaModel::new("hf.co/Qwen/Qwen3-8B-GGUF:Q4_K_M", 1, None)];
+        assert!(!needs_availability(&m, &v, &installed));
+        // Dépôt protégé : Ollama s'authentifie avec sa propre clé.
+        assert!(!needs_availability(
+            &m,
+            &variant("unsloth/Qwen3-8B-GGUF", "Q4_K_M", 1),
+            &[]
+        ));
+        // Taille estimée : refusée sans rien demander.
+        let mut estimated = v.clone();
+        estimated.exact = false;
+        assert!(!needs_availability(&m, &estimated, &[]));
+    }
+
+    #[test]
+    fn echecs_reconnus() {
+        let r = PullFailure::recognize;
+        // Réponses de Hugging Face, telles quelles ou reprises par Ollama.
+        assert_eq!(
+            r(
+                "The specified tag is not available in the repository. Please use another tag \
+               or \"latest\""
+            ),
+            Some(PullFailure::UnknownQuant)
+        );
+        assert_eq!(
+            r(
+                "This tag is a sharded GGUF. Ollama does not yet support pulling sharded GGUF \
+               via the registry"
+            ),
+            Some(PullFailure::Sharded)
+        );
+        assert_eq!(
+            r("Invalid username or password."),
+            Some(PullFailure::Unauthorized)
+        );
+        assert_eq!(r("pull model manifest: file does not exist"), None);
     }
 
     #[test]
